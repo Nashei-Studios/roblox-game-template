@@ -16,10 +16,7 @@ export type SessionRecord<T> = {
     version: number,
 }
 
-export type SessionError =
-    "locked_by_other_server"
-    | "backend_failure"
-    | "not_lock_owner"
+export type SessionError = "locked_by_other_server" | "backend_failure" | "not_lock_owner"
 
 -- Atomic read-modify-write. `transform` returns nil to abort without writing.
 -- Returns the stored record, or nil when the transform aborted.

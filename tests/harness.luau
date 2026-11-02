@@ -16,7 +16,10 @@ local harness = {}
 
 function harness.equal<T>(actual: T, expected: T, label: string?)
     if actual ~= expected then
-        error(`{label or "values"} differ: expected {tostring(expected)}, got {tostring(actual)}`, 2)
+        error(
+            `{label or "values"} differ: expected {tostring(expected)}, got {tostring(actual)}`,
+            2
+        )
     end
 end
 
