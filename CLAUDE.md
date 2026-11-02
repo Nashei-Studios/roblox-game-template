@@ -12,6 +12,7 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - `stylua .` format, `stylua --check .` verify
 - `selene .` lint
 - `lune run scripts/test` unit tests (add new suites to the list in `scripts/test.luau`)
+- `pwsh scripts/analyze.ps1` type-check (`-NewSolver` for the informational pass)
 - `rojo serve` sync to Studio
 
 ## Rules
