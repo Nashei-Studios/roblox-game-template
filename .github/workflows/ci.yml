@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # Community action that installs the tools pinned in rokit.toml.
+      # UNVERIFIED: confirm the action name and tag on the first CI run.
+      - uses: CompeyDev/setup-rokit@v0.1.2
+      - name: Format check
+        run: stylua --check .
+      - name: Lint
+        run: selene .
+      - name: Unit tests (Lune)
+        run: lune run scripts/test
