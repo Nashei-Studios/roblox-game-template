@@ -6,7 +6,7 @@
 
 ## Context
 
-The official MCP server is built into Studio (stdio, `%LOCALAPPDATA%\Roblox\mcp.bat`). It can read and modify open places, and `execute_luau` runs arbitrary Luau. The standalone Rust server is archived. Community servers are untrusted code.
+The official MCP server is built into Studio (stdio proxy `StudioMCP.exe`, signed by Roblox Corporation, inside each `%LOCALAPPDATA%\Roblox\Versions\version-*` folder; `tools/roblox-studio-mcp.cmd` resolves the newest one). It can read and modify open places, and `execute_luau` runs arbitrary Luau. The standalone Rust server is archived. Community servers are untrusted code.
 
 ## Options considered
 

@@ -76,7 +76,7 @@ Write-Host 'Still manual (cannot be automated safely):'
 Write-Host '  1. Log in to Roblox Studio and enable 2FA on the account.'
 Write-Host '  2. In Studio: Assistant > Manage MCP Servers > Enable Studio as MCP server.'
 Write-Host '  3. Open a DEV/throwaway place first, never a production place.'
-Write-Host '  4. Verify the mcp.bat path exists: %LOCALAPPDATA%\Roblox\mcp.bat'
+Write-Host '  4. Check the MCP answers (Studio open): claude mcp get Roblox_Studio'
 Write-Host '  5. Start syncing: `rojo serve`, then Connect in the Rojo plugin.'
 
 if ($script:failures -gt 0) {

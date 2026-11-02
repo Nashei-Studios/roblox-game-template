@@ -21,7 +21,7 @@ A starting kit for monetized Roblox games: strict Luau, Rojo-synced code, a type
 
 ## Studio MCP
 
-`.mcp.json` registers the built-in server project-scoped as `Roblox_Studio` (`cmd.exe /c %LOCALAPPDATA%\Roblox\mcp.bat`). That path is derived from Roblox docs: after Studio installs, check the file exists and that `claude mcp list` shows the server. `cmd.exe` expands `%LOCALAPPDATA%` itself because it receives the argument as text; if your setup does not, replace it with the absolute path, e.g. `C:\\Users\\<you>\\AppData\\Local\\Roblox\\mcp.bat`. Use it on a dev or throwaway place only ([ADR 0004](docs/adr/0004-studio-mcp-builtin-only.md)).
+`.mcp.json` registers the MCP proxy built into Studio (`StudioMCP.exe`, signed by Roblox Corporation) project-scoped as `Roblox_Studio`, through `tools/roblox-studio-mcp.cmd`, which picks the newest `%LOCALAPPDATA%RobloxVersionsersion-*StudioMCP.exe` so Studio updates do not break the path. Studio must be open with **Enable Studio as MCP server** turned on (Assistant settings). Check with `claude mcp get Roblox_Studio`: it should list the tools. Use it on a dev or throwaway place only ([ADR 0004](docs/adr/0004-studio-mcp-builtin-only.md)).
 
 ## Folder tree
 
