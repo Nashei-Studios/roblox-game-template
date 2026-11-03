@@ -24,7 +24,7 @@ try {
         '--base-luaurc', '.luaurc'
     )
     if ($NewSolver) { $arguments += '--flag:LuauSolverV2=true' }
-    $arguments += @('src', 'tests', 'scripts')
+    $arguments += @('src', 'tests', 'scripts', '.claude/hooks')
     & luau-lsp @arguments
     exit $LASTEXITCODE
 } finally {
