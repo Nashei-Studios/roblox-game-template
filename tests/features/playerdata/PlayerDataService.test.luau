@@ -12,6 +12,10 @@ local function clone(data: PlayerData.PlayerData): PlayerData.PlayerData
         coins = data.coins,
         purchaseIds = table.clone(data.purchaseIds),
         sessionCount = data.sessionCount,
+        rodLevel = data.rodLevel,
+        bait = data.bait,
+        totalCatches = data.totalCatches,
+        fishStock = table.clone(data.fishStock),
     }
 end
 
@@ -164,7 +168,7 @@ return function(suite: harness.Harness)
         local joined = service:join("1")
         harness.isTrue(joined.ok, "join ok")
         if joined.ok then
-            harness.equal(joined.value.data.schemaVersion, 3, "schemaVersion")
+            harness.equal(joined.value.data.schemaVersion, 4, "schemaVersion")
             harness.equal(joined.value.data.coins, 40, "coins kept")
             harness.equal(joined.value.sessionIndex, 1, "sessionIndex")
         end

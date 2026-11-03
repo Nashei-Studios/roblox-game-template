@@ -5,7 +5,7 @@ local harness = require("./harness")
 return function(suite: harness.Harness)
     suite:test("default config reports every unset id", function()
         local problems = Config.validate(Config.default)
-        harness.equal(#problems, 2, "problem count")
+        harness.equal(#problems, 4, "problem count")
     end)
 
     suite:test("a fully configured game has no problems", function()
@@ -109,5 +109,34 @@ return function(suite: harness.Harness)
             developerProducts = {},
         }
         harness.equal(#Config.validate(config), 1, "problem count")
+    end)
+
+    suite:test("a bait grant needs a positive amount and a cap that holds it", function()
+        local function configWith(grant: Config.ProductGrant): Config.GameConfig
+            return {
+                gameName = "Test",
+                sessionLockTimeoutSeconds = 60,
+                autosaveIntervalSeconds = 30,
+                purchaseLedgerSize = 50,
+                saveConfirmTimeoutSeconds = 30,
+                gamePasses = {},
+                developerProducts = { { name = "Bait", id = 5, grant = grant } },
+            }
+        end
+        harness.equal(
+            #Config.validate(configWith({ kind = "bait", amount = 20, maxBait = 500 })),
+            0,
+            "valid"
+        )
+        harness.equal(
+            #Config.validate(configWith({ kind = "bait", amount = 0, maxBait = 500 })),
+            1,
+            "zero amount"
+        )
+        harness.equal(
+            #Config.validate(configWith({ kind = "bait", amount = 20, maxBait = 10 })),
+            1,
+            "cap below amount"
+        )
     end)
 end

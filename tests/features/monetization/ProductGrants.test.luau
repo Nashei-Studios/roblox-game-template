@@ -17,6 +17,9 @@ end
 local function newGrants(): ProductGrants.ProductGrants
     return ProductGrants.new({
         Coins100 = { kind = "coins", amount = 100 },
+        BaitPack = { kind = "bait", amount = 20, maxBait = 50 },
+        BadBait = { kind = "bait", amount = 0, maxBait = 50 },
+        BadCap = { kind = "bait", amount = 5, maxBait = 0 },
         Broken = { kind = "coins", amount = -5 },
         Fractional = { kind = "coins", amount = 1.5 },
         Huge = { kind = "coins", amount = ProductGrants.MAX_COINS },
@@ -32,20 +35,20 @@ end
 
 return function(suite: harness.Harness)
     suite:test("a coins product adds its amount to the player's coins", function()
-        local data = { coins = 5 }
+        local data = { coins = 5, bait = 0 }
         local result = newGrants():apply(data, "Coins100")
         harness.isTrue(result.ok, "applied")
         harness.equal(data.coins, 105, "coins")
     end)
 
     suite:test("an unknown product is a typed error and leaves data untouched", function()
-        local data = { coins = 5 }
+        local data = { coins = 5, bait = 0 }
         harness.equal(errorKind(newGrants():apply(data, "Nope")), "unknown_product")
         harness.equal(data.coins, 5, "coins")
     end)
 
     suite:test("invalid amounts are rejected without mutating data", function()
-        local data = { coins = 5 }
+        local data = { coins = 5, bait = 0 }
         harness.equal(errorKind(newGrants():apply(data, "Broken")), "invalid_amount", "negative")
         harness.equal(
             errorKind(newGrants():apply(data, "Fractional")),
@@ -56,14 +59,14 @@ return function(suite: harness.Harness)
     end)
 
     suite:test("overflow past MAX_COINS is rejected without mutating data", function()
-        local data = { coins = 1 }
+        local data = { coins = 1, bait = 0 }
         harness.equal(errorKind(newGrants():apply(data, "Huge")), "overflow")
         harness.equal(data.coins, 1, "coins")
     end)
 
     suite:test("the same PurchaseId through the ledger grants only once", function()
         local grants = newGrants()
-        local data = { coins = 0, purchaseIds = {} :: { string } }
+        local data = { coins = 0, bait = 0, purchaseIds = {} :: { string } }
         local ledger = Monetization.newListLedger(data.purchaseIds, 50)
         local function grant(): boolean
             return grants:apply(data, "Coins100").ok
@@ -77,7 +80,7 @@ return function(suite: harness.Harness)
 
     suite:test("a failed grant is not recorded, so Roblox can retry the receipt", function()
         local grants = newGrants()
-        local data = { coins = 0, purchaseIds = {} :: { string } }
+        local data = { coins = 0, bait = 0, purchaseIds = {} :: { string } }
         local ledger = Monetization.newListLedger(data.purchaseIds, 50)
         local receipt: Monetization.ReceiptInfo =
             { playerId = 1, purchaseId = "p-2", productId = 10 }
@@ -87,5 +90,27 @@ return function(suite: harness.Harness)
         harness.equal(decision, "failed")
         harness.isFalse(ledger:has("p-2"), "not recorded")
         harness.equal(data.coins, 0, "no delivery")
+    end)
+
+    suite:test("a bait product adds its amount and leaves coins alone", function()
+        local data = { coins = 5, bait = 3 }
+        local result = newGrants():apply(data, "BaitPack")
+        harness.isTrue(result.ok, "ok")
+        harness.equal(data.bait, 23, "bait")
+        harness.equal(data.coins, 5, "coins")
+    end)
+
+    suite:test("bait beyond the stock cap is clamped and still granted", function()
+        local data = { coins = 0, bait = 45 }
+        local result = newGrants():apply(data, "BaitPack")
+        harness.isTrue(result.ok, "granted, so the receipt is not retried forever")
+        harness.equal(data.bait, 50, "clamped")
+    end)
+
+    suite:test("an invalid bait grant fails and leaves the data untouched", function()
+        local data = { coins = 0, bait = 4 }
+        harness.equal(errorKind(newGrants():apply(data, "BadBait")), "invalid_amount", "amount")
+        harness.equal(errorKind(newGrants():apply(data, "BadCap")), "invalid_amount", "cap")
+        harness.equal(data.bait, 4, "bait")
     end)
 end

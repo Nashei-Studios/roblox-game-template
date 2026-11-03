@@ -6,3 +6,4 @@ Third game of the 3-games-per-week factory. Times are wall clock, 2026-11-03, ta
 |---|---|---|---|---|---|
 | 0 | Setup: worktree, read design, CLAUDE.md, template sources, baseline gate | 09:15 | 09:17:26 | 2 | Baseline: 130 tests, coverage 97.7 %; start time estimated, not taken with `date` |
 | 1 | docs: reef-flow.md, ADR 0021 | 09:17:26 | 09:20 | 3 | |
+| 2 | Pure core with TDD: ReefRules, ReefConfig, FishRoll, ReefController, Funnel, HudModel, schema v4 migration, bait grant | 09:20 | 09:24 | 4 | Gate: stylua, selene, analyze, 174 tests, coverage 98.4 % |

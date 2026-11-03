@@ -6,13 +6,17 @@
     `Config.validate` reports every missing id so a misconfigured game fails loudly.
 ]]
 
+local ReefRules = require("./features/reef/ReefRules")
+
 export type ProductConfig = {
     name: string,
     id: number?,
 }
 
 -- What a developer product delivers (applied by features/monetization/ProductGrants).
-export type ProductGrant = { kind: "coins", amount: number }
+export type ProductGrant =
+    { kind: "coins", amount: number }
+    | { kind: "bait", amount: number, maxBait: number }
 
 export type DeveloperProductConfig = {
     name: string,
@@ -46,10 +50,16 @@ Config.default = {
     saveConfirmTimeoutSeconds = 30,
     perfProbeEnabled = false,
     gamePasses = {
-        { name = "VIP", id = nil }, -- TODO(victor): set id
+        { name = ReefRules.BIGGER_BUCKET_PASS, id = nil }, -- TODO(victor): set id
+        { name = ReefRules.SELL_ANYWHERE_PASS, id = nil }, -- TODO(victor): set id
     },
     developerProducts = {
         { name = "Coins100", id = nil, grant = { kind = "coins", amount = 100 } }, -- TODO(victor): set id
+        {
+            name = "BaitPack",
+            id = nil, -- TODO(victor): set id
+            grant = { kind = "bait", amount = 20, maxBait = ReefRules.MAX_BAIT },
+        },
     },
 } :: GameConfig
 
@@ -94,12 +104,19 @@ function Config.validate(config: GameConfig): { string }
         end
         seenNames[product.name] = true
         local grant = product.grant
-        if grant.kind ~= "coins" then
+        if grant.kind ~= "coins" and grant.kind ~= "bait" then
             table.insert(problems, `developer product "{product.name}" has an unknown grant kind`)
         elseif grant.amount ~= grant.amount or grant.amount <= 0 or grant.amount % 1 ~= 0 then
             table.insert(
                 problems,
                 `developer product "{product.name}" grants an invalid amount (must be a positive integer)`
+            )
+        elseif
+            grant.kind == "bait" and (grant.maxBait < grant.amount or grant.maxBait % 1 ~= 0)
+        then
+            table.insert(
+                problems,
+                `developer product "{product.name}" has a maxBait below its amount`
             )
         end
     end

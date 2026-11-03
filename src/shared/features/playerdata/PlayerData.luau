@@ -14,11 +14,16 @@ export type PlayerData = {
     purchaseIds: { string },
     -- Sessions started by this player, counting the current one (see PlayerDataService.join).
     sessionCount: number,
+    -- Reef: rod level (1 = the free starter rod), bait items, lifetime catches, unsold fish by id.
+    rodLevel: number,
+    bait: number,
+    totalCatches: number,
+    fishStock: { [string]: number },
 }
 
 local PlayerDataModule = {}
 
-PlayerDataModule.CURRENT_SCHEMA_VERSION = 3
+PlayerDataModule.CURRENT_SCHEMA_VERSION = 4
 
 --- A fresh table on every call (profiles mutate their data in place).
 function PlayerDataModule.default(): PlayerData
@@ -27,6 +32,10 @@ function PlayerDataModule.default(): PlayerData
         coins = 0,
         purchaseIds = {},
         sessionCount = 0,
+        rodLevel = 1,
+        bait = 0,
+        totalCatches = 0,
+        fishStock = {},
     }
 end
 

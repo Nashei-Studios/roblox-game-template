@@ -36,19 +36,31 @@ export type PlayerDataV3 = {
     sessionCount: number,
 }
 
+export type PlayerDataV4 = {
+    schemaVersion: number,
+    coins: number,
+    purchaseIds: { string },
+    sessionCount: number,
+    -- Reef: rod level (1 = the free starter rod), bait items, lifetime catches, unsold fish by id.
+    rodLevel: number,
+    bait: number,
+    totalCatches: number,
+    fishStock: { [string]: number },
+}
+
 export type MigrationError =
     { kind: "future_version", found: number, supported: number }
     | { kind: "invalid_data", reason: string }
 
 export type MigrationResult =
-    { ok: true, value: PlayerDataV3 }
+    { ok: true, value: PlayerDataV4 }
     | { ok: false, error: MigrationError }
 
 type StepResult = { ok: true, value: unknown } | { ok: false, error: MigrationError }
 
 local PlayerDataMigrations = {}
 
-PlayerDataMigrations.CURRENT_SCHEMA_VERSION = 3
+PlayerDataMigrations.CURRENT_SCHEMA_VERSION = 4
 
 local function invalid(reason: string): { ok: false, error: MigrationError }
     return { ok = false, error = { kind = "invalid_data", reason = reason } }
@@ -143,7 +155,10 @@ local function readV2(raw: unknown): { ok: true, value: PlayerDataV2 } | {
     }
 end
 
-local function readV3(raw: unknown): MigrationResult
+local function readV3(raw: unknown): { ok: true, value: PlayerDataV3 } | {
+    ok: false,
+    error: MigrationError,
+}
     local record = asRecord(raw)
     if record == nil then
         return invalid("player data must be a table")
@@ -182,6 +197,52 @@ local function readV3(raw: unknown): MigrationResult
     }
 end
 
+local function isCount(value: unknown): boolean
+    return isFiniteNumber(value) and (value :: number) >= 0 and (value :: number) % 1 == 0
+end
+
+local function readV4(raw: unknown): MigrationResult
+    local base = readV3(raw) -- the shared fields keep their v3 validation
+    if not base.ok then
+        return base
+    end
+    local record = raw :: { [string]: unknown }
+    local rodLevel = record.rodLevel
+    if not isCount(rodLevel) or (rodLevel :: number) < 1 then
+        return invalid("rodLevel must be a positive integer")
+    end
+    if not isCount(record.bait) then
+        return invalid("bait must be a non-negative integer")
+    end
+    if not isCount(record.totalCatches) then
+        return invalid("totalCatches must be a non-negative integer")
+    end
+    local rawStock = record.fishStock
+    if type(rawStock) ~= "table" then
+        return invalid("fishStock must be a table")
+    end
+    local stock: { [string]: number } = {}
+    for fishId, count in rawStock :: { [unknown]: unknown } do
+        if type(fishId) ~= "string" or not isCount(count) then
+            return invalid("fishStock must map string ids to non-negative integers")
+        end
+        stock[fishId] = count :: number
+    end
+    return {
+        ok = true,
+        value = {
+            schemaVersion = 4,
+            coins = base.value.coins,
+            purchaseIds = base.value.purchaseIds,
+            sessionCount = base.value.sessionCount,
+            rodLevel = rodLevel :: number,
+            bait = record.bait :: number,
+            totalCatches = record.totalCatches :: number,
+            fishStock = stock,
+        },
+    }
+end
+
 local function v1ToV2(v1: PlayerDataV1): PlayerDataV2
     return {
         schemaVersion = 2,
@@ -209,6 +270,19 @@ local function v2ToV3(v2: PlayerDataV2): PlayerDataV3
     }
 end
 
+local function v3ToV4(v3: PlayerDataV3): PlayerDataV4
+    return {
+        schemaVersion = 4,
+        coins = v3.coins,
+        purchaseIds = v3.purchaseIds,
+        sessionCount = v3.sessionCount,
+        rodLevel = 1,
+        bait = 0,
+        totalCatches = 0,
+        fishStock = {},
+    }
+end
+
 -- steps[n] validates a vN table and upgrades it to vN+1. Add a new entry per schema change.
 local steps: { [number]: (raw: unknown) -> StepResult } = {
     [1] = function(raw: unknown): StepResult
@@ -224,6 +298,13 @@ local steps: { [number]: (raw: unknown) -> StepResult } = {
             return v2
         end
         return { ok = true, value = v2ToV3(v2.value) }
+    end,
+    [3] = function(raw: unknown): StepResult
+        local v3 = readV3(raw)
+        if not v3.ok then
+            return v3
+        end
+        return { ok = true, value = v3ToV4(v3.value) }
     end,
 }
 
@@ -245,9 +326,9 @@ function PlayerDataMigrations.migrate(raw: unknown): MigrationResult
         }
     end
     if version.value == current then
-        local validated = readV3(raw)
+        local validated = readV4(raw)
         if validated.ok then
-            return { ok = true, value = raw :: PlayerDataV3 } -- unchanged: same table
+            return { ok = true, value = raw :: PlayerDataV4 } -- unchanged: same table
         end
         return validated
     end
@@ -264,7 +345,7 @@ function PlayerDataMigrations.migrate(raw: unknown): MigrationResult
         end
         working = stepped.value
     end
-    return readV3(working)
+    return readV4(working)
 end
 
 --- Like `migrate`, but writes the result into `raw` (the live ProfileStore table, whose
@@ -282,7 +363,7 @@ function PlayerDataMigrations.migrateInPlace(raw: unknown): MigrationResult
             live[key] = value
         end
         local result: unknown = live
-        return { ok = true, value = result :: PlayerDataV3 }
+        return { ok = true, value = result :: PlayerDataV4 }
     end
     return migrated
 end

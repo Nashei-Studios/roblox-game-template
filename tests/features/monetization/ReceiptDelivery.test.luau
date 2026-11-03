@@ -20,6 +20,10 @@ local function clone(data: PlayerData.PlayerData): PlayerData.PlayerData
         coins = data.coins,
         purchaseIds = table.clone(data.purchaseIds),
         sessionCount = data.sessionCount,
+        rodLevel = data.rodLevel,
+        bait = data.bait,
+        totalCatches = data.totalCatches,
+        fishStock = table.clone(data.fishStock),
     }
 end
 

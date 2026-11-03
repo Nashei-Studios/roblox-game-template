@@ -62,6 +62,13 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     { name = "RemoteBudget", register = require("../tests/perf/RemoteBudget.test") },
     { name = "ProbeEvaluator", register = require("../tests/perf/ProbeEvaluator.test") },
     {
+        name = "ReefConfig and FishRoll",
+        register = require("../tests/features/reef/ReefConfig.test"),
+    },
+    { name = "ReefController", register = require("../tests/features/reef/ReefController.test") },
+    { name = "Reef Funnel", register = require("../tests/features/reef/Funnel.test") },
+    { name = "Reef HudModel", register = require("../tests/features/reef/HudModel.test") },
+    {
         name = "StudioLockPolicy (hook)",
         register = require("../tests/claude/StudioLockPolicy.test"),
     },
