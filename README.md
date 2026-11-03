@@ -75,7 +75,9 @@ Why this split: anything that needs only values lives in `shared` so Lune can te
 
 ## Start a new game from this template
 
-Use "Use this template" on GitHub once the repo is marked as a template (or copy the folder), rename `name` in `default.project.json`, set `gameName` in `Config.luau`, create game passes and developer products in Creator Hub and fill their ids (each marked `TODO(victor)`), and create a separate dev place for MCP work.
+Preferred: `pwsh scripts/new-game.ps1 -Slug <kebab-case-slug> [-VaultPath <vault>] [-DryRun]`. It validates the slug, runs `gh repo create vruizz22/<slug> --private --template vruizz22/roblox-game-template`, clones into `D:\Victor\Repositoriosoblox\games\<slug>`, renames the game in `default.project.json`, `Config.luau` and this README, writes `games/<yyyy-mm>-<slug>/index.md` in the vault only when `-VaultPath` is given, and prints the names (never values) of `ASPHALT_API_KEY` and `ROBLOX_API_KEY`. `-DryRun` only prints the commands. The template repo must be marked as a template on GitHub first (Victor action, vault decision 0014). Tests: `pwsh scripts/new-game.test.ps1`.
+
+Manual: Use "Use this template" on GitHub once the repo is marked as a template (or copy the folder), rename `name` in `default.project.json`, set `gameName` in `Config.luau`, create game passes and developer products in Creator Hub and fill their ids (each marked `TODO(victor)`), and create a separate dev place for MCP work.
 
 ## Game pipeline (short)
 
