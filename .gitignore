@@ -18,3 +18,6 @@ roblox.yml
 logs/
 .vscode/*.code-workspace
 node_modules/
+
+# Studio lock (docs/multi-agent.md)
+.studio.lock

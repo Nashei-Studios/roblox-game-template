@@ -25,6 +25,12 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - New decision -> new ADR in `docs/adr/`, never edit an accepted one.
 - Conventional Commits in English. Everything enters `main` by PR.
 
+## Multi-agent (docs/multi-agent.md)
+- One git worktree and branch per agent; own one `features/<name>/` folder; cross-feature, `ports/`, `Main.*`, `vendor/`, CI go through the orchestrator.
+- Headless first: `stylua --check .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `rojo build` must pass before you ask for Studio.
+- Studio only while holding `.studio.lock` (main checkout root, gitignored: agent, worktree, branch, start time, rojo port). Max 3 agents, 1 Studio open at a time. Always pass `studio_id`. Delete the lock when done; never delete another agent's lock, report stale ones (over 2 h).
+- Never merge `.rbxl` files. Monetization and player-data changes need human approval.
+
 ## Forbidden
 - Community MCP servers; only the Studio built-in MCP (`Roblox_Studio`), and only on a dev/throwaway place.
 - Secrets, API keys or tokens in the repo (Open Cloud keys go in GitHub secrets).

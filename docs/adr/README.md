@@ -17,5 +17,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0010](0010-profilestore-behind-profilerepository.md) | ProfileStore (vendored) behind a ProfileRepository port |
 | [0011](0011-flags-port-experience-configs.md) | Flags port over Experience Configs with in-repo defaults |
 | [0012](0012-remote-validation-and-rate-limit.md) | Remote validation and rate limiting; code-gen spike deferred |
+| [0013](0013-multi-agent-protocol.md) | Multi-agent protocol: worktree per agent, headless first, Studio lock |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
