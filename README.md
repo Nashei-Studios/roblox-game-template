@@ -66,9 +66,9 @@ Why this split: anything that needs only values lives in `shared` so Lune can te
 
 1. Put the decision and data shape in a pure module under `src/shared/features/<feature>/` with typed exports and a `Deps` table for anything external.
 2. If it needs an external service, add a port type in `src/shared/ports` and an adapter in `src/server/adapters`; wire it in `Main.server.luau` (the only place that builds adapters).
-3. Add `tests/features/<feature>/<Module>.test.luau` and register it in `scripts/test.luau`.
+3. Add `tests/features/<feature>/<Module>.test.luau` and register it in `scripts/suites.luau`.
 4. For a remote: validate every argument with `shared/net/Validation` and gate it with a `RateLimiter` (ADR 0012).
-5. `stylua .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, then open a PR (CI runs the same). Several agents at once: read `docs/multi-agent.md`.
+5. `stylua .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `pwsh scripts/coverage.ps1`, then open a PR (CI runs the same). Several agents at once: read `docs/multi-agent.md`.
 
 ## Start a new game from this template
 
@@ -84,8 +84,22 @@ No community MCP servers; no secrets in the repo; nothing that moves real money 
 
 ## Tests
 
-Pure logic: `tests/` via `lune run scripts/test`; types via `pwsh scripts/analyze.ps1` (both run in CI). Engine-bound adapters have no automated tests yet; the plan is the Open Cloud Luau Execution API once Victor creates the key ([ADR 0005](docs/adr/0005-tests-lune-then-luau-execution.md)).
+Pure logic: `tests/` via `lune run scripts/test`; types via `pwsh scripts/analyze.ps1` (both run in CI). Adapters are tested with fakes (`tests/adapters/`); behavior against the real engine has no automated tests yet, the plan is the Open Cloud Luau Execution API once Victor creates the key ([ADR 0005](docs/adr/0005-tests-lune-then-luau-execution.md)).
 
 ## Status
 
 Verified locally on 2026-11-02: StyLua, Selene, `luau-lsp analyze` (0 errors), Lune tests and `rojo build`. CI has not run yet (no remote). Still unverified: Studio MCP with several Studios, the engine adapters (no engine tests until the Luau Execution API), and the new-solver pass (informational, reports errors on ProfileStore typing and `os.time` as a clock).
+
+## Coverage
+
+Line coverage of the pure Luau code, measured with the Luau CLI ([ADR 0017](docs/adr/0017-luau-coverage-gate.md)):
+
+```powershell
+rokit install                      # pins luau and lune (rokit.toml); `rokit trust luau-lang/luau` once if asked
+pwsh scripts/coverage.ps1          # runs the suites under `luau --coverage`, writes logs/coverage.lcov, prints the table
+```
+
+- The gate is 75 % of the TOTAL lines (`-Threshold` to try another value) and also fails when a file that is not excluded never appears in the lcov (a module no test loads would otherwise hide).
+- Excluded: `vendor/`, `types/`, `tests/`, `generated/`, `src/shared/ports/`, `Main.*` and any file that touches `game` (engine code). The report lists every excluded file.
+- This is line coverage only (no branches). Tests that need the engine are out of scope until the Luau Execution API job exists (ADR 0005).
+- `scripts/suites.luau` is the runtime-neutral runner; `scripts/test.luau` is its Lune entry and `scripts/test_luau.luau` its Luau CLI entry.

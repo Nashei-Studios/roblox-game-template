@@ -7,12 +7,13 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - `src/server` -> ServerScriptService/Server. `Main.server` is the ONLY Script (composition root); `adapters/` implement ports over engine services; `features/<name>/` server-only services.
 - `src/client` -> StarterPlayerScripts/Client. `Main.client` is the ONLY LocalScript.
 - `vendor/` pinned third-party code (ProfileStore) with LICENSE; never edit it. `types/` is data for `analyze`.
-- `tests/` mirrors `src`; `scripts/test.luau` runner; `docs/adr/` decisions; `docs/architecture.md` diagrams.
+- `tests/` mirrors `src`; `scripts/suites.luau` neutral test runner (entries `test.luau` for Lune, `test_luau.luau` for Luau); `docs/adr/` decisions; `docs/architecture.md` diagrams.
 
 ## Commands (run via Rokit tools)
 - `stylua .` format, `stylua --check .` verify
 - `selene .` lint
-- `lune run scripts/test` unit tests (add new suites to the list in `scripts/test.luau`)
+- `lune run scripts/test` unit tests (add new suites to the list in `scripts/suites.luau`)
+- `pwsh scripts/coverage.ps1` line coverage gate (75 % of the total, ADR 0017)
 - `pwsh scripts/analyze.ps1` type-check (`-NewSolver` for the informational pass)
 - `rojo serve` sync to Studio
 

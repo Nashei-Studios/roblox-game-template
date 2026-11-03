@@ -88,3 +88,21 @@ jobs:
         run: |
           mkdir -p places
           rojo build default.project.json -o places/ci.rbxl
+
+  coverage:
+    # Line coverage gate (ADR 0017): luau --coverage, 75 % of the total, no file left unmeasured.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          version: v1.2.0
+          cache: "true"
+      - name: Run the suites with coverage
+        run: |
+          mkdir -p logs
+          luau --coverage scripts/test_luau.luau
+          mv coverage.out logs/coverage.lcov
+      - name: Gate (75 % of the total, per-file report)
+        run: lune run scripts/coverage_report logs/coverage.lcov 75 src
