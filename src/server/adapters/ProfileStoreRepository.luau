@@ -13,6 +13,8 @@ type Result<T, E> = { ok: true, value: T } | { ok: false, error: E }
 
 type ProfileError = "session_unavailable" | "not_active" | "save_failed"
 
+type SaveConfirmError = "not_active" | "timeout"
+
 type ProfileHandle<T> = {
     key: string,
     data: T,
@@ -20,6 +22,14 @@ type ProfileHandle<T> = {
     save: (self: ProfileHandle<T>) -> Result<nil, ProfileError>,
     release: (self: ProfileHandle<T>) -> Result<nil, ProfileError>,
     onSessionEnd: (self: ProfileHandle<T>, listener: () -> ()) -> (),
+    -- Yields until a saved snapshot satisfies `isSaved` (a confirmed DataStore write), the
+    -- session ends without it ("not_active") or `timeoutSeconds` pass ("timeout"). Used to
+    -- confirm that a purchase reached the DataStore before Roblox is told it was granted.
+    confirmSaved: (
+        self: ProfileHandle<T>,
+        isSaved: (saved: T) -> boolean,
+        timeoutSeconds: number
+    ) -> Result<nil, SaveConfirmError>,
 }
 
 type ProfileRepository<T> = {
@@ -29,6 +39,9 @@ type ProfileRepository<T> = {
 -- The slice of ProfileStore's Profile that this adapter uses.
 export type ProfileLike<T> = {
     Data: T,
+    -- Last snapshot that ProfileStore confirmed written to the DataStore (a table replaced
+    -- after every successful save; read it fresh each time).
+    LastSavedData: T,
     IsActive: (self: unknown) -> boolean,
     Reconcile: (self: unknown) -> (),
     Save: (self: unknown) -> (),
@@ -47,9 +60,20 @@ export type StoreLike<T> = {
     ) -> ProfileLike<T>?,
 }
 
+-- Time and yielding come from the composition root (os.clock and task.wait there), so the
+-- confirmation loop runs under Lune with a fake clock.
+export type Runtime = {
+    clock: () -> number,
+    wait: (seconds: number) -> (),
+}
+
+local POLL_SECONDS = 0.1
+-- A save already in flight when we ask may predate the data we want confirmed, so ask again.
+local SAVE_RETRY_SECONDS = 5
+
 local ProfileStoreRepository = {}
 
-function ProfileStoreRepository.new<T>(store: StoreLike<T>): ProfileRepository<T>
+function ProfileStoreRepository.new<T>(store: StoreLike<T>, runtime: Runtime): ProfileRepository<T>
     local repository: ProfileRepository<T> = {
         load = function(
             _self: ProfileRepository<T>,
@@ -82,6 +106,33 @@ function ProfileStoreRepository.new<T>(store: StoreLike<T>): ProfileRepository<T
                     end
                     profile:EndSession()
                     return { ok = true, value = nil }
+                end,
+                confirmSaved = function(
+                    _handle: ProfileHandle<T>,
+                    isSaved: (saved: T) -> boolean,
+                    timeoutSeconds: number
+                ): Result<nil, SaveConfirmError>
+                    local deadline = runtime.clock() + timeoutSeconds
+                    local nextSaveAt = runtime.clock()
+                    while true do
+                        -- Official ProfileStore pattern: LastSavedData is the confirmed snapshot
+                        -- and survives the session ending, so check it before IsActive.
+                        if isSaved(profile.LastSavedData) then
+                            return { ok = true, value = nil }
+                        end
+                        if not profile:IsActive() then
+                            return { ok = false, error = "not_active" }
+                        end
+                        local now = runtime.clock()
+                        if now >= deadline then
+                            return { ok = false, error = "timeout" }
+                        end
+                        if now >= nextSaveAt then
+                            profile:Save()
+                            nextSaveAt = now + SAVE_RETRY_SECONDS
+                        end
+                        runtime.wait(POLL_SECONDS)
+                    end
                 end,
                 onSessionEnd = function(_handle: ProfileHandle<T>, listener: () -> ())
                     profile.OnSessionEnd:Connect(listener)

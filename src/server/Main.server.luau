@@ -49,7 +49,12 @@ local store: ProfileStoreRepository.StoreLike<PlayerData.PlayerData> = {
         return profileStore:StartSessionAsync(profileKey, params or {})
     end,
 }
-local repository = ProfileStoreRepository.new(store)
+local repository = ProfileStoreRepository.new(store, {
+    clock = os.clock,
+    wait = function(seconds: number)
+        task.wait(seconds)
+    end,
+})
 local flags = Flags.new(
     ConfigServiceFlags.new({
         configService = {
@@ -121,6 +126,18 @@ local productGrants = ProductGrants.new(Config.grantsByName(Config.default))
 
 local monetization = MonetizationService.new({
     ledgers = ledgers,
+    -- Roblox is told the purchase was granted only after the data holding its PurchaseId is
+    -- confirmed saved (ADR 0016).
+    confirmSaved = function(userId: number, purchaseId: string): boolean
+        local confirmed = playerData:confirmSaved(
+            tostring(userId),
+            function(saved: PlayerData.PlayerData): boolean
+                return table.find(saved.purchaseIds, purchaseId) ~= nil
+            end,
+            Config.default.saveConfirmTimeoutSeconds
+        )
+        return confirmed.ok
+    end,
     -- True only when the product was delivered; a failed grant is not recorded, so Roblox
     -- retries the receipt (see Monetization.processReceipt).
     grant = function(receipt: Monetization.ReceiptInfo): boolean

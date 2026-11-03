@@ -4,10 +4,35 @@ local harness = require("../harness")
 
 type Data = { coins: number }
 
+type FakeClock = {
+    runtime: ProfileStoreRepository.Runtime,
+    now: () -> number,
+}
+
+-- A clock that only advances when the code under test waits.
+local function newClock(): FakeClock
+    local current = 0
+    return {
+        runtime = {
+            clock = function(): number
+                return current
+            end,
+            wait = function(seconds: number)
+                current += seconds
+            end,
+        },
+        now = function(): number
+            return current
+        end,
+    }
+end
+
 type FakeProfile = {
     profile: ProfileStoreRepository.ProfileLike<Data>,
     calls: { string },
     endSession: () -> (),
+    -- Stands in for ProfileStore's OnAfterSave: publishes the data as the confirmed snapshot.
+    completeSave: () -> (),
 }
 
 local function newProfile(data: Data): FakeProfile
@@ -22,6 +47,7 @@ local function newProfile(data: Data): FakeProfile
     end
     local profile: ProfileStoreRepository.ProfileLike<Data> = {
         Data = data,
+        LastSavedData = { coins = data.coins },
         IsActive = function(_self: unknown): boolean
             return active
         end,
@@ -42,7 +68,15 @@ local function newProfile(data: Data): FakeProfile
             end,
         },
     }
-    return { profile = profile, calls = calls, endSession = endSession }
+    local function completeSave()
+        profile.LastSavedData = { coins = profile.Data.coins }
+    end
+    return {
+        profile = profile,
+        calls = calls,
+        endSession = endSession,
+        completeSave = completeSave,
+    }
 end
 
 local function newStore(
@@ -66,7 +100,7 @@ return function(suite: harness.Harness)
     suite:test("load reconciles the profile and exposes its live data", function()
         local fake = newProfile({ coins = 9 })
         local store, keys = newStore(fake.profile)
-        local loaded = ProfileStoreRepository.new(store):load("42")
+        local loaded = ProfileStoreRepository.new(store, newClock().runtime):load("42")
         harness.isTrue(loaded.ok, "loaded")
         harness.equal(keys[1], "42", "key")
         harness.equal(fake.calls[1], "Reconcile", "reconcile first")
@@ -78,7 +112,7 @@ return function(suite: harness.Harness)
 
     suite:test("an unavailable session maps to session_unavailable", function()
         local store = newStore(nil)
-        local loaded = ProfileStoreRepository.new(store):load("42")
+        local loaded = ProfileStoreRepository.new(store, newClock().runtime):load("42")
         harness.isFalse(loaded.ok, "must fail")
         if not loaded.ok then
             harness.equal(loaded.error, "session_unavailable", "error")
@@ -88,7 +122,7 @@ return function(suite: harness.Harness)
     suite:test("save schedules a Save while active and reports not_active after the end", function()
         local fake = newProfile({ coins = 0 })
         local store = newStore(fake.profile)
-        local loaded = ProfileStoreRepository.new(store):load("1")
+        local loaded = ProfileStoreRepository.new(store, newClock().runtime):load("1")
         if not loaded.ok then
             error("load failed")
         end
@@ -105,7 +139,7 @@ return function(suite: harness.Harness)
     suite:test("release ends the session once; a second release is not_active", function()
         local fake = newProfile({ coins = 0 })
         local store = newStore(fake.profile)
-        local loaded = ProfileStoreRepository.new(store):load("1")
+        local loaded = ProfileStoreRepository.new(store, newClock().runtime):load("1")
         if not loaded.ok then
             error("load failed")
         end
@@ -121,7 +155,7 @@ return function(suite: harness.Harness)
     suite:test("onSessionEnd forwards the listener to the ProfileStore signal", function()
         local fake = newProfile({ coins = 0 })
         local store = newStore(fake.profile)
-        local loaded = ProfileStoreRepository.new(store):load("1")
+        local loaded = ProfileStoreRepository.new(store, newClock().runtime):load("1")
         if not loaded.ok then
             error("load failed")
         end
@@ -131,5 +165,78 @@ return function(suite: harness.Harness)
         end)
         fake.endSession()
         harness.equal(fired, 1, "listener calls")
+    end)
+
+    suite:test(
+        "confirmSaved returns ok once ProfileStore publishes matching LastSavedData",
+        function()
+            local fake = newProfile({ coins = 0 })
+            local clock = newClock()
+            local loaded = ProfileStoreRepository.new(newStore(fake.profile), clock.runtime)
+                :load("1")
+            if not loaded.ok then
+                error("load failed")
+            end
+            fake.profile.Data.coins = 50
+            -- The save completes 0.3 s after the adapter asks for it.
+            local baseWait = clock.runtime.wait
+            clock.runtime.wait = function(seconds: number)
+                baseWait(seconds)
+                if table.find(fake.calls, "Save") ~= nil and clock.now() >= 0.3 then
+                    fake.completeSave()
+                end
+            end
+            local confirmed = loaded.value:confirmSaved(function(saved: Data): boolean
+                return saved.coins == 50
+            end, 30)
+            harness.isTrue(confirmed.ok, "confirmed")
+            harness.isTrue(table.find(fake.calls, "Save") ~= nil, "asked ProfileStore to save")
+        end
+    )
+
+    suite:test(
+        "confirmSaved times out when the save never lands, and keeps asking to save",
+        function()
+            local fake = newProfile({ coins = 0 })
+            local clock = newClock()
+            local loaded = ProfileStoreRepository.new(newStore(fake.profile), clock.runtime)
+                :load("1")
+            if not loaded.ok then
+                error("load failed")
+            end
+            fake.profile.Data.coins = 50
+            local confirmed = loaded.value:confirmSaved(function(saved: Data): boolean
+                return saved.coins == 50
+            end, 12)
+            harness.isFalse(confirmed.ok, "not confirmed")
+            if not confirmed.ok then
+                harness.equal(confirmed.error, "timeout", "error")
+            end
+            local saves = 0
+            for _, call in fake.calls do
+                if call == "Save" then
+                    saves += 1
+                end
+            end
+            harness.equal(saves, 3, "saves at t=0, 5 and 10")
+        end
+    )
+
+    suite:test("confirmSaved reports not_active when the session ends without the data", function()
+        local fake = newProfile({ coins = 0 })
+        local clock = newClock()
+        local loaded = ProfileStoreRepository.new(newStore(fake.profile), clock.runtime):load("1")
+        if not loaded.ok then
+            error("load failed")
+        end
+        fake.profile.Data.coins = 50
+        fake.endSession()
+        local confirmed = loaded.value:confirmSaved(function(saved: Data): boolean
+            return saved.coins == 50
+        end, 30)
+        harness.isFalse(confirmed.ok, "not confirmed")
+        if not confirmed.ok then
+            harness.equal(confirmed.error, "not_active", "error")
+        end
     end)
 end

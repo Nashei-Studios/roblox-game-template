@@ -9,6 +9,8 @@ type Result<T, E> = { ok: true, value: T } | { ok: false, error: E }
 
 type ProfileError = "session_unavailable" | "not_active" | "save_failed"
 
+type SaveConfirmError = "not_active" | "timeout"
+
 type ProfileHandle<T> = {
     key: string,
     data: T,
@@ -16,6 +18,14 @@ type ProfileHandle<T> = {
     save: (self: ProfileHandle<T>) -> Result<nil, ProfileError>,
     release: (self: ProfileHandle<T>) -> Result<nil, ProfileError>,
     onSessionEnd: (self: ProfileHandle<T>, listener: () -> ()) -> (),
+    -- Yields until a saved snapshot satisfies `isSaved` (a confirmed DataStore write), the
+    -- session ends without it ("not_active") or `timeoutSeconds` pass ("timeout"). Used to
+    -- confirm that a purchase reached the DataStore before Roblox is told it was granted.
+    confirmSaved: (
+        self: ProfileHandle<T>,
+        isSaved: (saved: T) -> boolean,
+        timeoutSeconds: number
+    ) -> Result<nil, SaveConfirmError>,
 }
 
 type ProfileRepository<T> = {
@@ -42,6 +52,14 @@ export type Joined<T> = {
 export type PlayerDataService<T, E> = {
     join: (self: PlayerDataService<T, E>, key: string) -> Result<Joined<T>, ProfileError | E>,
     leave: (self: PlayerDataService<T, E>, key: string) -> Result<nil, ProfileError>,
+    -- Yields until a saved snapshot satisfies `isSaved`; see ProfileHandle.confirmSaved.
+    -- "not_active" also covers a player whose data is not loaded.
+    confirmSaved: (
+        self: PlayerDataService<T, E>,
+        key: string,
+        isSaved: (saved: T) -> boolean,
+        timeoutSeconds: number
+    ) -> Result<nil, SaveConfirmError>,
     -- nil when the player's data is not loaded.
     get: (self: PlayerDataService<T, E>, key: string) -> T?,
 }
@@ -90,6 +108,18 @@ function PlayerDataServiceModule.new<T, E>(deps: Deps<T, E>): PlayerDataService<
             end
             handles[key] = nil
             return handle:release()
+        end,
+        confirmSaved = function(
+            _self: PlayerDataService<T, E>,
+            key: string,
+            isSaved: (saved: T) -> boolean,
+            timeoutSeconds: number
+        ): Result<nil, SaveConfirmError>
+            local handle = handles[key]
+            if handle == nil then
+                return { ok = false, error = "not_active" }
+            end
+            return handle:confirmSaved(isSaved, timeoutSeconds)
         end,
         get = function(_self: PlayerDataService<T, E>, key: string): T?
             local handle = handles[key]

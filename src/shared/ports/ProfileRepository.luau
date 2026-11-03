@@ -11,6 +11,8 @@ export type Result<T, E> = { ok: true, value: T } | { ok: false, error: E }
 
 export type ProfileError = "session_unavailable" | "not_active" | "save_failed"
 
+export type SaveConfirmError = "not_active" | "timeout"
+
 export type ProfileHandle<T> = {
     key: string,
     -- Live table: mutate it, then save. Only valid while the handle is active.
@@ -21,6 +23,14 @@ export type ProfileHandle<T> = {
     release: (self: ProfileHandle<T>) -> Result<nil, ProfileError>,
     -- Fires when the session ends for any reason (release, or another server took it).
     onSessionEnd: (self: ProfileHandle<T>, listener: () -> ()) -> (),
+    -- Yields until a saved snapshot satisfies `isSaved` (a confirmed DataStore write), the
+    -- session ends without it ("not_active") or `timeoutSeconds` pass ("timeout"). Used to
+    -- confirm that a purchase reached the DataStore before Roblox is told it was granted.
+    confirmSaved: (
+        self: ProfileHandle<T>,
+        isSaved: (saved: T) -> boolean,
+        timeoutSeconds: number
+    ) -> Result<nil, SaveConfirmError>,
 }
 
 export type ProfileRepository<T> = {

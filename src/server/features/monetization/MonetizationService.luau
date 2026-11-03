@@ -4,7 +4,7 @@
     shared/features/monetization/Monetization.luau. Dependencies are injected; the composition
     root (Main.server) supplies the ledger provider (backed by the player's profile) and `grant`.
     Real-money flows are the developer's responsibility: test only on a dev place and never
-    mark a receipt processed before the grant is saved.
+    mark a receipt processed before the grant is confirmed saved (Monetization.processReceipt).
 ]]
 
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -16,6 +16,8 @@ local LedgerProvider = require(ReplicatedStorage.Shared.ports.LedgerProvider)
 export type Deps = {
     ledgers: LedgerProvider.LedgerProvider,
     grant: Monetization.GrantFn,
+    -- Yields until the player's saved data contains the PurchaseId; see Monetization.ConfirmSavedFn.
+    confirmSaved: (userId: number, purchaseId: string) -> boolean,
 }
 
 export type MonetizationService = {
@@ -44,8 +46,15 @@ function MonetizationServiceModule.new(deps: Deps): MonetizationService
                     purchaseId = info.PurchaseId,
                     productId = info.ProductId,
                 }
-                local decision = Monetization.processReceipt(ledger, receipt, deps.grant)
-                if decision == "failed" then
+                local decision = Monetization.processReceipt(
+                    ledger,
+                    receipt,
+                    deps.grant,
+                    function(purchaseId: string): boolean
+                        return deps.confirmSaved(info.PlayerId, purchaseId)
+                    end
+                )
+                if decision == "failed" or decision == "unconfirmed" then
                     return Enum.ProductPurchaseDecision.NotProcessedYet
                 end
                 return Enum.ProductPurchaseDecision.PurchaseGranted

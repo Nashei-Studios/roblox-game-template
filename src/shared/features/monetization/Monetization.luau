@@ -5,7 +5,8 @@
     the result to Enum.ProductPurchaseDecision.
 
     Rule: a purchase is granted at most once per PurchaseId. A failed grant is NOT
-    recorded, so Roblox retries the receipt on the next join.
+    recorded, and a grant whose save is not confirmed is reported as unconfirmed, so Roblox
+    retries the receipt (ADR 0016).
 ]]
 
 export type ReceiptInfo = {
@@ -14,7 +15,10 @@ export type ReceiptInfo = {
     productId: number,
 }
 
-export type ReceiptDecision = "granted" | "alreadyGranted" | "failed"
+-- granted: delivered now and confirmed saved. alreadyGranted: delivered earlier and confirmed
+-- saved. unconfirmed: delivered in memory but the save was not confirmed (retry later).
+-- failed: not delivered. Only "granted" and "alreadyGranted" may become PurchaseGranted.
+export type ReceiptDecision = "granted" | "alreadyGranted" | "unconfirmed" | "failed"
 
 -- Storage for processed purchase ids. Production code backs this with the player's
 -- persisted data (see PlayerData.luau and newListLedger); tests use the in-memory ledger.
@@ -25,6 +29,10 @@ export type ReceiptLedger = {
 
 -- Grants the product. Returns true only when the grant fully succeeded.
 export type GrantFn = (receipt: ReceiptInfo) -> boolean
+
+-- Yields until the data holding this PurchaseId (and the grant) is confirmed saved; false when
+-- the player left, the session ended, or the save did not land in time.
+export type ConfirmSavedFn = (purchaseId: string) -> boolean
 
 local Monetization = {}
 
@@ -54,20 +62,27 @@ function Monetization.newMemoryLedger(capacity: number?): ReceiptLedger
     return Monetization.newListLedger({}, capacity or 50)
 end
 
+--- Rule: the grant and the ledger entry live in the same saved data, so a purchase is reported
+--- as processed only once that data is confirmed saved. If the grant is applied but the save
+--- is not confirmed, the entry stays in memory: Roblox retries the receipt, `has` is true, the
+--- grant is NOT applied twice, and the retry only waits for the save again.
 function Monetization.processReceipt(
     ledger: ReceiptLedger,
     receipt: ReceiptInfo,
-    grant: GrantFn
+    grant: GrantFn,
+    confirmSaved: ConfirmSavedFn
 ): ReceiptDecision
-    if ledger:has(receipt.purchaseId) then
-        return "alreadyGranted"
+    local alreadyDelivered = ledger:has(receipt.purchaseId)
+    if not alreadyDelivered then
+        if not grant(receipt) then
+            return "failed"
+        end
+        ledger:record(receipt.purchaseId)
     end
-    local granted = grant(receipt)
-    if not granted then
-        return "failed"
+    if not confirmSaved(receipt.purchaseId) then
+        return "unconfirmed"
     end
-    ledger:record(receipt.purchaseId)
-    return "granted"
+    return if alreadyDelivered then "alreadyGranted" else "granted"
 end
 
 return Monetization

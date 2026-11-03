@@ -150,7 +150,10 @@ return function(suite: harness.Harness)
                 local legacy: unknown = { schemaVersion = 1, coins = 40, purchases = {} }
                 return legacy :: PlayerData.PlayerData
             end,
-            clone = clone,
+            -- Identity clone: the legacy table has no current-schema fields to copy.
+            clone = function(data: PlayerData.PlayerData): PlayerData.PlayerData
+                return data
+            end,
         })
         local service = PlayerDataService.new({
             repository = repository,
@@ -166,4 +169,24 @@ return function(suite: harness.Harness)
             harness.equal(joined.value.sessionIndex, 1, "sessionIndex")
         end
     end)
+
+    suite:test(
+        "confirmSaved delegates to the player's handle and reports not_active when absent",
+        function()
+            local service = newService({})
+            local missing = service:confirmSaved("9", function(): boolean
+                return true
+            end, 1)
+            harness.isFalse(missing.ok, "no data loaded")
+            service:join("1")
+            local present = service:confirmSaved(
+                "1",
+                function(saved: PlayerData.PlayerData): boolean
+                    return saved.sessionCount == 1
+                end,
+                1
+            )
+            harness.isTrue(present.ok, "confirmed")
+        end
+    )
 end

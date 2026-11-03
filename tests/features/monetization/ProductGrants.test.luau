@@ -3,6 +3,17 @@ local Monetization = require("../../../src/shared/features/monetization/Monetiza
 local ProductGrants = require("../../../src/shared/features/monetization/ProductGrants")
 local harness = require("../../harness")
 
+-- Confirms every save: these tests cover delivery and idempotency, not persistence.
+local function process(
+    ledger: Monetization.ReceiptLedger,
+    receipt: Monetization.ReceiptInfo,
+    grant: Monetization.GrantFn
+): Monetization.ReceiptDecision
+    return Monetization.processReceipt(ledger, receipt, grant, function(): boolean
+        return true
+    end)
+end
+
 local function newGrants(): ProductGrants.ProductGrants
     return ProductGrants.new({
         Coins100 = { kind = "coins", amount = 100 },
@@ -59,12 +70,8 @@ return function(suite: harness.Harness)
         end
         local receipt: Monetization.ReceiptInfo =
             { playerId = 1, purchaseId = "p-1", productId = 10 }
-        harness.equal(Monetization.processReceipt(ledger, receipt, grant), "granted", "first")
-        harness.equal(
-            Monetization.processReceipt(ledger, receipt, grant),
-            "alreadyGranted",
-            "second"
-        )
+        harness.equal(process(ledger, receipt, grant), "granted", "first")
+        harness.equal(process(ledger, receipt, grant), "alreadyGranted", "second")
         harness.equal(data.coins, 100, "delivered once")
     end)
 
@@ -74,7 +81,7 @@ return function(suite: harness.Harness)
         local ledger = Monetization.newListLedger(data.purchaseIds, 50)
         local receipt: Monetization.ReceiptInfo =
             { playerId = 1, purchaseId = "p-2", productId = 10 }
-        local decision = Monetization.processReceipt(ledger, receipt, function(): boolean
+        local decision = process(ledger, receipt, function(): boolean
             return grants:apply(data, "Nope").ok
         end)
         harness.equal(decision, "failed")

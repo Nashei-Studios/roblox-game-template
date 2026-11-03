@@ -28,6 +28,8 @@ export type GameConfig = {
     autosaveIntervalSeconds: number,
     -- Receipt ledger window: how many recent PurchaseIds each profile remembers (ADR 0016).
     purchaseLedgerSize: number,
+    -- Seconds a receipt waits for its save to be confirmed before Roblox is told to retry.
+    saveConfirmTimeoutSeconds: number,
     gamePasses: { ProductConfig },
     developerProducts: { DeveloperProductConfig },
 }
@@ -39,6 +41,7 @@ Config.default = {
     sessionLockTimeoutSeconds = 1800,
     autosaveIntervalSeconds = 120,
     purchaseLedgerSize = 50,
+    saveConfirmTimeoutSeconds = 30,
     gamePasses = {
         { name = "VIP", id = nil }, -- TODO(victor): set id
     },
@@ -69,6 +72,9 @@ function Config.validate(config: GameConfig): { string }
     end
     if config.purchaseLedgerSize < 1 or config.purchaseLedgerSize % 1 ~= 0 then
         table.insert(problems, "purchaseLedgerSize must be a positive integer")
+    end
+    if config.saveConfirmTimeoutSeconds <= 0 then
+        table.insert(problems, "saveConfirmTimeoutSeconds must be positive")
     end
     for _, pass in config.gamePasses do
         if pass.id == nil then

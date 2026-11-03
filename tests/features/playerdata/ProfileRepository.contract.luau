@@ -11,6 +11,7 @@ type Data = { coins: number }
 
 type Result<T, E> = { ok: true, value: T } | { ok: false, error: E }
 type ProfileError = "session_unavailable" | "not_active" | "save_failed"
+type SaveConfirmError = "not_active" | "timeout"
 type ProfileHandle = {
     key: string,
     data: Data,
@@ -18,6 +19,11 @@ type ProfileHandle = {
     save: (self: ProfileHandle) -> Result<nil, ProfileError>,
     release: (self: ProfileHandle) -> Result<nil, ProfileError>,
     onSessionEnd: (self: ProfileHandle, listener: () -> ()) -> (),
+    confirmSaved: (
+        self: ProfileHandle,
+        isSaved: (saved: Data) -> boolean,
+        timeoutSeconds: number
+    ) -> Result<nil, SaveConfirmError>,
 }
 export type Repository = {
     load: (self: Repository, key: string) -> Result<ProfileHandle, ProfileError>,
@@ -80,6 +86,48 @@ function contract.run(suite: harness.Harness, makeRepository: () -> Repository)
         end)
         handle:release()
         harness.equal(notified, 1, "listener calls")
+    end)
+
+    suite:test("confirmSaved succeeds once the data reached storage", function()
+        local handle = loadOrFail(makeRepository(), "p1")
+        handle.data.coins = 7
+        local confirmed = handle:confirmSaved(function(saved: Data): boolean
+            return saved.coins == 7
+        end, 1)
+        harness.isTrue(confirmed.ok, "confirmed")
+    end)
+
+    suite:test("confirmSaved still confirms data saved by the final release", function()
+        local handle = loadOrFail(makeRepository(), "p1")
+        handle.data.coins = 9
+        handle:release()
+        local confirmed = handle:confirmSaved(function(saved: Data): boolean
+            return saved.coins == 9
+        end, 1)
+        harness.isTrue(confirmed.ok, "confirmed after release")
+    end)
+
+    suite:test("confirmSaved on an ended session without the data reports not_active", function()
+        local handle = loadOrFail(makeRepository(), "p1")
+        handle:release()
+        local confirmed = handle:confirmSaved(function(saved: Data): boolean
+            return saved.coins == 123
+        end, 0.1)
+        harness.isFalse(confirmed.ok, "not confirmed")
+        if not confirmed.ok then
+            harness.equal(confirmed.error, "not_active")
+        end
+    end)
+
+    suite:test("confirmSaved reports timeout when the snapshot never matches", function()
+        local handle = loadOrFail(makeRepository(), "p1")
+        local confirmed = handle:confirmSaved(function(saved: Data): boolean
+            return saved.coins == 123
+        end, 0.1)
+        harness.isFalse(confirmed.ok, "not confirmed")
+        if not confirmed.ok then
+            harness.equal(confirmed.error, "timeout")
+        end
     end)
 
     suite:test("keys are independent", function()

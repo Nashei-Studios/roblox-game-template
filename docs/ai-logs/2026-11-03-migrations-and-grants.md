@@ -23,3 +23,9 @@ Ficha R1-T2: D-30 (pure migrations), real `sessionIndex`, D-38 (product delivery
 - `MonetizationService` records the receipt before the grant is saved to DataStore (autosave); consider saving before returning `PurchaseGranted` when real products exist (needs Victor's approval: monetization change).
 - Tests against the real engine remain R4 (Execution API key from Victor).
 - No GitHub remote yet; nothing pushed.
+
+## Follow-up: confirmed save before PurchaseGranted (ADR 0016)
+- Closed the open item above. ProfileStore API used: `Profile.LastSavedData`, `Profile.OnAfterSave`, `Profile:Save()` (vendored source plus upstream "Developer Products" docs via context7). There is no awaitable save, so the port exposes `confirmSaved` and the adapter polls `LastSavedData`.
+- Decisions: the PurchaseId stays recorded in memory after a timeout (the retry does not grant twice and only waits again); ledger is `purchaseIds` (oldest first, `purchaseLedgerSize` 50); schema v3 with fixture; `saveConfirmTimeoutSeconds` 30.
+- The vendored ProfileStore was not modified. Real `LastSavedData` timing and throttling are unverified without Studio (R4).
+- ADR 0015 belongs to another branch; the index here lists 0014 and 0016 only, so expect a trivial merge in `docs/adr/README.md`.
