@@ -28,6 +28,10 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - New decision -> new ADR in `docs/adr/`, never edit an accepted one.
 - Conventional Commits in English. Everything enters `main` by PR.
 
+## Roblox knowledge (ADR 0021)
+- The `lihfolk` plugin is enabled at project scope from the pinned copy in `D:\Victor\Roblox\kits\lihfolk-vault-v2.5.0\`. Before writing player data, receipts, remotes, monetization or anything with a 2025-2026 limit, price or policy, look it up through the `lihfolk` router (or `python -I "<vault>/_tools/vault.py" "<question>"`) and cite the note titles in the PR.
+- The template's ports and features layout wins over LihFolk's drop-in systems; each game derives its own UI tokens. LihFolk's checker findings are hints; our CI is the gate.
+
 ## Multi-agent (docs/multi-agent.md)
 - One git worktree and branch per agent; own one `features/<name>/` folder; cross-feature, `ports/`, `Main.*`, `vendor/`, CI go through the orchestrator.
 - Headless first: `stylua --check .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `rojo build` must pass before you ask for Studio.
