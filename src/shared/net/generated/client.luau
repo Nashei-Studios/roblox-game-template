@@ -133,11 +133,29 @@ if not RunService:IsRunning() then
 	local noop = function() end
 	return table.freeze({
 		sendEvents = noop,
+		SkipStage = table.freeze({
+			fire = noop
+		}),
 		RequestPurchase = table.freeze({
+			fire = noop
+		}),
+		ProgressChanged = table.freeze({
+			setCallback = noop
+		}),
+		PressBatch = table.freeze({
+			fire = noop
+		}),
+		MultiplierChanged = table.freeze({
+			setCallback = noop
+		}),
+		Finish = table.freeze({
 			fire = noop
 		}),
 		CoinsChanged = table.freeze({
 			setCallback = noop
+		}),
+		BuyCap = table.freeze({
+			fire = noop
 		}),
 	}) :: Events
 end
@@ -164,8 +182,10 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(1)
-local reliable_event_queue: { [number]: { any } } = table.create(1)
+local reliable_events = table.create(3)
+local reliable_event_queue: { [number]: { any } } = table.create(3)
+reliable_event_queue[2] = {}
+reliable_event_queue[1] = {}
 reliable_event_queue[0] = {}
 reliable.OnClientEvent:Connect(function(buff, inst)
 	incoming_buff = buff
@@ -175,7 +195,31 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 	local len = buffer.len(buff)
 	while incoming_read < len do
 		local id = buffer.readu8(buff, read(1))
-		if id == 0 then -- CoinsChanged
+		if id == 2 then -- ProgressChanged
+			local value, value2
+			value = buffer.readu8(incoming_buff, read(1))
+			value2 = buffer.readu8(incoming_buff, read(1))
+			if reliable_events[2] then
+				reliable_events[2](value, value2)
+			else
+				table.insert(reliable_event_queue[2], { value, value2 })
+				if #reliable_event_queue[2] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[2]} events in queue for ProgressChanged. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 1 then -- MultiplierChanged
+			local value, value2
+			value = buffer.readf32(incoming_buff, read(4))
+			value2 = buffer.readu8(incoming_buff, read(1))
+			if reliable_events[1] then
+				reliable_events[1](value, value2)
+			else
+				table.insert(reliable_event_queue[1], { value, value2 })
+				if #reliable_event_queue[1] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[1]} events in queue for MultiplierChanged. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 0 then -- CoinsChanged
 			local value
 			value = buffer.readu32(incoming_buff, read(4))
 			if reliable_events[0] then
@@ -196,6 +240,12 @@ table.freeze(polling_queues_unreliable)
 
 local returns = {
 	sendEvents = sendEvents,
+	SkipStage = {
+		fire = function()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+		end,
+	},
 	RequestPurchase = {
 		fire = function(product: ("Coins100"))
 			alloc(1)
@@ -204,6 +254,48 @@ local returns = {
 			else
 				error("Invalid enumerator")
 			end
+		end,
+	},
+	ProgressChanged = {
+		setCallback = function(callback: (highestStage: (number), multiplierCap: (number)) -> ()): () -> ()
+			reliable_events[2] = callback
+			for _, value in reliable_event_queue[2] do
+				callback(unpack(value)				)
+
+			end
+			reliable_event_queue[2] = {}
+			return function()
+				reliable_events[2] = nil
+			end
+		end,
+	},
+	PressBatch = {
+		fire = function(presses: (number))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, presses)
+		end,
+	},
+	MultiplierChanged = {
+		setCallback = function(callback: (multiplier: (number), multiplierCap: (number)) -> ()): () -> ()
+			reliable_events[1] = callback
+			for _, value in reliable_event_queue[1] do
+				callback(unpack(value)				)
+
+			end
+			reliable_event_queue[1] = {}
+			return function()
+				reliable_events[1] = nil
+			end
+		end,
+	},
+	Finish = {
+		fire = function(stage: (number))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, stage)
 		end,
 	},
 	CoinsChanged = {
@@ -217,6 +309,12 @@ local returns = {
 			return function()
 				reliable_events[0] = nil
 			end
+		end,
+	},
+	BuyCap = {
+		fire = function()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 		end,
 	},
 }

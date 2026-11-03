@@ -135,7 +135,30 @@ if not RunService:IsRunning() then
 	local noop = function() end
 	return table.freeze({
 		sendEvents = noop,
+		SkipStage = table.freeze({
+			setCallback = noop
+		}),
 		RequestPurchase = table.freeze({
+			setCallback = noop
+		}),
+		ProgressChanged = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
+		PressBatch = table.freeze({
+			setCallback = noop
+		}),
+		MultiplierChanged = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
+		Finish = table.freeze({
 			setCallback = noop
 		}),
 		CoinsChanged = table.freeze({
@@ -144,6 +167,9 @@ if not RunService:IsRunning() then
 			fireExcept = noop,
 			fireList = noop,
 			fireSet = noop
+		}),
+		BuyCap = table.freeze({
+			setCallback = noop
 		}),
 	}) :: Events
 end
@@ -195,7 +221,7 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(1)
+local reliable_events = table.create(5)
 reliable.OnServerEvent:Connect(function(player, buff, inst)
 	incoming_buff = buff
 	incoming_inst = inst
@@ -204,11 +230,33 @@ reliable.OnServerEvent:Connect(function(player, buff, inst)
 	local len = buffer.len(buff)
 	while incoming_read < len do
 		local id = buffer.readu8(buff, read(1))
-		if id == 0 then -- RequestPurchase
+		if id == 4 then -- SkipStage
+			local value
+			if reliable_events[4] then
+				reliable_events[4](player, value)
+			end
+		elseif id == 0 then -- RequestPurchase
 			local value
 			value = "Coins100"
 			if reliable_events[0] then
 				reliable_events[0](player, value)
+			end
+		elseif id == 1 then -- PressBatch
+			local value
+			value = buffer.readu8(incoming_buff, read(1))
+			if reliable_events[1] then
+				reliable_events[1](player, value)
+			end
+		elseif id == 2 then -- Finish
+			local value
+			value = buffer.readu8(incoming_buff, read(1))
+			if reliable_events[2] then
+				reliable_events[2](player, value)
+			end
+		elseif id == 3 then -- BuyCap
+			local value
+			if reliable_events[3] then
+				reliable_events[3](player, value)
 			end
 		else
 			error("Unknown event id")
@@ -220,11 +268,199 @@ table.freeze(polling_queues_unreliable)
 
 local returns = {
 	sendEvents = sendEvents,
+	SkipStage = {
+		setCallback = function(callback: (player: Player) -> ()): () -> ()
+			reliable_events[4] = callback
+			return function()
+				reliable_events[4] = nil
+			end
+		end,
+	},
 	RequestPurchase = {
 		setCallback = function(callback: (player: Player, product: ("Coins100")) -> ()): () -> ()
 			reliable_events[0] = callback
 			return function()
 				reliable_events[0] = nil
+			end
+		end,
+	},
+	ProgressChanged = {
+		fire = function(player: Player, highestStage: (number), multiplierCap: (number))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, highestStage)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, multiplierCap)
+			player_map[player] = save()
+		end,
+		fireAll = function(highestStage: (number), multiplierCap: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, highestStage)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, multiplierCap)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, highestStage: (number), multiplierCap: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, highestStage)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, multiplierCap)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, highestStage: (number), multiplierCap: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, highestStage)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, multiplierCap)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, highestStage: (number), multiplierCap: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, highestStage)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, multiplierCap)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
+	PressBatch = {
+		setCallback = function(callback: (player: Player, presses: (number)) -> ()): () -> ()
+			reliable_events[1] = callback
+			return function()
+				reliable_events[1] = nil
+			end
+		end,
+	},
+	MultiplierChanged = {
+		fire = function(player: Player, multiplier: (number), multiplierCap: (number))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(4)
+			buffer.writef32(outgoing_buff, outgoing_apos, multiplier)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, multiplierCap)
+			player_map[player] = save()
+		end,
+		fireAll = function(multiplier: (number), multiplierCap: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(4)
+			buffer.writef32(outgoing_buff, outgoing_apos, multiplier)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, multiplierCap)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, multiplier: (number), multiplierCap: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(4)
+			buffer.writef32(outgoing_buff, outgoing_apos, multiplier)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, multiplierCap)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, multiplier: (number), multiplierCap: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(4)
+			buffer.writef32(outgoing_buff, outgoing_apos, multiplier)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, multiplierCap)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, multiplier: (number), multiplierCap: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(4)
+			buffer.writef32(outgoing_buff, outgoing_apos, multiplier)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, multiplierCap)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
+	Finish = {
+		setCallback = function(callback: (player: Player, stage: (number)) -> ()): () -> ()
+			reliable_events[2] = callback
+			return function()
+				reliable_events[2] = nil
 			end
 		end,
 	},
@@ -297,6 +533,14 @@ local returns = {
 				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
 				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
 				player_map[player] = save()
+			end
+		end,
+	},
+	BuyCap = {
+		setCallback = function(callback: (player: Player) -> ()): () -> ()
+			reliable_events[3] = callback
+			return function()
+				reliable_events[3] = nil
 			end
 		end,
 	},

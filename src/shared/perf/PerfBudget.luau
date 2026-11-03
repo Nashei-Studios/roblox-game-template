@@ -60,10 +60,18 @@ local PerfBudget: Budget = {
     clientRemotes = {
         -- The limit Main.server.luau builds the RequestPurchase RateLimiter from.
         RequestPurchase = { capacity = 3, refillPerSecond = 0.5 },
+        -- Key sprint (ADR 0020). The client batches key presses about 4 times a second.
+        PressBatch = { capacity = 6, refillPerSecond = 4 },
+        Finish = { capacity = 2, refillPerSecond = 0.5 },
+        BuyCap = { capacity = 2, refillPerSecond = 0.5 },
+        SkipStage = { capacity = 2, refillPerSecond = 0.5 },
     },
     serverRemotes = {
         -- At most a couple of grants per second reach one player.
         CoinsChanged = { maxPerSecond = 2 },
+        -- Key sprint: the controller reports a multiplier change at most every 0.25 s (tick).
+        MultiplierChanged = { maxPerSecond = 4 },
+        ProgressChanged = { maxPerSecond = 2 },
     },
     runtime = {
         maxHeartbeatMs = 16, -- sourced: server CPU time below 16 ms to hit 60 (production/analytics/performance)
