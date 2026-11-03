@@ -52,8 +52,8 @@ return function(suite: harness.Harness)
 
     suite:test("the same PurchaseId through the ledger grants only once", function()
         local grants = newGrants()
-        local data = { coins = 0, purchases = {} :: { [string]: boolean } }
-        local ledger = Monetization.newTableLedger(data.purchases)
+        local data = { coins = 0, purchaseIds = {} :: { string } }
+        local ledger = Monetization.newListLedger(data.purchaseIds, 50)
         local function grant(): boolean
             return grants:apply(data, "Coins100").ok
         end
@@ -70,8 +70,8 @@ return function(suite: harness.Harness)
 
     suite:test("a failed grant is not recorded, so Roblox can retry the receipt", function()
         local grants = newGrants()
-        local data = { coins = 0, purchases = {} :: { [string]: boolean } }
-        local ledger = Monetization.newTableLedger(data.purchases)
+        local data = { coins = 0, purchaseIds = {} :: { string } }
+        local ledger = Monetization.newListLedger(data.purchaseIds, 50)
         local receipt: Monetization.ReceiptInfo =
             { playerId = 1, purchaseId = "p-2", productId = 10 }
         local decision = Monetization.processReceipt(ledger, receipt, function(): boolean

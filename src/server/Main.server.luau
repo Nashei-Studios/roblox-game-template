@@ -113,7 +113,7 @@ local ledgers: LedgerProvider.LedgerProvider = {
         if data == nil then
             return nil
         end
-        return Monetization.newTableLedger(data.purchases)
+        return Monetization.newListLedger(data.purchaseIds, Config.default.purchaseLedgerSize)
     end,
 }
 

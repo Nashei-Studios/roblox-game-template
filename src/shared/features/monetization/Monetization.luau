@@ -17,7 +17,7 @@ export type ReceiptInfo = {
 export type ReceiptDecision = "granted" | "alreadyGranted" | "failed"
 
 -- Storage for processed purchase ids. Production code backs this with the player's
--- persisted data (see PlayerData.luau and newTableLedger); tests use the in-memory ledger.
+-- persisted data (see PlayerData.luau and newListLedger); tests use the in-memory ledger.
 export type ReceiptLedger = {
     has: (self: ReceiptLedger, purchaseId: string) -> boolean,
     record: (self: ReceiptLedger, purchaseId: string) -> (),
@@ -28,21 +28,30 @@ export type GrantFn = (receipt: ReceiptInfo) -> boolean
 
 local Monetization = {}
 
---- Ledger over a caller-owned table (the player's saved data), so records persist with the profile.
-function Monetization.newTableLedger(seen: { [string]: boolean }): ReceiptLedger
+--- Bounded ledger over a caller-owned list (the player's saved `purchaseIds`, oldest first),
+--- so records persist with the profile. Recording past `capacity` discards the oldest ids; a
+--- receipt older than that window could in theory be granted again, so keep `capacity` well
+--- above the number of purchases Roblox can leave unconfirmed (ADR 0016).
+function Monetization.newListLedger(ids: { string }, capacity: number): ReceiptLedger
     local ledger: ReceiptLedger = {
         has = function(_self: ReceiptLedger, purchaseId: string): boolean
-            return seen[purchaseId] == true
+            return table.find(ids, purchaseId) ~= nil
         end,
         record = function(_self: ReceiptLedger, purchaseId: string)
-            seen[purchaseId] = true
+            if table.find(ids, purchaseId) ~= nil then
+                return
+            end
+            while #ids >= math.max(capacity, 1) do
+                table.remove(ids, 1)
+            end
+            table.insert(ids, purchaseId)
         end,
     }
     return ledger
 end
 
-function Monetization.newMemoryLedger(): ReceiptLedger
-    return Monetization.newTableLedger({})
+function Monetization.newMemoryLedger(capacity: number?): ReceiptLedger
+    return Monetization.newListLedger({}, capacity or 50)
 end
 
 function Monetization.processReceipt(

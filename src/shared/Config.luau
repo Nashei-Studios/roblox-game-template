@@ -26,6 +26,8 @@ export type GameConfig = {
     sessionLockTimeoutSeconds: number,
     -- Seconds between ProfileStore autosaves (AUTO_SAVE_PERIOD).
     autosaveIntervalSeconds: number,
+    -- Receipt ledger window: how many recent PurchaseIds each profile remembers (ADR 0016).
+    purchaseLedgerSize: number,
     gamePasses: { ProductConfig },
     developerProducts: { DeveloperProductConfig },
 }
@@ -36,6 +38,7 @@ Config.default = {
     gameName = "My Game", -- TODO(victor): set the game name
     sessionLockTimeoutSeconds = 1800,
     autosaveIntervalSeconds = 120,
+    purchaseLedgerSize = 50,
     gamePasses = {
         { name = "VIP", id = nil }, -- TODO(victor): set id
     },
@@ -63,6 +66,9 @@ function Config.validate(config: GameConfig): { string }
     end
     if config.autosaveIntervalSeconds <= 0 then
         table.insert(problems, "autosaveIntervalSeconds must be positive")
+    end
+    if config.purchaseLedgerSize < 1 or config.purchaseLedgerSize % 1 ~= 0 then
+        table.insert(problems, "purchaseLedgerSize must be a positive integer")
     end
     for _, pass in config.gamePasses do
         if pass.id == nil then

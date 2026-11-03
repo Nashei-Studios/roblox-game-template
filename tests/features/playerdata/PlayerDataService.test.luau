@@ -10,7 +10,7 @@ local function clone(data: PlayerData.PlayerData): PlayerData.PlayerData
     return {
         schemaVersion = data.schemaVersion,
         coins = data.coins,
-        purchases = table.clone(data.purchases),
+        purchaseIds = table.clone(data.purchaseIds),
         sessionCount = data.sessionCount,
     }
 end
@@ -146,10 +146,9 @@ return function(suite: harness.Harness)
     suite:test("legacy v1 data is migrated before it is exposed", function()
         local repository = InMemoryProfileRepository.new({
             default = function(): PlayerData.PlayerData
-                local legacy = PlayerData.default()
-                legacy.schemaVersion = 1
-                legacy.coins = 40
-                return legacy
+                -- A profile saved by schema v1, stored under the current type for the fake.
+                local legacy: unknown = { schemaVersion = 1, coins = 40, purchases = {} }
+                return legacy :: PlayerData.PlayerData
             end,
             clone = clone,
         })
@@ -162,7 +161,7 @@ return function(suite: harness.Harness)
         local joined = service:join("1")
         harness.isTrue(joined.ok, "join ok")
         if joined.ok then
-            harness.equal(joined.value.data.schemaVersion, 2, "schemaVersion")
+            harness.equal(joined.value.data.schemaVersion, 3, "schemaVersion")
             harness.equal(joined.value.data.coins, 40, "coins kept")
             harness.equal(joined.value.sessionIndex, 1, "sessionIndex")
         end

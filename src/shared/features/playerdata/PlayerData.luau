@@ -10,22 +10,22 @@
 export type PlayerData = {
     schemaVersion: number,
     coins: number,
-    -- PurchaseId -> true, the idempotent receipt ledger (see Monetization.newTableLedger).
-    purchases: { [string]: boolean },
+    -- Receipt ledger: the most recent PurchaseIds, oldest first (see Monetization.newListLedger).
+    purchaseIds: { string },
     -- Sessions started by this player, counting the current one (see PlayerDataService.join).
     sessionCount: number,
 }
 
 local PlayerDataModule = {}
 
-PlayerDataModule.CURRENT_SCHEMA_VERSION = 2
+PlayerDataModule.CURRENT_SCHEMA_VERSION = 3
 
 --- A fresh table on every call (profiles mutate their data in place).
 function PlayerDataModule.default(): PlayerData
     return {
         schemaVersion = PlayerDataModule.CURRENT_SCHEMA_VERSION,
         coins = 0,
-        purchases = {},
+        purchaseIds = {},
         sessionCount = 0,
     }
 end

@@ -13,6 +13,7 @@ return function(suite: harness.Harness)
             gameName = "Test",
             sessionLockTimeoutSeconds = 60,
             autosaveIntervalSeconds = 30,
+            purchaseLedgerSize = 50,
             gamePasses = { { name = "VIP", id = 111 } },
             developerProducts = {
                 { name = "Coins", id = 222, grant = { kind = "coins", amount = 100 } },
@@ -26,6 +27,7 @@ return function(suite: harness.Harness)
             gameName = "Test",
             sessionLockTimeoutSeconds = 0,
             autosaveIntervalSeconds = -1,
+            purchaseLedgerSize = 50,
             gamePasses = {},
             developerProducts = {},
         }
@@ -37,6 +39,7 @@ return function(suite: harness.Harness)
             gameName = "Test",
             sessionLockTimeoutSeconds = 60,
             autosaveIntervalSeconds = 30,
+            purchaseLedgerSize = 50,
             gamePasses = {},
             developerProducts = {
                 { name = "Coins", id = 222, grant = { kind = "coins", amount = 100 } },
@@ -58,6 +61,7 @@ return function(suite: harness.Harness)
             gameName = "Test",
             sessionLockTimeoutSeconds = 60,
             autosaveIntervalSeconds = 30,
+            purchaseLedgerSize = 50,
             gamePasses = {},
             developerProducts = {
                 { name = "Zero", id = 1, grant = { kind = "coins", amount = 0 } },
@@ -67,5 +71,19 @@ return function(suite: harness.Harness)
             },
         }
         harness.equal(#Config.validate(config), 3, "problem count")
+    end)
+
+    suite:test("a ledger window below 1 or fractional is rejected", function()
+        local config: Config.GameConfig = {
+            gameName = "Test",
+            sessionLockTimeoutSeconds = 60,
+            autosaveIntervalSeconds = 30,
+            purchaseLedgerSize = 0,
+            gamePasses = {},
+            developerProducts = {},
+        }
+        harness.equal(#Config.validate(config), 1, "zero")
+        config.purchaseLedgerSize = 2.5
+        harness.equal(#Config.validate(config), 1, "fraction")
     end)
 end

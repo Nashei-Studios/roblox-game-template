@@ -28,19 +28,27 @@ export type PlayerDataV2 = {
     sessionCount: number,
 }
 
+export type PlayerDataV3 = {
+    schemaVersion: number,
+    coins: number,
+    -- Oldest first, bounded by Config.purchaseLedgerSize when recording (see Monetization).
+    purchaseIds: { string },
+    sessionCount: number,
+}
+
 export type MigrationError =
     { kind: "future_version", found: number, supported: number }
     | { kind: "invalid_data", reason: string }
 
 export type MigrationResult =
-    { ok: true, value: PlayerDataV2 }
+    { ok: true, value: PlayerDataV3 }
     | { ok: false, error: MigrationError }
 
 type StepResult = { ok: true, value: unknown } | { ok: false, error: MigrationError }
 
 local PlayerDataMigrations = {}
 
-PlayerDataMigrations.CURRENT_SCHEMA_VERSION = 2
+PlayerDataMigrations.CURRENT_SCHEMA_VERSION = 3
 
 local function invalid(reason: string): { ok: false, error: MigrationError }
     return { ok = false, error = { kind = "invalid_data", reason = reason } }
@@ -108,7 +116,10 @@ local function readV1(raw: unknown): { ok: true, value: PlayerDataV1 } | {
     return readCommon(record, 1)
 end
 
-local function readV2(raw: unknown): MigrationResult
+local function readV2(raw: unknown): { ok: true, value: PlayerDataV2 } | {
+    ok: false,
+    error: MigrationError,
+}
     local record = asRecord(raw)
     if record == nil then
         return invalid("player data must be a table")
@@ -132,12 +143,69 @@ local function readV2(raw: unknown): MigrationResult
     }
 end
 
+local function readV3(raw: unknown): MigrationResult
+    local record = asRecord(raw)
+    if record == nil then
+        return invalid("player data must be a table")
+    end
+    if not isFiniteNumber(record.coins) then
+        return invalid("coins must be a finite number")
+    end
+    if not isFiniteNumber(record.sessionCount) then
+        return invalid("sessionCount must be a finite number")
+    end
+    local rawIds = record.purchaseIds
+    if type(rawIds) ~= "table" then
+        return invalid("purchaseIds must be a table")
+    end
+    local sequence = rawIds :: { unknown }
+    local entries = 0
+    for _ in rawIds :: { [unknown]: unknown } do
+        entries += 1
+    end
+    local ids: { string } = {}
+    for index = 1, entries do
+        local id = sequence[index]
+        if type(id) ~= "string" then
+            return invalid("purchaseIds must be a sequence of strings")
+        end
+        ids[index] = id
+    end
+    return {
+        ok = true,
+        value = {
+            schemaVersion = 3,
+            coins = record.coins :: number,
+            purchaseIds = ids,
+            sessionCount = record.sessionCount :: number,
+        },
+    }
+end
+
 local function v1ToV2(v1: PlayerDataV1): PlayerDataV2
     return {
         schemaVersion = 2,
         coins = v1.coins,
         purchases = v1.purchases,
         sessionCount = 0,
+    }
+end
+
+-- The v2 ledger was an unordered map, so the true purchase order is lost; sorting by id keeps
+-- the result deterministic. Entries marked false were never processed and are dropped.
+local function v2ToV3(v2: PlayerDataV2): PlayerDataV3
+    local ids: { string } = {}
+    for purchaseId, processed in v2.purchases do
+        if processed then
+            table.insert(ids, purchaseId)
+        end
+    end
+    table.sort(ids)
+    return {
+        schemaVersion = 3,
+        coins = v2.coins,
+        purchaseIds = ids,
+        sessionCount = v2.sessionCount,
     }
 end
 
@@ -149,6 +217,13 @@ local steps: { [number]: (raw: unknown) -> StepResult } = {
             return v1
         end
         return { ok = true, value = v1ToV2(v1.value) }
+    end,
+    [2] = function(raw: unknown): StepResult
+        local v2 = readV2(raw)
+        if not v2.ok then
+            return v2
+        end
+        return { ok = true, value = v2ToV3(v2.value) }
     end,
 }
 
@@ -170,9 +245,9 @@ function PlayerDataMigrations.migrate(raw: unknown): MigrationResult
         }
     end
     if version.value == current then
-        local validated = readV2(raw)
+        local validated = readV3(raw)
         if validated.ok then
-            return { ok = true, value = raw :: PlayerDataV2 } -- unchanged: same table
+            return { ok = true, value = raw :: PlayerDataV3 } -- unchanged: same table
         end
         return validated
     end
@@ -189,7 +264,7 @@ function PlayerDataMigrations.migrate(raw: unknown): MigrationResult
         end
         working = stepped.value
     end
-    return readV2(working)
+    return readV3(working)
 end
 
 --- Like `migrate`, but writes the result into `raw` (the live ProfileStore table, whose
@@ -207,7 +282,7 @@ function PlayerDataMigrations.migrateInPlace(raw: unknown): MigrationResult
             live[key] = value
         end
         local result: unknown = live
-        return { ok = true, value = result :: PlayerDataV2 }
+        return { ok = true, value = result :: PlayerDataV3 }
     end
     return migrated
 end
