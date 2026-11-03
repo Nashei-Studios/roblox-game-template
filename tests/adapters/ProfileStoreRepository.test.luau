@@ -239,4 +239,68 @@ return function(suite: harness.Harness)
             harness.equal(confirmed.error, "not_active", "error")
         end
     end)
+
+    suite:test(
+        "ten simultaneous receipts share one Save() per interval (DataStore budget)",
+        function()
+            local fake = newProfile({ coins = 0 })
+            -- A tiny cooperative scheduler: wait() yields and the virtual clock jumps to the next wake-up.
+            local current = 0
+            local sleepers: { { thread: thread, wakeAt: number } } = {}
+            local runtime: ProfileStoreRepository.Runtime = {
+                clock = function(): number
+                    return current
+                end,
+                wait = function(seconds: number)
+                    coroutine.yield(seconds)
+                end,
+            }
+            local loaded = ProfileStoreRepository.new(newStore(fake.profile), runtime):load("1")
+            if not loaded.ok then
+                error("load failed")
+            end
+            local handle = loaded.value
+            local results: { string } = {}
+            local function park(thread: thread, seconds: number)
+                table.insert(sleepers, { thread = thread, wakeAt = current + seconds })
+            end
+            for _ = 1, 10 do
+                local thread = coroutine.create(function()
+                    local confirmed = handle:confirmSaved(function(): boolean
+                        return false -- the save never lands: the worst case for the budget
+                    end, 30)
+                    table.insert(results, if confirmed.ok then "ok" else confirmed.error)
+                end)
+                local _, seconds = coroutine.resume(thread)
+                if coroutine.status(thread) ~= "dead" then
+                    park(thread, seconds :: number)
+                end
+            end
+            while #sleepers > 0 do
+                table.sort(sleepers, function(a, b)
+                    return a.wakeAt < b.wakeAt
+                end)
+                local next = table.remove(sleepers, 1) :: { thread: thread, wakeAt: number }
+                current = next.wakeAt
+                local _, seconds = coroutine.resume(next.thread)
+                if coroutine.status(next.thread) ~= "dead" then
+                    park(next.thread, seconds :: number)
+                end
+            end
+            harness.equal(#results, 10, "all waiters finished")
+            for _, outcome in results do
+                harness.equal(outcome, "timeout", "outcome")
+            end
+            local saves = 0
+            for _, call in fake.calls do
+                if call == "Save" then
+                    saves += 1
+                end
+            end
+            -- One UpdateAsync per 5 s for the profile (t = 0, 5, ... 25), not one per waiter.
+            harness.equal(saves, 6, "Save() calls in 30 s")
+            -- 6 per 30 s is 12 per minute: inside 60 + 40 x 1 player even for a one-player experience.
+            harness.isTrue(saves * 2 <= 60 + 40 * 1, "within the DataStore budget")
+        end
+    )
 end

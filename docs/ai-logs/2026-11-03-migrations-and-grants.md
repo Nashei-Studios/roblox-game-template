@@ -29,3 +29,8 @@ Ficha R1-T2: D-30 (pure migrations), real `sessionIndex`, D-38 (product delivery
 - Decisions: the PurchaseId stays recorded in memory after a timeout (the retry does not grant twice and only waits again); ledger is `purchaseIds` (oldest first, `purchaseLedgerSize` 50); schema v3 with fixture; `saveConfirmTimeoutSeconds` 30.
 - The vendored ProfileStore was not modified. Real `LastSavedData` timing and throttling are unverified without Studio (R4).
 - ADR 0015 belongs to another branch; the index here lists 0014 and 0016 only, so expect a trivial merge in `docs/adr/README.md`.
+
+## Follow-up: ADR 0015 import, coverage gate (ADR 0017), DataStore budget
+- Cherry-picked the ADR 0015 docs commit from `feature/remote-layer` (index conflict resolved: 0014, 0015, 0016, 0017 in order; 0015 content untouched, still proposed).
+- Coverage gate: `luau` 0.745.0 pinned in `rokit.toml`; `scripts/suites.luau` neutral runner with entries `test.luau` (Lune) and `test_luau.luau` (Luau); `scripts/coverage.ps1` and `scripts/coverage_report.luau` (75 % of the total, fails on unmeasured files, engine-touching files excluded automatically); CI job `coverage`; `tests/Result.test.luau`. Result: 97.2 % (528/543 lines). The CI job has not run (no remote).
+- Budget: ProfileStore does not coalesce `Save()`; the adapter now shares one `Save()` per profile per 5 s across concurrent receipts (60 vs 6 UpdateAsync in the 10-receipt worst case). The Roblox docs say `60 + 40 x players`, not 10; ADR 0016 has a Budget section with both.

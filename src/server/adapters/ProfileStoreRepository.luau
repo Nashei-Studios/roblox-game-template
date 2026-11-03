@@ -69,6 +69,7 @@ export type Runtime = {
 
 local POLL_SECONDS = 0.1
 -- A save already in flight when we ask may predate the data we want confirmed, so ask again.
+-- At most one Save() per profile per interval, however many receipts wait (ADR 0016, Budget).
 local SAVE_RETRY_SECONDS = 5
 
 local ProfileStoreRepository = {}
@@ -85,6 +86,9 @@ function ProfileStoreRepository.new<T>(store: StoreLike<T>, runtime: Runtime): P
             end
             -- Fill fields added to the template since this profile was last saved.
             profile:Reconcile()
+            -- Shared by every confirmSaved wait on this profile: ProfileStore does not coalesce
+            -- Save() calls (each one is an UpdateAsync), so concurrent receipts must share them.
+            local lastSaveRequestedAt = -math.huge
 
             local handle: ProfileHandle<T> = {
                 key = key,
@@ -113,7 +117,6 @@ function ProfileStoreRepository.new<T>(store: StoreLike<T>, runtime: Runtime): P
                     timeoutSeconds: number
                 ): Result<nil, SaveConfirmError>
                     local deadline = runtime.clock() + timeoutSeconds
-                    local nextSaveAt = runtime.clock()
                     while true do
                         -- Official ProfileStore pattern: LastSavedData is the confirmed snapshot
                         -- and survives the session ending, so check it before IsActive.
@@ -127,9 +130,9 @@ function ProfileStoreRepository.new<T>(store: StoreLike<T>, runtime: Runtime): P
                         if now >= deadline then
                             return { ok = false, error = "timeout" }
                         end
-                        if now >= nextSaveAt then
+                        if now - lastSaveRequestedAt >= SAVE_RETRY_SECONDS then
                             profile:Save()
-                            nextSaveAt = now + SAVE_RETRY_SECONDS
+                            lastSaveRequestedAt = now
                         end
                         runtime.wait(POLL_SECONDS)
                     end

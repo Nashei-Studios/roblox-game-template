@@ -71,3 +71,22 @@ sequenceDiagram
 ## What would change this decision
 
 ProfileStore adding an awaitable save; Roblox changing the receipt retry or timeout semantics; real data showing more than the ledger window of unconfirmed receipts (then raise `purchaseLedgerSize`).
+
+## Budget (added 2026-11-03; the decision above is unchanged)
+
+**Does `Profile:Save()` coalesce?** No. In the vendored `ProfileStore.luau`, `Profile:Save()` only checks view mode and `IsActive()`, moves the profile in the autosave list and runs `task.spawn(SaveProfileAsync, self)` (lines 1172-1191). Every call is a separate save job and a separate `UpdateAsync`. The only protection is `UpdateQueue` (lines 344-375), which makes calls for the same key run one after another; it does not drop or merge them. So N calls to `Save()` are N `UpdateAsync` calls.
+
+**Limit.** Roblox data store docs (`error-codes-and-limits.md`, read through context7 `/roblox/creator-docs`): standard data stores allow `60 + numPlayers x 40` read requests and the same for write requests per minute, at experience level, and `UpdateAsync` consumes from both budgets. The coordinator's brief said `60 + 10 x players`; the current docs say 40, so this section uses 40 and also shows the 10 figure. Per key, writes are limited to 4 MB per minute (a profile is a few hundred bytes, so this is not the constraint). ProfileStore's own autosave adds about 1 `UpdateAsync` per profile per `autosaveIntervalSeconds` (120 s).
+
+**Worst case: 10 simultaneous receipts whose save never lands** (timeout 30 s, one `Save()` request every 5 s, requests at t = 0, 5, ... 25 = 6 per wait):
+
+| Design | `UpdateAsync` in 30 s | Per minute | Budget, 1 player (100 / 70 with x10) | Budget, 10 players (460 / 160 with x10) |
+|---|---|---|---|---|
+| Each wait saves on its own (first version of this ADR) | 10 x 6 = 60 | 120 | over | inside |
+| One shared `Save()` per profile per 5 s (adopted) | 6 | 12 | inside | inside |
+
+With 10 purchases from 10 different players each profile has its own waits, so the count is 6 per profile, which fits both budgets. The risky case is many concurrent receipts on ONE profile in a small experience, which the first version would have multiplied by the number of waiters.
+
+**Adjustment made (decision unchanged, mechanism tightened).** `ProfileStoreRepository` keeps one `lastSaveRequestedAt` per profile, shared by every `confirmSaved` wait on it: `Save()` is called only when 5 s have passed since the last request by any waiter. Cost: a receipt that arrives 1 s after another waiter's request waits up to 4 s more for the next save before it can be confirmed. Test: `tests/adapters/ProfileStoreRepository.test.luau`, "ten simultaneous receipts share one Save() per interval" (10 cooperative waiters on a virtual clock, expects 6 `Save()` calls in 30 s; the same test fails with 60 when the state is per wait, checked by mutation).
+
+**Not verified without Studio:** the real experience-level counters, whether throttling queues or drops requests under load, and the actual cost of `Save()` when no data changed. If receipts and autosaves still approach the budget, raise `SAVE_RETRY_SECONDS` (currently 5) or lower `saveConfirmTimeoutSeconds`.
