@@ -280,6 +280,8 @@ net.Cast.setCallback(function(player: Player, zone)
     local cast = reef:cast(userId, data, zone)
     if not cast.ok then
         warn(`Cast from {userId} dropped: {cast.error.kind}`)
+        -- Tell the client the line is not out, so its HUD returns to idle.
+        net.CatchResult.fire(player, nil)
         if cast.error.kind == "bucket_full" then
             pushStock(player, data)
         end
@@ -304,6 +306,7 @@ net.Reel.setCallback(function(player: Player)
     local reeled = reef:reel(userId, data)
     if not reeled.ok then
         warn(`Reel from {userId} dropped: {reeled.error.kind}`)
+        net.CatchResult.fire(player, nil)
         return
     end
     if reeled.value.caught then

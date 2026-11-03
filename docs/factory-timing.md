@@ -8,3 +8,6 @@ Third game of the 3-games-per-week factory. Times are wall clock, 2026-11-03, ta
 | 1 | docs: reef-flow.md, ADR 0021 | 09:17:26 | 09:20 | 3 | |
 | 2 | Pure core with TDD: ReefRules, ReefConfig, FishRoll, ReefController, Funnel, HudModel, schema v4 migration, bait grant | 09:20 | 09:24 | 4 | Gate: stylua, selene, analyze, 174 tests, coverage 98.4 % |
 | 3 | Zap remotes, perf budget, FishWire, SellStand adapter, server wiring (rate limits, validation, passes, funnel) | 09:24 | 09:26 | 2 | Gate: stylua, selene, analyze, 175 tests, perf-budget OK (138.5 of 512 B/s up, 81 of 2048 B/s down) |
+| 4 | HUD adapter (ReefHud) and client wiring, refused cast and reel return the HUD to idle, full gate | 09:26 | 09:28 | 2 | Gate: stylua, selene, analyze (0 type errors), 175 tests, perf-budget OK, coverage 98.4 %, remotes regenerate with no diff, rojo build OK |
+
+Total wall clock from setup to the last commit: about 13 minutes (09:15 to 09:28). Stage 0 start is an estimate; the other boundaries come from `date`.
