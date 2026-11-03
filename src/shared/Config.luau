@@ -6,13 +6,17 @@
     `Config.validate` reports every missing id so a misconfigured game fails loudly.
 ]]
 
+local GreenhouseData = require("./features/greenhouse/GreenhouseData")
+
 export type ProductConfig = {
     name: string,
     id: number?,
 }
 
 -- What a developer product delivers (applied by features/monetization/ProductGrants).
-export type ProductGrant = { kind: "coins", amount: number }
+export type ProductGrant =
+    { kind: "coins", amount: number }
+    | { kind: "seeds", cropId: string, amount: number }
 
 export type DeveloperProductConfig = {
     name: string,
@@ -46,10 +50,16 @@ Config.default = {
     saveConfirmTimeoutSeconds = 30,
     perfProbeEnabled = false,
     gamePasses = {
-        { name = "VIP", id = nil }, -- TODO(victor): set id
+        { name = GreenhouseData.PASS_EXTRA_PLOTS, id = nil }, -- TODO(victor): set id
+        { name = GreenhouseData.PASS_AUTO_HARVEST, id = nil }, -- TODO(victor): set id
     },
     developerProducts = {
         { name = "Coins100", id = nil, grant = { kind = "coins", amount = 100 } }, -- TODO(victor): set id
+        {
+            name = "SeedBundle",
+            id = nil, -- TODO(victor): set id
+            grant = { kind = "seeds", cropId = "carrot", amount = 10 },
+        },
     },
 } :: GameConfig
 
@@ -94,13 +104,21 @@ function Config.validate(config: GameConfig): { string }
         end
         seenNames[product.name] = true
         local grant = product.grant
-        if grant.kind ~= "coins" then
+        if grant.kind == "coins" or grant.kind == "seeds" then
+            if grant.amount ~= grant.amount or grant.amount <= 0 or grant.amount % 1 ~= 0 then
+                table.insert(
+                    problems,
+                    `developer product "{product.name}" grants an invalid amount (must be a positive integer)`
+                )
+            end
+            if grant.kind == "seeds" and GreenhouseData.cropById(grant.cropId) == nil then
+                table.insert(
+                    problems,
+                    `developer product "{product.name}" grants seeds of an unknown crop`
+                )
+            end
+        else
             table.insert(problems, `developer product "{product.name}" has an unknown grant kind`)
-        elseif grant.amount ~= grant.amount or grant.amount <= 0 or grant.amount % 1 ~= 0 then
-            table.insert(
-                problems,
-                `developer product "{product.name}" grants an invalid amount (must be a positive integer)`
-            )
         end
     end
     return problems

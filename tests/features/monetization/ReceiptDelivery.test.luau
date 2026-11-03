@@ -20,6 +20,10 @@ local function clone(data: PlayerData.PlayerData): PlayerData.PlayerData
         coins = data.coins,
         purchaseIds = table.clone(data.purchaseIds),
         sessionCount = data.sessionCount,
+        plots = table.clone(data.plots),
+        seeds = table.clone(data.seeds),
+        produce = table.clone(data.produce),
+        totalHarvests = data.totalHarvests,
     }
 end
 

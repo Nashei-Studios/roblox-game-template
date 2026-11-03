@@ -1,11 +1,12 @@
 --!strict
 local Config = require("../src/shared/Config")
+local GreenhouseData = require("../src/shared/features/greenhouse/GreenhouseData")
 local harness = require("./harness")
 
 return function(suite: harness.Harness)
     suite:test("default config reports every unset id", function()
         local problems = Config.validate(Config.default)
-        harness.equal(#problems, 2, "problem count")
+        harness.equal(#problems, 4, "problem count")
     end)
 
     suite:test("a fully configured game has no problems", function()
@@ -109,5 +110,50 @@ return function(suite: harness.Harness)
             developerProducts = {},
         }
         harness.equal(#Config.validate(config), 1, "problem count")
+    end)
+    suite:test("default config declares 2 passes and 2 products with no ids", function()
+        harness.equal(#Config.default.gamePasses, 2, "passes")
+        harness.equal(#Config.default.developerProducts, 2, "products")
+        for _, pass in Config.default.gamePasses do
+            harness.isTrue(pass.id == nil, `{pass.name} id is a TODO, never invented`)
+        end
+        for _, product in Config.default.developerProducts do
+            harness.isTrue(product.id == nil, `{product.name} id is a TODO, never invented`)
+        end
+    end)
+
+    suite:test("default config names the greenhouse monetization items", function()
+        harness.equal(Config.default.gamePasses[1].name, GreenhouseData.PASS_EXTRA_PLOTS, "pass 1")
+        harness.equal(Config.default.gamePasses[2].name, GreenhouseData.PASS_AUTO_HARVEST, "pass 2")
+        local bundle = Config.grantsByName(Config.default)["SeedBundle"]
+        harness.isTrue(bundle ~= nil and bundle.kind == "seeds", "seed bundle grant")
+        local coins = Config.grantsByName(Config.default)["Coins100"]
+        harness.isTrue(coins ~= nil and coins.kind == "coins", "coin pack grant")
+    end)
+
+    suite:test("validate rejects a seeds grant with an unknown crop or a bad amount", function()
+        local function configWith(grant: Config.ProductGrant): Config.GameConfig
+            return {
+                gameName = "Test",
+                sessionLockTimeoutSeconds = 60,
+                autosaveIntervalSeconds = 30,
+                purchaseLedgerSize = 50,
+                saveConfirmTimeoutSeconds = 30,
+                gamePasses = {},
+                developerProducts = { { name = "Seeds", id = 5, grant = grant } },
+            }
+        end
+        harness.equal(
+            #Config.validate(configWith({ kind = "seeds", cropId = "nope", amount = 5 })),
+            1
+        )
+        harness.equal(
+            #Config.validate(configWith({ kind = "seeds", cropId = "carrot", amount = 0 })),
+            1
+        )
+        harness.equal(
+            #Config.validate(configWith({ kind = "seeds", cropId = "carrot", amount = 5 })),
+            0
+        )
     end)
 end

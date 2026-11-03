@@ -36,19 +36,35 @@ export type PlayerDataV3 = {
     sessionCount: number,
 }
 
+export type PlotV4 = { cropId: string, readyAt: number }
+
+export type PlayerDataV4 = {
+    schemaVersion: number,
+    coins: number,
+    purchaseIds: { string },
+    sessionCount: number,
+    -- Greenhouse (ADR 0020). A plot with cropId "" is empty (no nil holes in a profile).
+    plots: { PlotV4 },
+    seeds: { [string]: number },
+    produce: { [string]: number },
+    totalHarvests: number,
+}
+
 export type MigrationError =
     { kind: "future_version", found: number, supported: number }
     | { kind: "invalid_data", reason: string }
 
 export type MigrationResult =
-    { ok: true, value: PlayerDataV3 }
+    { ok: true, value: PlayerDataV4 }
     | { ok: false, error: MigrationError }
 
 type StepResult = { ok: true, value: unknown } | { ok: false, error: MigrationError }
 
 local PlayerDataMigrations = {}
 
-PlayerDataMigrations.CURRENT_SCHEMA_VERSION = 3
+-- Kept in step with GreenhouseData.START_PLOTS / START_SEED_*; a test compares the migrated
+-- fields with PlayerData.default() (this file stays free of game modules).
+PlayerDataMigrations.CURRENT_SCHEMA_VERSION = 4
 
 local function invalid(reason: string): { ok: false, error: MigrationError }
     return { ok = false, error = { kind = "invalid_data", reason = reason } }
@@ -143,7 +159,10 @@ local function readV2(raw: unknown): { ok: true, value: PlayerDataV2 } | {
     }
 end
 
-local function readV3(raw: unknown): MigrationResult
+local function readV3(raw: unknown): { ok: true, value: PlayerDataV3 } | {
+    ok: false,
+    error: MigrationError,
+}
     local record = asRecord(raw)
     if record == nil then
         return invalid("player data must be a table")
@@ -209,6 +228,111 @@ local function v2ToV3(v2: PlayerDataV2): PlayerDataV3
     }
 end
 
+local function isCount(value: unknown): boolean
+    return isFiniteNumber(value) and (value :: number) >= 0 and (value :: number) % 1 == 0
+end
+
+-- A map of crop id -> non-negative integer, copied.
+local function readStock(
+    raw: unknown,
+    label: string
+): { ok: true, value: { [string]: number } } | {
+    ok: false,
+    error: MigrationError,
+}
+    local record = asRecord(raw)
+    if record == nil then
+        return invalid(`{label} must be a table`)
+    end
+    local stock: { [string]: number } = {}
+    for cropId, count in record do
+        if type(cropId) ~= "string" or not isCount(count) then
+            return invalid(`{label} must map crop ids to non-negative integers`)
+        end
+        stock[cropId] = count :: number
+    end
+    return { ok = true, value = stock }
+end
+
+local function readPlots(raw: unknown): { ok: true, value: { PlotV4 } } | {
+    ok: false,
+    error: MigrationError,
+}
+    if type(raw) ~= "table" then
+        return invalid("plots must be a table")
+    end
+    local sequence = raw :: { unknown }
+    local entries = 0
+    for _ in raw :: { [unknown]: unknown } do
+        entries += 1
+    end
+    if entries < 1 then
+        return invalid("plots must hold at least one plot")
+    end
+    local plots: { PlotV4 } = {}
+    for index = 1, entries do
+        local plot = asRecord(sequence[index])
+        if plot == nil or type(plot.cropId) ~= "string" then
+            return invalid("each plot needs a string cropId")
+        end
+        if not isFiniteNumber(plot.readyAt) or (plot.readyAt :: number) < 0 then
+            return invalid("each plot needs a non-negative readyAt")
+        end
+        plots[index] = { cropId = plot.cropId :: string, readyAt = plot.readyAt :: number }
+    end
+    return { ok = true, value = plots }
+end
+
+local function readV4(raw: unknown): MigrationResult
+    local v3 = readV3(raw)
+    if not v3.ok then
+        return v3
+    end
+    local record = raw :: { [string]: unknown }
+    local plots = readPlots(record.plots)
+    if not plots.ok then
+        return plots
+    end
+    local seeds = readStock(record.seeds, "seeds")
+    if not seeds.ok then
+        return seeds
+    end
+    local produce = readStock(record.produce, "produce")
+    if not produce.ok then
+        return produce
+    end
+    if not isCount(record.totalHarvests) then
+        return invalid("totalHarvests must be a non-negative integer")
+    end
+    return {
+        ok = true,
+        value = {
+            schemaVersion = 4,
+            coins = v3.value.coins,
+            purchaseIds = v3.value.purchaseIds,
+            sessionCount = v3.value.sessionCount,
+            plots = plots.value,
+            seeds = seeds.value,
+            produce = produce.value,
+            totalHarvests = record.totalHarvests :: number,
+        },
+    }
+end
+
+-- One empty plot and the starting seed, the same as a brand new player (PlayerData.default).
+local function v3ToV4(v3: PlayerDataV3): PlayerDataV4
+    return {
+        schemaVersion = 4,
+        coins = v3.coins,
+        purchaseIds = v3.purchaseIds,
+        sessionCount = v3.sessionCount,
+        plots = { { cropId = "", readyAt = 0 } },
+        seeds = { radish = 1 },
+        produce = {},
+        totalHarvests = 0,
+    }
+end
+
 -- steps[n] validates a vN table and upgrades it to vN+1. Add a new entry per schema change.
 local steps: { [number]: (raw: unknown) -> StepResult } = {
     [1] = function(raw: unknown): StepResult
@@ -224,6 +348,13 @@ local steps: { [number]: (raw: unknown) -> StepResult } = {
             return v2
         end
         return { ok = true, value = v2ToV3(v2.value) }
+    end,
+    [3] = function(raw: unknown): StepResult
+        local v3 = readV3(raw)
+        if not v3.ok then
+            return v3
+        end
+        return { ok = true, value = v3ToV4(v3.value) }
     end,
 }
 
@@ -245,9 +376,9 @@ function PlayerDataMigrations.migrate(raw: unknown): MigrationResult
         }
     end
     if version.value == current then
-        local validated = readV3(raw)
+        local validated = readV4(raw)
         if validated.ok then
-            return { ok = true, value = raw :: PlayerDataV3 } -- unchanged: same table
+            return { ok = true, value = raw :: PlayerDataV4 } -- unchanged: same table
         end
         return validated
     end
@@ -264,7 +395,7 @@ function PlayerDataMigrations.migrate(raw: unknown): MigrationResult
         end
         working = stepped.value
     end
-    return readV3(working)
+    return readV4(working)
 end
 
 --- Like `migrate`, but writes the result into `raw` (the live ProfileStore table, whose
@@ -282,7 +413,7 @@ function PlayerDataMigrations.migrateInPlace(raw: unknown): MigrationResult
             live[key] = value
         end
         local result: unknown = live
-        return { ok = true, value = result :: PlayerDataV3 }
+        return { ok = true, value = result :: PlayerDataV4 }
     end
     return migrated
 end
