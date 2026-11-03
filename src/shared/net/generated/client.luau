@@ -133,10 +133,34 @@ if not RunService:IsRunning() then
 	local noop = function() end
 	return table.freeze({
 		sendEvents = noop,
+		StockChanged = table.freeze({
+			setCallback = noop
+		}),
+		Sell = table.freeze({
+			fire = noop
+		}),
+		RodChanged = table.freeze({
+			setCallback = noop
+		}),
 		RequestPurchase = table.freeze({
 			fire = noop
 		}),
+		Reel = table.freeze({
+			fire = noop
+		}),
 		CoinsChanged = table.freeze({
+			setCallback = noop
+		}),
+		CatchResult = table.freeze({
+			setCallback = noop
+		}),
+		Cast = table.freeze({
+			fire = noop
+		}),
+		BuyRod = table.freeze({
+			fire = noop
+		}),
+		Bite = table.freeze({
 			setCallback = noop
 		}),
 	}) :: Events
@@ -146,7 +170,8 @@ local remotes = ReplicatedStorage:WaitForChild("ZAP")
 local reliable = remotes:WaitForChild("ZAP_RELIABLE")
 assert(reliable:IsA("RemoteEvent"), "Expected ZAP_RELIABLE to be a RemoteEvent")
 
-export type ProductName = ("Coins100")
+export type ProductName = ("Coins100" | "BaitPack")
+export type FishName = ("minnow" | "sardine" | "perch" | "mackerel" | "snapper" | "grouper" | "tuna" | "swordfish" | "marlin")
 
 local function sendEvents()
 	if outgoing_used ~= 0 then
@@ -164,9 +189,13 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(1)
-local reliable_event_queue: { [number]: { any } } = table.create(1)
+local reliable_events = table.create(5)
+local reliable_event_queue: { [number]: { any } } = table.create(5)
+reliable_event_queue[3] = {}
+reliable_event_queue[4] = {}
 reliable_event_queue[0] = {}
+reliable_event_queue[2] = {}
+reliable_event_queue[1] = 0
 reliable.OnClientEvent:Connect(function(buff, inst)
 	incoming_buff = buff
 	incoming_inst = inst
@@ -175,7 +204,30 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 	local len = buffer.len(buff)
 	while incoming_read < len do
 		local id = buffer.readu8(buff, read(1))
-		if id == 0 then -- CoinsChanged
+		if id == 3 then -- StockChanged
+			local value, value2
+			value = buffer.readu8(incoming_buff, read(1))
+			value2 = buffer.readu8(incoming_buff, read(1))
+			if reliable_events[3] then
+				reliable_events[3](value, value2)
+			else
+				table.insert(reliable_event_queue[3], { value, value2 })
+				if #reliable_event_queue[3] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[3]} events in queue for StockChanged. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 4 then -- RodChanged
+			local value
+			value = buffer.readu8(incoming_buff, read(1))
+			if reliable_events[4] then
+				reliable_events[4](value)
+			else
+				table.insert(reliable_event_queue[4], value)
+				if #reliable_event_queue[4] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[4]} events in queue for RodChanged. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 0 then -- CoinsChanged
 			local value
 			value = buffer.readu32(incoming_buff, read(4))
 			if reliable_events[0] then
@@ -184,6 +236,50 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 				table.insert(reliable_event_queue[0], value)
 				if #reliable_event_queue[0] > 64 then
 					warn(`[ZAP] {#reliable_event_queue[0]} events in queue for CoinsChanged. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 2 then -- CatchResult
+			local value
+			local bool_1 = buffer.readu16(incoming_buff, read(2))
+			if bit32.btest(bool_1, 0b0000000000000001) then
+				if bit32.btest(bool_1, 0b0000000000000010) then
+					value = "minnow"
+				elseif bit32.btest(bool_1, 0b0000000000000100) then
+					value = "sardine"
+				elseif bit32.btest(bool_1, 0b0000000000001000) then
+					value = "perch"
+				elseif bit32.btest(bool_1, 0b0000000000010000) then
+					value = "mackerel"
+				elseif bit32.btest(bool_1, 0b0000000000100000) then
+					value = "snapper"
+				elseif bit32.btest(bool_1, 0b0000000001000000) then
+					value = "grouper"
+				elseif bit32.btest(bool_1, 0b0000000010000000) then
+					value = "tuna"
+				elseif bit32.btest(bool_1, 0b0000000100000000) then
+					value = "swordfish"
+				elseif bit32.btest(bool_1, 0b0000001000000000) then
+					value = "marlin"
+				end
+			else
+				value = nil
+			end
+			if reliable_events[2] then
+				reliable_events[2](value)
+			else
+				table.insert(reliable_event_queue[2], value)
+				if #reliable_event_queue[2] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[2]} events in queue for CatchResult. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 1 then -- Bite
+			local value
+			if reliable_events[1] then
+				reliable_events[1](value)
+			else
+				reliable_event_queue[1] += 1
+				if reliable_event_queue[1] > 16 then
+					warn(`[ZAP] {reliable_event_queue[1]} events in queue for Bite. Did you forget to attach a listener?`)
 				end
 			end
 		else
@@ -196,14 +292,58 @@ table.freeze(polling_queues_unreliable)
 
 local returns = {
 	sendEvents = sendEvents,
+	StockChanged = {
+		setCallback = function(callback: (count: (number), capacity: (number)) -> ()): () -> ()
+			reliable_events[3] = callback
+			for _, value in reliable_event_queue[3] do
+				callback(unpack(value)				)
+
+			end
+			reliable_event_queue[3] = {}
+			return function()
+				reliable_events[3] = nil
+			end
+		end,
+	},
+	Sell = {
+		fire = function()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+		end,
+	},
+	RodChanged = {
+		setCallback = function(callback: (rodLevel: (number)) -> ()): () -> ()
+			reliable_events[4] = callback
+			for _, value in reliable_event_queue[4] do
+				callback(value				)
+
+			end
+			reliable_event_queue[4] = {}
+			return function()
+				reliable_events[4] = nil
+			end
+		end,
+	},
 	RequestPurchase = {
-		fire = function(product: ("Coins100"))
+		fire = function(product: ("Coins100" | "BaitPack"))
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+			local bool_2 = 0
+			local bool_2_pos_1 = alloc(1)
 			if product == "Coins100" then
+				bool_2 = bit32.bor(bool_2, 0b0000000000000001)
+			elseif product == "BaitPack" then
+				local _
 			else
 				error("Invalid enumerator")
 			end
+			buffer.writeu8(outgoing_buff, bool_2_pos_1, bool_2)
+		end,
+	},
+	Reel = {
+		fire = function()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
 		end,
 	},
 	CoinsChanged = {
@@ -216,6 +356,45 @@ local returns = {
 			reliable_event_queue[0] = {}
 			return function()
 				reliable_events[0] = nil
+			end
+		end,
+	},
+	CatchResult = {
+		setCallback = function(callback: (fish: (("minnow" | "sardine" | "perch" | "mackerel" | "snapper" | "grouper" | "tuna" | "swordfish" | "marlin")?)) -> ()): () -> ()
+			reliable_events[2] = callback
+			for _, value in reliable_event_queue[2] do
+				callback(value				)
+
+			end
+			reliable_event_queue[2] = {}
+			return function()
+				reliable_events[2] = nil
+			end
+		end,
+	},
+	Cast = {
+		fire = function(zone: (number))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, zone)
+		end,
+	},
+	BuyRod = {
+		fire = function()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+		end,
+	},
+	Bite = {
+		setCallback = function(callback: () -> ()): () -> ()
+			reliable_events[1] = callback
+			for _ = 1, reliable_event_queue[1] do
+				callback()
+			end
+			reliable_event_queue[1] = 0
+			return function()
+				reliable_events[1] = nil
 			end
 		end,
 	},

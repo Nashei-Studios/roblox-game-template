@@ -17,6 +17,7 @@ local Analytics = require(Shared.features.analytics.Analytics)
 local AnalyticsTracker = require(Shared.features.analytics.AnalyticsTracker)
 local Config = require(Shared.Config)
 local Flags = require(Shared.features.flags.Flags)
+local FishWire = require(Shared.features.reef.FishWire)
 local LedgerProvider = require(Shared.ports.LedgerProvider)
 local Monetization = require(Shared.features.monetization.Monetization)
 local PlayerData = require(Shared.features.playerdata.PlayerData)
@@ -25,6 +26,10 @@ local PlayerDataMigrations = require(Shared.features.playerdata.PlayerDataMigrat
 local PlayerDataService = require(Shared.features.playerdata.PlayerDataService)
 local PurchaseRequests = require(Shared.features.monetization.PurchaseRequests)
 local PerfBudget = require(Shared.perf.PerfBudget)
+local ReefConfig = require(Shared.features.reef.ReefConfig)
+local ReefController = require(Shared.features.reef.ReefController)
+local ReefFunnel = require(Shared.features.reef.Funnel)
+local ReefRules = require(Shared.features.reef.ReefRules)
 local RateLimiter = require(Shared.net.RateLimiter)
 local net = require(Shared.net.generated.server)
 
@@ -35,6 +40,7 @@ local ConfigServiceFlags = require(script.Parent.adapters.ConfigServiceFlags)
 local MonetizationService = require(script.Parent.features.monetization.MonetizationService)
 local PerfProbe = require(script.Parent.dev.PerfProbe)
 local ProfileStoreRepository = require(script.Parent.adapters.ProfileStoreRepository)
+local SellStand = require(script.Parent.adapters.SellStand)
 
 -- Config is validated at boot; unset ids are reported, not hidden.
 local problems = Config.validate(Config.default)
@@ -208,6 +214,175 @@ net.RequestPurchase.setCallback(function(player: Player, product)
     end
 end)
 
+-- Reef (ADR 0021). The client sends intent; ReefController owns the catch, the prices and the coins.
+local ownedPasses: { [number]: { [string]: boolean } } = {}
+local sellStand = SellStand.new(ReefRules.STAND_RANGE)
+local random = Random.new()
+
+local reef = ReefController.new({
+    table = ReefConfig.default,
+    clock = os.clock,
+    rng = function(): number
+        return random:NextNumber()
+    end,
+    ownsPass = function(userId: number, passName: string): boolean
+        local owned = ownedPasses[userId]
+        return owned ~= nil and owned[passName] == true
+    end,
+    isNearStand = function(userId: number): boolean
+        return sellStand:isNear(userId)
+    end,
+})
+local reefFunnel = ReefFunnel.new({
+    track = function(name: string, userId: number, sessionIndex: number): boolean
+        return tracker:track(name, userId, sessionIndex)
+    end,
+})
+
+local function limiterFor(remoteName: string): RateLimiter.RateLimiter
+    local limit = PerfBudget.clientRemotes[remoteName]
+    return RateLimiter.new({
+        capacity = limit.capacity,
+        refillPerSecond = limit.refillPerSecond,
+        clock = os.clock,
+    })
+end
+local castLimiter = limiterFor("Cast")
+local reelLimiter = limiterFor("Reel")
+local sellLimiter = limiterFor("Sell")
+local buyRodLimiter = limiterFor("BuyRod")
+
+local function pushCoins(player: Player, data: PlayerData.PlayerData)
+    net.CoinsChanged.fire(player, math.min(data.coins, MAX_WIRE_COINS))
+end
+
+local function pushStock(player: Player, data: PlayerData.PlayerData)
+    local capacity = reef:bucketCapacity(player.UserId)
+    net.StockChanged.fire(player, math.min(reef:stockCount(data), 255), math.min(capacity, 255))
+end
+
+local function pushState(player: Player, data: PlayerData.PlayerData)
+    pushCoins(player, data)
+    pushStock(player, data)
+    net.RodChanged.fire(player, math.min(data.rodLevel, 255))
+end
+
+local function playerDataOf(userId: number): PlayerData.PlayerData?
+    return playerData:get(tostring(userId))
+end
+
+net.Cast.setCallback(function(player: Player, zone)
+    local userId = player.UserId
+    local data = playerDataOf(userId)
+    if data == nil or not castLimiter:allow(userId) then
+        return
+    end
+    local cast = reef:cast(userId, data, zone)
+    if not cast.ok then
+        warn(`Cast from {userId} dropped: {cast.error.kind}`)
+        if cast.error.kind == "bucket_full" then
+            pushStock(player, data)
+        end
+        return
+    end
+    reefFunnel:onCastAccepted(userId)
+    local castId = cast.value.castId
+    -- The bite time never leaves the server; the client is told only when to reel.
+    task.delay(cast.value.biteDelaySeconds, function()
+        if player.Parent ~= nil and reef:isPending(userId, castId) then
+            net.Bite.fire(player)
+        end
+    end)
+end)
+
+net.Reel.setCallback(function(player: Player)
+    local userId = player.UserId
+    local data = playerDataOf(userId)
+    if data == nil or not reelLimiter:allow(userId) then
+        return
+    end
+    local reeled = reef:reel(userId, data)
+    if not reeled.ok then
+        warn(`Reel from {userId} dropped: {reeled.error.kind}`)
+        return
+    end
+    if reeled.value.caught then
+        net.CatchResult.fire(player, FishWire.toWire(reeled.value.fishId))
+        pushStock(player, data)
+    else
+        net.CatchResult.fire(player, nil)
+    end
+end)
+
+net.Sell.setCallback(function(player: Player)
+    local userId = player.UserId
+    local data = playerDataOf(userId)
+    if data == nil or not sellLimiter:allow(userId) then
+        return
+    end
+    local sold = reef:sell(userId, data)
+    if not sold.ok then
+        warn(`Sell from {userId} dropped: {sold.error.kind}`)
+        return
+    end
+    pushCoins(player, data)
+    pushStock(player, data)
+end)
+
+net.BuyRod.setCallback(function(player: Player)
+    local userId = player.UserId
+    local data = playerDataOf(userId)
+    if data == nil or not buyRodLimiter:allow(userId) then
+        return
+    end
+    local bought = reef:buyRod(userId, data)
+    if not bought.ok then
+        warn(`BuyRod from {userId} dropped: {bought.error.kind}`)
+        return
+    end
+    reefFunnel:onRodBought(userId)
+    pushState(player, data)
+end)
+
+-- Passes: ownership is read from Roblox at join and when a purchase finishes, never from the client.
+local function refreshPasses(player: Player)
+    for _, pass in Config.default.gamePasses do
+        local passId = pass.id
+        if passId == nil then
+            continue
+        end
+        local ok, owns = pcall(function(): boolean
+            return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
+        end)
+        if ok then
+            local owned = ownedPasses[player.UserId] or {}
+            owned[pass.name] = owns
+            ownedPasses[player.UserId] = owned
+        else
+            warn(`Could not read pass "{pass.name}" ownership for {player.UserId}: {owns}`)
+        end
+    end
+end
+
+MarketplaceService.PromptGamePassPurchaseFinished:Connect(
+    function(player: Player, passId: number, wasPurchased: boolean)
+        if not wasPurchased then
+            return
+        end
+        for _, pass in Config.default.gamePasses do
+            if pass.id == passId then
+                local owned = ownedPasses[player.UserId] or {}
+                owned[pass.name] = true
+                ownedPasses[player.UserId] = owned
+                local data = playerDataOf(player.UserId)
+                if data ~= nil then
+                    pushStock(player, data)
+                end
+            end
+        end
+    end
+)
+
 -- Engine events.
 Players.PlayerAdded:Connect(function(player: Player)
     local joined = playerData:join(tostring(player.UserId))
@@ -221,12 +396,22 @@ Players.PlayerAdded:Connect(function(player: Player)
         player:Kick("Could not load your data. Please rejoin.")
         return
     end
-    tracker:track("session_start", player.UserId, joined.value.sessionIndex)
+    -- session_start and the tutorial events come from the Reef funnel (Funnel).
+    reefFunnel:onJoin(player.UserId, joined.value.sessionIndex, joined.value.data.totalCatches)
+    refreshPasses(player)
+    pushState(player, joined.value.data)
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
     playerData:leave(tostring(player.UserId))
     purchaseLimiter:forget(player.UserId)
+    castLimiter:forget(player.UserId)
+    reelLimiter:forget(player.UserId)
+    sellLimiter:forget(player.UserId)
+    buyRodLimiter:forget(player.UserId)
+    reef:forget(player.UserId)
+    reefFunnel:forget(player.UserId)
+    ownedPasses[player.UserId] = nil
 end)
 
 PerfProbe.start(Config.default.perfProbeEnabled == true)

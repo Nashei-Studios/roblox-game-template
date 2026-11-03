@@ -60,10 +60,20 @@ local PerfBudget: Budget = {
     clientRemotes = {
         -- The limit Main.server.luau builds the RequestPurchase RateLimiter from.
         RequestPurchase = { capacity = 3, refillPerSecond = 0.5 },
+        -- Reef (ADR 0021). A cast lasts several seconds, so a sustained 1 per second is generous.
+        Cast = { capacity = 2, refillPerSecond = 1 },
+        Reel = { capacity = 3, refillPerSecond = 2 },
+        Sell = { capacity = 2, refillPerSecond = 0.5 },
+        BuyRod = { capacity = 2, refillPerSecond = 0.5 },
     },
     serverRemotes = {
         -- At most a couple of grants per second reach one player.
         CoinsChanged = { maxPerSecond = 2 },
+        -- Reef: one bite and one result per cast; stock and rod change at most with each of those.
+        Bite = { maxPerSecond = 1 },
+        CatchResult = { maxPerSecond = 2 },
+        StockChanged = { maxPerSecond = 2 },
+        RodChanged = { maxPerSecond = 1 },
     },
     runtime = {
         maxHeartbeatMs = 16, -- sourced: server CPU time below 16 ms to hit 60 (production/analytics/performance)

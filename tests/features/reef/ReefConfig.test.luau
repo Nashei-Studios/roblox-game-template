@@ -1,5 +1,6 @@
 --!strict
 local FishRoll = require("../../../src/shared/features/reef/FishRoll")
+local FishWire = require("../../../src/shared/features/reef/FishWire")
 local ReefConfig = require("../../../src/shared/features/reef/ReefConfig")
 local harness = require("../../harness")
 
@@ -82,5 +83,21 @@ return function(suite: harness.Harness)
         harness.equal(FishRoll.biteDelay(zone, 0), zone.biteMinSeconds, "min")
         harness.equal(FishRoll.biteDelay(zone, 1), zone.biteMaxSeconds, "max")
         harness.equal(FishRoll.biteDelay(zone, 7), zone.biteMaxSeconds, "clamped")
+    end)
+
+    suite:test("every fish in the table has a wire name and the map has nothing extra", function()
+        local fishCount = 0
+        for _, zone in ReefConfig.default.zones do
+            for _, fish in zone.fish do
+                fishCount += 1
+                harness.equal(FishWire.toWire(fish.id), fish.id, `wire name of {fish.id}`)
+            end
+        end
+        local mapped = 0
+        for _ in FishWire.names do
+            mapped += 1
+        end
+        harness.equal(mapped, fishCount, "same size")
+        harness.isTrue(FishWire.toWire("ghost") == nil, "unknown fish")
     end)
 end

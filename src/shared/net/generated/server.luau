@@ -135,10 +135,50 @@ if not RunService:IsRunning() then
 	local noop = function() end
 	return table.freeze({
 		sendEvents = noop,
+		StockChanged = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
+		Sell = table.freeze({
+			setCallback = noop
+		}),
+		RodChanged = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
 		RequestPurchase = table.freeze({
 			setCallback = noop
 		}),
+		Reel = table.freeze({
+			setCallback = noop
+		}),
 		CoinsChanged = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
+		CatchResult = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
+		Cast = table.freeze({
+			setCallback = noop
+		}),
+		BuyRod = table.freeze({
+			setCallback = noop
+		}),
+		Bite = table.freeze({
 			fire = noop,
 			fireAll = noop,
 			fireExcept = noop,
@@ -175,7 +215,8 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	player_map[player] = nil
 end)
-export type ProductName = ("Coins100")
+export type ProductName = ("Coins100" | "BaitPack")
+export type FishName = ("minnow" | "sardine" | "perch" | "mackerel" | "snapper" | "grouper" | "tuna" | "swordfish" | "marlin")
 
 local function sendEvents()
 	for player, outgoing in player_map do
@@ -195,7 +236,7 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(1)
+local reliable_events = table.create(5)
 reliable.OnServerEvent:Connect(function(player, buff, inst)
 	incoming_buff = buff
 	incoming_inst = inst
@@ -204,11 +245,37 @@ reliable.OnServerEvent:Connect(function(player, buff, inst)
 	local len = buffer.len(buff)
 	while incoming_read < len do
 		local id = buffer.readu8(buff, read(1))
-		if id == 0 then -- RequestPurchase
+		if id == 3 then -- Sell
 			local value
-			value = "Coins100"
+			if reliable_events[3] then
+				reliable_events[3](player, value)
+			end
+		elseif id == 0 then -- RequestPurchase
+			local value
+			local bool_1 = buffer.readu8(incoming_buff, read(1))
+			if bit32.btest(bool_1, 0b0000000000000001) then
+				value = "Coins100"
+			else
+				value = "BaitPack"
+			end
 			if reliable_events[0] then
 				reliable_events[0](player, value)
+			end
+		elseif id == 2 then -- Reel
+			local value
+			if reliable_events[2] then
+				reliable_events[2](player, value)
+			end
+		elseif id == 1 then -- Cast
+			local value
+			value = buffer.readu8(incoming_buff, read(1))
+			if reliable_events[1] then
+				reliable_events[1](player, value)
+			end
+		elseif id == 4 then -- BuyRod
+			local value
+			if reliable_events[4] then
+				reliable_events[4](player, value)
 			end
 		else
 			error("Unknown event id")
@@ -220,11 +287,181 @@ table.freeze(polling_queues_unreliable)
 
 local returns = {
 	sendEvents = sendEvents,
+	StockChanged = {
+		fire = function(player: Player, count: (number), capacity: (number))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, count)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, capacity)
+			player_map[player] = save()
+		end,
+		fireAll = function(count: (number), capacity: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, count)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, capacity)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, count: (number), capacity: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, count)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, capacity)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, count: (number), capacity: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, count)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, capacity)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, count: (number), capacity: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, count)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, capacity)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
+	Sell = {
+		setCallback = function(callback: (player: Player) -> ()): () -> ()
+			reliable_events[3] = callback
+			return function()
+				reliable_events[3] = nil
+			end
+		end,
+	},
+	RodChanged = {
+		fire = function(player: Player, rodLevel: (number))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, rodLevel)
+			player_map[player] = save()
+		end,
+		fireAll = function(rodLevel: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, rodLevel)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, rodLevel: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, rodLevel)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, rodLevel: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, rodLevel)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, rodLevel: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, rodLevel)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
 	RequestPurchase = {
-		setCallback = function(callback: (player: Player, product: ("Coins100")) -> ()): () -> ()
+		setCallback = function(callback: (player: Player, product: ("Coins100" | "BaitPack")) -> ()): () -> ()
 			reliable_events[0] = callback
 			return function()
 				reliable_events[0] = nil
+			end
+		end,
+	},
+	Reel = {
+		setCallback = function(callback: (player: Player) -> ()): () -> ()
+			reliable_events[2] = callback
+			return function()
+				reliable_events[2] = nil
 			end
 		end,
 	},
@@ -290,6 +527,281 @@ local returns = {
 			buffer.writeu8(outgoing_buff, outgoing_apos, 0)
 			alloc(4)
 			buffer.writeu32(outgoing_buff, outgoing_apos, coins)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
+	CatchResult = {
+		fire = function(player: Player, fish: (("minnow" | "sardine" | "perch" | "mackerel" | "snapper" | "grouper" | "tuna" | "swordfish" | "marlin")?))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			local bool_2 = 0
+			local bool_2_pos_1 = alloc(2)
+			if fish ~= nil then
+				bool_2 = bit32.bor(bool_2, 0b0000000000000001)
+				if fish == "minnow" then
+					bool_2 = bit32.bor(bool_2, 0b0000000000000010)
+				elseif fish == "sardine" then
+					bool_2 = bit32.bor(bool_2, 0b0000000000000100)
+				elseif fish == "perch" then
+					bool_2 = bit32.bor(bool_2, 0b0000000000001000)
+				elseif fish == "mackerel" then
+					bool_2 = bit32.bor(bool_2, 0b0000000000010000)
+				elseif fish == "snapper" then
+					bool_2 = bit32.bor(bool_2, 0b0000000000100000)
+				elseif fish == "grouper" then
+					bool_2 = bit32.bor(bool_2, 0b0000000001000000)
+				elseif fish == "tuna" then
+					bool_2 = bit32.bor(bool_2, 0b0000000010000000)
+				elseif fish == "swordfish" then
+					bool_2 = bit32.bor(bool_2, 0b0000000100000000)
+				elseif fish == "marlin" then
+					bool_2 = bit32.bor(bool_2, 0b0000001000000000)
+				else
+					error("Invalid enumerator")
+				end
+			end
+			buffer.writeu16(outgoing_buff, bool_2_pos_1, bool_2)
+			player_map[player] = save()
+		end,
+		fireAll = function(fish: (("minnow" | "sardine" | "perch" | "mackerel" | "snapper" | "grouper" | "tuna" | "swordfish" | "marlin")?))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			local bool_3 = 0
+			local bool_3_pos_1 = alloc(2)
+			if fish ~= nil then
+				bool_3 = bit32.bor(bool_3, 0b0000000000000001)
+				if fish == "minnow" then
+					bool_3 = bit32.bor(bool_3, 0b0000000000000010)
+				elseif fish == "sardine" then
+					bool_3 = bit32.bor(bool_3, 0b0000000000000100)
+				elseif fish == "perch" then
+					bool_3 = bit32.bor(bool_3, 0b0000000000001000)
+				elseif fish == "mackerel" then
+					bool_3 = bit32.bor(bool_3, 0b0000000000010000)
+				elseif fish == "snapper" then
+					bool_3 = bit32.bor(bool_3, 0b0000000000100000)
+				elseif fish == "grouper" then
+					bool_3 = bit32.bor(bool_3, 0b0000000001000000)
+				elseif fish == "tuna" then
+					bool_3 = bit32.bor(bool_3, 0b0000000010000000)
+				elseif fish == "swordfish" then
+					bool_3 = bit32.bor(bool_3, 0b0000000100000000)
+				elseif fish == "marlin" then
+					bool_3 = bit32.bor(bool_3, 0b0000001000000000)
+				else
+					error("Invalid enumerator")
+				end
+			end
+			buffer.writeu16(outgoing_buff, bool_3_pos_1, bool_3)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, fish: (("minnow" | "sardine" | "perch" | "mackerel" | "snapper" | "grouper" | "tuna" | "swordfish" | "marlin")?))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			local bool_4 = 0
+			local bool_4_pos_1 = alloc(2)
+			if fish ~= nil then
+				bool_4 = bit32.bor(bool_4, 0b0000000000000001)
+				if fish == "minnow" then
+					bool_4 = bit32.bor(bool_4, 0b0000000000000010)
+				elseif fish == "sardine" then
+					bool_4 = bit32.bor(bool_4, 0b0000000000000100)
+				elseif fish == "perch" then
+					bool_4 = bit32.bor(bool_4, 0b0000000000001000)
+				elseif fish == "mackerel" then
+					bool_4 = bit32.bor(bool_4, 0b0000000000010000)
+				elseif fish == "snapper" then
+					bool_4 = bit32.bor(bool_4, 0b0000000000100000)
+				elseif fish == "grouper" then
+					bool_4 = bit32.bor(bool_4, 0b0000000001000000)
+				elseif fish == "tuna" then
+					bool_4 = bit32.bor(bool_4, 0b0000000010000000)
+				elseif fish == "swordfish" then
+					bool_4 = bit32.bor(bool_4, 0b0000000100000000)
+				elseif fish == "marlin" then
+					bool_4 = bit32.bor(bool_4, 0b0000001000000000)
+				else
+					error("Invalid enumerator")
+				end
+			end
+			buffer.writeu16(outgoing_buff, bool_4_pos_1, bool_4)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, fish: (("minnow" | "sardine" | "perch" | "mackerel" | "snapper" | "grouper" | "tuna" | "swordfish" | "marlin")?))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			local bool_5 = 0
+			local bool_5_pos_1 = alloc(2)
+			if fish ~= nil then
+				bool_5 = bit32.bor(bool_5, 0b0000000000000001)
+				if fish == "minnow" then
+					bool_5 = bit32.bor(bool_5, 0b0000000000000010)
+				elseif fish == "sardine" then
+					bool_5 = bit32.bor(bool_5, 0b0000000000000100)
+				elseif fish == "perch" then
+					bool_5 = bit32.bor(bool_5, 0b0000000000001000)
+				elseif fish == "mackerel" then
+					bool_5 = bit32.bor(bool_5, 0b0000000000010000)
+				elseif fish == "snapper" then
+					bool_5 = bit32.bor(bool_5, 0b0000000000100000)
+				elseif fish == "grouper" then
+					bool_5 = bit32.bor(bool_5, 0b0000000001000000)
+				elseif fish == "tuna" then
+					bool_5 = bit32.bor(bool_5, 0b0000000010000000)
+				elseif fish == "swordfish" then
+					bool_5 = bit32.bor(bool_5, 0b0000000100000000)
+				elseif fish == "marlin" then
+					bool_5 = bit32.bor(bool_5, 0b0000001000000000)
+				else
+					error("Invalid enumerator")
+				end
+			end
+			buffer.writeu16(outgoing_buff, bool_5_pos_1, bool_5)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, fish: (("minnow" | "sardine" | "perch" | "mackerel" | "snapper" | "grouper" | "tuna" | "swordfish" | "marlin")?))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			local bool_6 = 0
+			local bool_6_pos_1 = alloc(2)
+			if fish ~= nil then
+				bool_6 = bit32.bor(bool_6, 0b0000000000000001)
+				if fish == "minnow" then
+					bool_6 = bit32.bor(bool_6, 0b0000000000000010)
+				elseif fish == "sardine" then
+					bool_6 = bit32.bor(bool_6, 0b0000000000000100)
+				elseif fish == "perch" then
+					bool_6 = bit32.bor(bool_6, 0b0000000000001000)
+				elseif fish == "mackerel" then
+					bool_6 = bit32.bor(bool_6, 0b0000000000010000)
+				elseif fish == "snapper" then
+					bool_6 = bit32.bor(bool_6, 0b0000000000100000)
+				elseif fish == "grouper" then
+					bool_6 = bit32.bor(bool_6, 0b0000000001000000)
+				elseif fish == "tuna" then
+					bool_6 = bit32.bor(bool_6, 0b0000000010000000)
+				elseif fish == "swordfish" then
+					bool_6 = bit32.bor(bool_6, 0b0000000100000000)
+				elseif fish == "marlin" then
+					bool_6 = bit32.bor(bool_6, 0b0000001000000000)
+				else
+					error("Invalid enumerator")
+				end
+			end
+			buffer.writeu16(outgoing_buff, bool_6_pos_1, bool_6)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
+	Cast = {
+		setCallback = function(callback: (player: Player, zone: (number)) -> ()): () -> ()
+			reliable_events[1] = callback
+			return function()
+				reliable_events[1] = nil
+			end
+		end,
+	},
+	BuyRod = {
+		setCallback = function(callback: (player: Player) -> ()): () -> ()
+			reliable_events[4] = callback
+			return function()
+				reliable_events[4] = nil
+			end
+		end,
+	},
+	Bite = {
+		fire = function(player: Player)
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			player_map[player] = save()
+		end,
+		fireAll = function()
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player)
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player })
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any })
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
 			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
 			for player in set do
 				load_player(player)

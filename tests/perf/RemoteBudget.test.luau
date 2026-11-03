@@ -128,6 +128,14 @@ return function(suite: harness.Harness)
         local report = RemoteBudget.evaluate({
             { name = "RequestPurchase", from = "Client", payloadBytes = 1 },
             { name = "CoinsChanged", from = "Server", payloadBytes = 4 },
+            { name = "Cast", from = "Client", payloadBytes = 1 },
+            { name = "Reel", from = "Client", payloadBytes = 0 },
+            { name = "Sell", from = "Client", payloadBytes = 0 },
+            { name = "BuyRod", from = "Client", payloadBytes = 0 },
+            { name = "Bite", from = "Server", payloadBytes = 0 },
+            { name = "CatchResult", from = "Server", payloadBytes = 2 },
+            { name = "StockChanged", from = "Server", payloadBytes = 2 },
+            { name = "RodChanged", from = "Server", payloadBytes = 1 },
         }, PerfBudget)
         harness.equal(#report.failures, 0)
     end)
