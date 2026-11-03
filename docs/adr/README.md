@@ -24,5 +24,7 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0017](0017-luau-coverage-gate.md) | Line-coverage gate with the Luau CLI (75 % of the total) |
 | [0018](0018-studio-mcp-user-scope.md) | Studio MCP registered at user scope only (supersedes the registration clause of 0004) |
 | [0019](0019-performance-budget.md) | Performance budget: static remote-bandwidth calculator plus a dev probe |
+| 0020 | Reserved: each game branch (`game/*`) records its own game-specific 0020, so template ADRs skip it to avoid collisions when those branches merge `main` |
+| [0021](0021-lihfolk-knowledge-plugin.md) | LihFolk Vault V2.5.0 as the project-scoped Roblox knowledge router (pinned local copy) |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).

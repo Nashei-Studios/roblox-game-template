@@ -31,12 +31,33 @@
     "PreToolUse": [
       {
         "matcher": "mcp__Roblox_Studio__.*",
-        "hooks": [{ "type": "command", "command": "lune run .claude/hooks/studio-lock" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lune run .claude/hooks/studio-lock"
+          }
+        ]
       },
       {
         "matcher": "Bash|PowerShell",
-        "hooks": [{ "type": "command", "command": "lune run .claude/hooks/studio-lock" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lune run .claude/hooks/studio-lock"
+          }
+        ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "lihfolk": {
+      "source": {
+        "source": "directory",
+        "path": "D:\\Victor\\Roblox\\kits\\lihfolk-vault-v2.5.0\\LihFolk Vault V2"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "lihfolk@lihfolk": true
   }
 }
