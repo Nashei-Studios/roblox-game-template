@@ -16,12 +16,12 @@ A starting kit for monetized Roblox games: strict Luau, Rojo-synced code, a type
    - `rojo plugin install`
    - VS Code profile: `code --profile roblox --install-extension JohnnyMorganz.luau-lsp` (repeat for `evaera.vscode-rojo`, `Kampfkarren.selene-vscode`, `JohnnyMorganz.stylua`), then open the folder with `code --profile roblox .`
 4. `rojo serve`, open a dev place in Studio, click Connect in the Rojo plugin.
-5. Studio MCP (optional, see below): Assistant > Manage MCP Servers > Enable Studio as MCP server.
+5. Studio MCP (optional, see below): bootstrap installs and registers it at user scope; then Assistant > Manage MCP Servers > Enable Studio as MCP server.
 6. First run formatting once: `stylua .` (the committed files were written without the tool available).
 
 ## Studio MCP
 
-`.mcp.json` registers the MCP proxy built into Studio (`StudioMCP.exe`, signed by Roblox Corporation) project-scoped as `Roblox_Studio`, through `tools/roblox-studio-mcp.cmd`, which picks the newest `%LOCALAPPDATA%RobloxVersionsersion-*StudioMCP.exe` so Studio updates do not break the path. Studio must be open with **Enable Studio as MCP server** turned on (Assistant settings). Check with `claude mcp get Roblox_Studio`: it should list the tools. Use it on a dev or throwaway place only ([ADR 0004](docs/adr/0004-studio-mcp-builtin-only.md)).
+The MCP proxy built into Studio (`StudioMCP.exe`, signed by Roblox Corporation) is registered at **user scope only** as `Roblox_Studio` ([ADR 0018](docs/adr/0018-studio-mcp-user-scope.md)); there is no project `.mcp.json`, so no second proxy starts. `tools/roblox-studio-mcp.cmd` is the install source: `pwsh scripts/bootstrap.ps1` copies it to `~/.local/bin` and runs `claude mcp add --scope user Roblox_Studio -- cmd.exe /c <that path>` when `claude mcp get Roblox_Studio` fails. The launcher picks the newest `%LOCALAPPDATA%\Roblox\Versions\version-*\StudioMCP.exe` so Studio updates do not break the path. Studio must be open with **Enable Studio as MCP server** turned on (Assistant settings). Check with `claude mcp get Roblox_Studio`: it should list the tools. Use it on a dev or throwaway place only ([ADR 0004](docs/adr/0004-studio-mcp-builtin-only.md)), and only while holding the Studio lock: for Claude Code agents `.claude/hooks/studio-lock` blocks `Roblox_Studio` tools and `rojo serve` without it ([docs/multi-agent.md](docs/multi-agent.md)).
 
 ## Folder tree
 
@@ -30,7 +30,7 @@ A starting kit for monetized Roblox games: strict Luau, Rojo-synced code, a type
 ├── rokit.toml               pinned toolchain (Rojo, StyLua, Selene, Lune, Luau LSP)
 ├── default.project.json     Rojo map; only code folders are managed
 ├── .luaurc  selene.toml  stylua.toml   strict mode, lint std, format rules
-├── .mcp.json                project-scoped Studio MCP registration
+├── .claude/                 Claude Code setup: settings.json (permissions, hook), hooks/studio-lock (Studio lock gate), agents/luau-reviewer
 ├── .vscode/                 luau-lsp settings and recommended extensions
 ├── .github/workflows/ci.yml jobs: format, lint, analyze (+ non-blocking new solver), test (PR and push to main)
 ├── src/

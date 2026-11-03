@@ -1,5 +1,6 @@
 # ADR 0004: Built-in Studio MCP only
 
+- Status: Superseded in part by [0018](0018-studio-mcp-user-scope.md) (registration clause only)
 - Status: accepted by recommendation 2026-11-02, revisable
 - Date: 2026-11-02
 - Source: R0 toolchain research (decisions-proposed.md, D-05)
