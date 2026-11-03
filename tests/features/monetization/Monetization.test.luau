@@ -1,6 +1,6 @@
 --!strict
-local Monetization = require("../src/shared/Monetization")
-local harness = require("./harness")
+local Monetization = require("../../../src/shared/features/monetization/Monetization")
+local harness = require("../../harness")
 
 local function receipt(purchaseId: string): Monetization.ReceiptInfo
     return { playerId = 1, purchaseId = purchaseId, productId = 10 }
@@ -42,5 +42,16 @@ return function(suite: harness.Harness)
             return true
         end)
         harness.equal(retry, "granted")
+    end)
+
+    suite:test("a table-backed ledger persists in the caller's table", function()
+        local saved: { [string]: boolean } = {}
+        local ledger = Monetization.newTableLedger(saved)
+        Monetization.processReceipt(ledger, receipt("a"), function()
+            return true
+        end)
+        harness.isTrue(saved["a"] == true, "record lands in the player's data")
+        local reloaded = Monetization.newTableLedger(saved)
+        harness.isTrue(reloaded:has("a"), "a new ledger over the same table sees it")
     end)
 end

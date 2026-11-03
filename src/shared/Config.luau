@@ -13,9 +13,9 @@ export type ProductConfig = {
 
 export type GameConfig = {
     gameName: string,
-    -- Seconds before another server may steal a session lock (see Session.luau).
+    -- Seconds after which ProfileStore assumes a silent server is dead (ASSUME_DEAD).
     sessionLockTimeoutSeconds: number,
-    -- Seconds between autosaves of player data.
+    -- Seconds between ProfileStore autosaves (AUTO_SAVE_PERIOD).
     autosaveIntervalSeconds: number,
     gamePasses: { ProductConfig },
     developerProducts: { ProductConfig },
@@ -34,6 +34,14 @@ Config.default = {
         { name = "Coins100", id = nil }, -- TODO(victor): set id
     },
 } :: GameConfig
+
+--- In-repo fallbacks for live-ops flags (Experience Configs override them; see features/flags).
+Config.flagDefaults = {
+    booleans = {
+        purchasesEnabled = true,
+    },
+    numbers = {},
+} :: { booleans: { [string]: boolean }, numbers: { [string]: number } }
 
 --- Returns one human-readable problem per invalid or missing value (empty when valid).
 function Config.validate(config: GameConfig): { string }

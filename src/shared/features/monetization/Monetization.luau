@@ -1,7 +1,7 @@
 --!strict
 --[[
     Pure receipt-processing core (idempotent ProcessReceipt pattern).
-    No Roblox services: the server adapter in src/server/MonetizationService.luau maps
+    No Roblox services: the server service in src/server/features/monetization/MonetizationService.luau maps
     the result to Enum.ProductPurchaseDecision.
 
     Rule: a purchase is granted at most once per PurchaseId. A failed grant is NOT
@@ -17,7 +17,7 @@ export type ReceiptInfo = {
 export type ReceiptDecision = "granted" | "alreadyGranted" | "failed"
 
 -- Storage for processed purchase ids. Production code backs this with the player's
--- persisted data (see Session.luau); tests use the in-memory ledger below.
+-- persisted data (see PlayerData.luau and newTableLedger); tests use the in-memory ledger.
 export type ReceiptLedger = {
     has: (self: ReceiptLedger, purchaseId: string) -> boolean,
     record: (self: ReceiptLedger, purchaseId: string) -> (),
@@ -28,8 +28,8 @@ export type GrantFn = (receipt: ReceiptInfo) -> boolean
 
 local Monetization = {}
 
-function Monetization.newMemoryLedger(): ReceiptLedger
-    local seen: { [string]: boolean } = {}
+--- Ledger over a caller-owned table (the player's saved data), so records persist with the profile.
+function Monetization.newTableLedger(seen: { [string]: boolean }): ReceiptLedger
     local ledger: ReceiptLedger = {
         has = function(_self: ReceiptLedger, purchaseId: string): boolean
             return seen[purchaseId] == true
@@ -39,6 +39,10 @@ function Monetization.newMemoryLedger(): ReceiptLedger
         end,
     }
     return ledger
+end
+
+function Monetization.newMemoryLedger(): ReceiptLedger
+    return Monetization.newTableLedger({})
 end
 
 function Monetization.processReceipt(

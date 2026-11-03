@@ -10,9 +10,26 @@ local harness = require("../tests/harness")
 
 local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     { name = "Config", register = require("../tests/Config.test") },
-    { name = "Analytics", register = require("../tests/Analytics.test") },
-    { name = "Monetization", register = require("../tests/Monetization.test") },
-    { name = "Session", register = require("../tests/Session.test") },
+    { name = "Analytics", register = require("../tests/features/analytics/Analytics.test") },
+    {
+        name = "AnalyticsTracker",
+        register = require("../tests/features/analytics/AnalyticsTracker.test"),
+    },
+    { name = "Flags", register = require("../tests/features/flags/Flags.test") },
+    {
+        name = "Monetization",
+        register = require("../tests/features/monetization/Monetization.test"),
+    },
+    {
+        name = "InMemoryProfileRepository (port contract)",
+        register = require("../tests/features/playerdata/InMemoryProfileRepository.test"),
+    },
+    {
+        name = "PlayerDataService",
+        register = require("../tests/features/playerdata/PlayerDataService.test"),
+    },
+    { name = "Validation", register = require("../tests/net/Validation.test") },
+    { name = "RateLimiter", register = require("../tests/net/RateLimiter.test") },
 }
 
 local totalPassed, totalFailed = 0, 0

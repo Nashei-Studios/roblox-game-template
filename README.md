@@ -32,14 +32,22 @@ A starting kit for monetized Roblox games: strict Luau, Rojo-synced code, a type
 ├── .luaurc  selene.toml  stylua.toml   strict mode, lint std, format rules
 ├── .mcp.json                project-scoped Studio MCP registration
 ├── .vscode/                 luau-lsp settings and recommended extensions
-├── .github/workflows/ci.yml format check, lint, Lune tests (PR and push to main)
+├── .github/workflows/ci.yml jobs: format, lint, analyze (+ non-blocking new solver), test (PR and push to main)
 ├── src/
 │   ├── shared/              -> ReplicatedStorage/Shared: pure logic, no engine services, Lune-testable
-│   ├── server/              -> ServerScriptService/Server: thin adapters over engine services
-│   └── client/              -> StarterPlayerScripts/Client: binds behavior to Studio-built UI
-├── tests/                   Lune tests, one file per pure module, plus a tiny harness
-├── scripts/                 test runner and the one-time bootstrap
-└── docs/                    roadmap, requirements, milestones, architecture, adr/, ai-logs/
+│   │   ├── ports/           types only: what features need from outside (ProfileRepository, Flags, AnalyticsSink, LedgerProvider)
+│   │   ├── features/<name>/ one folder per capability (analytics, flags, monetization, playerdata)
+│   │   └── net/             remote helpers: Validation, RateLimiter
+│   ├── server/              -> ServerScriptService/Server
+│   │   ├── Main.server.luau the only server Script: composition root
+│   │   ├── adapters/        ports implemented over engine services and ProfileStore
+│   │   └── features/<name>/ server-only services (MonetizationService)
+│   └── client/              -> StarterPlayerScripts/Client: Main.client binds behavior to Studio-built UI
+├── vendor/                  pinned third-party code with LICENSE and provenance (ProfileStore)
+├── types/                   Roblox definitions for luau-lsp analyze (data only)
+├── tests/                   mirrors src, plus a tiny harness and the ProfileRepository port contract
+├── scripts/                 test runner, analyze.ps1 and the one-time bootstrap
+└── docs/                    roadmap, requirements, milestones, architecture, adr/, multi-agent.md, ai-logs/
 ```
 
 Why this split: anything that needs only values lives in `shared` so Lune can test it in CI without Studio; anything that touches `DataStoreService` or `MarketplaceService` stays in `server` as a small adapter around a tested core.
@@ -50,16 +58,17 @@ Why this split: anything that needs only values lives in `shared` so Lune can te
 |---|---|---|
 | Strict Luau (ADR 0001) | No compile step, native tooling | No TypeScript ecosystem |
 | Partially managed Rojo (ADR 0002) | Safe merges | World/UI not in Git |
-| Pure core + injected backends | Lune-testable, no mocks of the engine | A thin adapter per service |
+| Pure core, ports and adapters (ADR 0009) | Lune-testable, no mocks of the engine | A thin adapter per service |
 | Local structural `Result` alias in pure modules | They load under Lune without engine `require` paths | Small duplication of the type |
 | Idempotent receipt ledger | No double grants | The ledger must persist with player data |
 
 ## Add a feature
 
-1. Put the decision and data shape in a pure module under `src/shared` with typed exports.
-2. Add `tests/<Module>.test.luau` and register it in `scripts/test.luau`.
-3. If it needs the engine, add a thin adapter under `src/server` (or `src/client`).
-4. `stylua .`, `selene .`, `lune run scripts/test`, then open a PR.
+1. Put the decision and data shape in a pure module under `src/shared/features/<feature>/` with typed exports and a `Deps` table for anything external.
+2. If it needs an external service, add a port type in `src/shared/ports` and an adapter in `src/server/adapters`; wire it in `Main.server.luau` (the only place that builds adapters).
+3. Add `tests/features/<feature>/<Module>.test.luau` and register it in `scripts/test.luau`.
+4. For a remote: validate every argument with `shared/net/Validation` and gate it with a `RateLimiter` (ADR 0012).
+5. `stylua .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, then open a PR (CI runs the same). Several agents at once: read `docs/multi-agent.md`.
 
 ## Start a new game from this template
 
@@ -75,8 +84,8 @@ No community MCP servers; no secrets in the repo; nothing that moves real money 
 
 ## Tests
 
-Pure logic: `tests/` via `lune run scripts/test` (runs in CI). Engine-bound adapters have no automated tests yet; the plan is the Open Cloud Luau Execution API once Victor creates the key ([ADR 0005](docs/adr/0005-tests-lune-then-luau-execution.md)).
+Pure logic: `tests/` via `lune run scripts/test`; types via `pwsh scripts/analyze.ps1` (both run in CI). Engine-bound adapters have no automated tests yet; the plan is the Open Cloud Luau Execution API once Victor creates the key ([ADR 0005](docs/adr/0005-tests-lune-then-luau-execution.md)).
 
-## Status and unverified items
+## Status
 
-Nothing here has been executed yet: no Studio, Rokit, Rojo or Lune were installed when this was written. First CI/Lune run may need small fixes (formatter diff, Lune `require` of `*.test` files, Selene on test files, the `CompeyDev/setup-rokit` action tag).
+Verified locally on 2026-11-02: StyLua, Selene, `luau-lsp analyze` (0 errors), Lune tests and `rojo build`. CI has not run yet (no remote). Still unverified: Studio MCP with several Studios, the engine adapters (no engine tests until the Luau Execution API), and the new-solver pass (informational, reports errors on ProfileStore typing and `os.time` as a clock).

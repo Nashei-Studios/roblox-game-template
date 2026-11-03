@@ -3,10 +3,11 @@
 Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `README.md` first.
 
 ## Structure
-- `src/shared` -> ReplicatedStorage/Shared. Pure logic: no Roblox services, loads under Lune.
-- `src/server` -> ServerScriptService/Server. Adapters over engine services (DataStore, Marketplace).
-- `src/client` -> StarterPlayerScripts/Client. Binds behavior to UI built in Studio.
-- `tests/` Lune tests, `scripts/test.luau` runner, `docs/adr/` decisions.
+- `src/shared` -> ReplicatedStorage/Shared. Pure logic, loads under Lune: `ports/` (types), `features/<name>/`, `net/`.
+- `src/server` -> ServerScriptService/Server. `Main.server` is the ONLY Script (composition root); `adapters/` implement ports over engine services; `features/<name>/` server-only services.
+- `src/client` -> StarterPlayerScripts/Client. `Main.client` is the ONLY LocalScript.
+- `vendor/` pinned third-party code (ProfileStore) with LICENSE; never edit it. `types/` is data for `analyze`.
+- `tests/` mirrors `src`; `scripts/test.luau` runner; `docs/adr/` decisions; `docs/architecture.md` diagrams.
 
 ## Commands (run via Rokit tools)
 - `stylua .` format, `stylua --check .` verify
@@ -17,7 +18,8 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 
 ## Rules
 - Every `.luau` file starts with `--!strict`. No `any`. Every exported function has typed params and return.
-- Business logic goes in pure modules with injected dependencies; engine calls stay in thin adapters.
+- Business logic goes in pure modules with constructor-injected `Deps`; engine calls stay in adapters that implement a port. Only `Main.*` builds adapters. No frameworks, no service locators.
+- Player data only through `ProfileRepository`; remote arguments only through `net/Validation` and a `RateLimiter`.
 - Errors are values (typed Result), never silently swallowed.
 - Ids (game passes, products) stay `nil` with `-- TODO(victor): set id` until real. Never invent ids.
 - New decision -> new ADR in `docs/adr/`, never edit an accepted one.

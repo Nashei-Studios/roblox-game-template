@@ -13,5 +13,9 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0006](0006-assets-by-reference.md) | Assets by reference, no Git LFS |
 | [0007](0007-luau-lsp-analyze-in-ci.md) | luau-lsp analyze in CI with vendored Roblox definitions |
 | [0008](0008-stable-solver-gate.md) | CI gates on the stable solver, new solver non-blocking |
+| [0009](0009-plain-modules-constructor-di.md) | Plain modules, constructor DI, one Script per side, feature folders |
+| [0010](0010-profilestore-behind-profilerepository.md) | ProfileStore (vendored) behind a ProfileRepository port |
+| [0011](0011-flags-port-experience-configs.md) | Flags port over Experience Configs with in-repo defaults |
+| [0012](0012-remote-validation-and-rate-limit.md) | Remote validation and rate limiting; code-gen spike deferred |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
