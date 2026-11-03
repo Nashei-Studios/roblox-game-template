@@ -75,8 +75,10 @@ src/
     ports/                   types only: what features need from the outside world
     features/<feature>/      one folder per capability; the template stays genre-agnostic
     net/                     remote helpers: Validation, RateLimiter (ADR 0012)
+    perf/                    PerfBudget config, RemoteBudget calculator, ProbeEvaluator (ADR 0019)
   server/                    -> ServerScriptService/Server
     Main.server.luau         the ONLY server Script; builds adapters, injects, connects events
+    dev/                     PerfProbe: Studio-only sampler, off by flag (ADR 0019)
     adapters/                implementations of ports over engine services / vendored libs
     features/<feature>/      server-only services (need engine services, e.g. MonetizationService)
   client/                    -> StarterPlayerScripts/Client
@@ -130,7 +132,8 @@ Remotes are generated from `net/schema.zap` (Zap, [ADR 0015](adr/0015-remote-lay
 1. **Schema.** Add an `event` to `net/schema.zap` (direction, reliability, named params). A remote carries intent only: never a price, a result or a player id. Prefer enums and bounded ranges over free strings and numbers.
 2. **Regenerate.** `pwsh scripts/generate-remotes.ps1`, then commit `src/shared/net/generated/`. CI regenerates with the pinned Zap and fails on `git diff --exit-code`.
 3. **Handler.** Write a pure module under `features/<name>/` with injected deps: rate limit first (`net/RateLimiter`), then `net/Validation` on every argument typed `unknown`, then the action. See `features/monetization/PurchaseRequests`. Wire it in `Main.server` only (`net.<Event>.setCallback`), and call `forget` on PlayerRemoving.
-4. **Tests.** A suite in `tests/` registered in `scripts/suites.luau`: valid request, invalid payload, rate-limited, and the malformed-payload path.
+4. **Budget.** Add the remote to `src/shared/perf/PerfBudget.luau` (`clientRemotes` with the limiter you use, or `serverRemotes` with its max sends per second) and run `lune run scripts/perf-budget`: an undeclared or over-budget remote fails CI (ADR 0019).
+5. **Tests.** A suite in `tests/` registered in `scripts/suites.luau`: valid request, invalid payload, rate-limited, and the malformed-payload path.
 
 ```mermaid
 sequenceDiagram
@@ -162,6 +165,10 @@ sequenceDiagram
 ```
 
 Keep the schema enum of product names equal to `Config.default.developerProducts`. The handler also checks the names against Config, so a product missing from the schema is unreachable, not unsafe.
+
+## Performance budget
+
+One config (`PerfBudget`) feeds three consumers: the CI calculator, the RequestPurchase limiter in `Main.server`, and the Studio probe. Flow and alternatives: [ADR 0019](adr/0019-performance-budget.md); manual procedure: [performance.md](performance.md). The calculator is static and sees only remote payloads, not replication or physics traffic.
 
 ## Tradeoffs
 
