@@ -24,6 +24,7 @@ local ProductGrants = require(Shared.features.monetization.ProductGrants)
 local PlayerDataMigrations = require(Shared.features.playerdata.PlayerDataMigrations)
 local PlayerDataService = require(Shared.features.playerdata.PlayerDataService)
 local PurchaseRequests = require(Shared.features.monetization.PurchaseRequests)
+local PerfBudget = require(Shared.perf.PerfBudget)
 local RateLimiter = require(Shared.net.RateLimiter)
 local net = require(Shared.net.generated.server)
 
@@ -32,6 +33,7 @@ local ProfileStore = require(ServerScriptService.Vendor.ProfileStore)
 local AnalyticsServiceSink = require(script.Parent.adapters.AnalyticsServiceSink)
 local ConfigServiceFlags = require(script.Parent.adapters.ConfigServiceFlags)
 local MonetizationService = require(script.Parent.features.monetization.MonetizationService)
+local PerfProbe = require(script.Parent.dev.PerfProbe)
 local ProfileStoreRepository = require(script.Parent.adapters.ProfileStoreRepository)
 
 -- Config is validated at boot; unset ids are reported, not hidden.
@@ -173,9 +175,11 @@ local monetization = MonetizationService.new({
 
 -- Remotes (ADR 0012, ADR 0015): the generated layer decodes, PurchaseRequests rate-limits and
 -- validates, and only then is the purchase prompt opened.
+-- The limit lives in PerfBudget so the static bandwidth calculator reads the same numbers (ADR 0019).
+local purchaseLimit = PerfBudget.clientRemotes.RequestPurchase
 local purchaseLimiter = RateLimiter.new({
-    capacity = 3,
-    refillPerSecond = 0.5,
+    capacity = purchaseLimit.capacity,
+    refillPerSecond = purchaseLimit.refillPerSecond,
     clock = os.clock,
 })
 local purchaseNames: { string } = {}
@@ -224,6 +228,8 @@ Players.PlayerRemoving:Connect(function(player: Player)
     playerData:leave(tostring(player.UserId))
     purchaseLimiter:forget(player.UserId)
 end)
+
+PerfProbe.start(Config.default.perfProbeEnabled == true)
 
 if flags:getBoolean("purchasesEnabled") then
     monetization.start()

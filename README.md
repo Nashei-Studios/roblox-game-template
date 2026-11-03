@@ -17,7 +17,7 @@ A starting kit for monetized Roblox games: strict Luau, Rojo-synced code, a type
    - VS Code profile: `code --profile roblox --install-extension JohnnyMorganz.luau-lsp` (repeat for `evaera.vscode-rojo`, `Kampfkarren.selene-vscode`, `JohnnyMorganz.stylua`), then open the folder with `code --profile roblox .`
 4. `rojo serve`, open a dev place in Studio, click Connect in the Rojo plugin.
 5. Studio MCP (optional, see below): bootstrap installs and registers it at user scope; then Assistant > Manage MCP Servers > Enable Studio as MCP server.
-6. Check the headless gate passes before writing code: `stylua --check .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `pwsh scripts/coverage.ps1`, `rojo build default.project.json -o places/dev.rbxl`.
+6. Check the headless gate passes before writing code: `stylua --check .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `pwsh scripts/coverage.ps1`, `lune run scripts/perf-budget`, `rojo build default.project.json -o places/dev.rbxl`.
 
 ## Studio MCP
 
@@ -38,10 +38,12 @@ The MCP proxy built into Studio (`StudioMCP.exe`, signed by Roblox Corporation) 
 │   ├── shared/              -> ReplicatedStorage/Shared: pure logic, no engine services, Lune-testable
 │   │   ├── ports/           types only: what features need from outside (ProfileRepository, Flags, AnalyticsSink, LedgerProvider)
 │   │   ├── features/<name>/ one folder per capability (analytics, flags, monetization, playerdata)
-│   │   └── net/             remote helpers: Validation, RateLimiter
+│   │   ├── net/             remote helpers: Validation, RateLimiter
+│   │   └── perf/            PerfBudget (the numbers), RemoteBudget (static bandwidth), ProbeEvaluator (ADR 0019)
 │   ├── server/              -> ServerScriptService/Server
 │   │   ├── Main.server.luau the only server Script: composition root
 │   │   ├── adapters/        ports implemented over engine services and ProfileStore
+│   │   ├── dev/             PerfProbe: Studio-only sampler, off by default (ADR 0019)
 │   │   └── features/<name>/ server-only services (MonetizationService)
 │   └── client/              -> StarterPlayerScripts/Client: Main.client binds behavior to Studio-built UI
 ├── vendor/                  pinned third-party code with LICENSE and provenance (ProfileStore)
@@ -73,7 +75,9 @@ Why this split: anything that needs only values lives in `shared` so Lune can te
 
 ## Start a new game from this template
 
-Use "Use this template" on GitHub once the repo is marked as a template (or copy the folder), rename `name` in `default.project.json`, set `gameName` in `Config.luau`, create game passes and developer products in Creator Hub and fill their ids (each marked `TODO(victor)`), and create a separate dev place for MCP work.
+Preferred: `pwsh scripts/new-game.ps1 -Slug <kebab-case-slug> [-VaultPath <vault>] [-DryRun]`. It validates the slug, runs `gh repo create vruizz22/<slug> --private --template vruizz22/roblox-game-template`, clones into `D:\Victor\Repositoriosoblox\games\<slug>`, renames the game in `default.project.json`, `Config.luau` and this README, writes `games/<yyyy-mm>-<slug>/index.md` in the vault only when `-VaultPath` is given, and prints the names (never values) of `ASPHALT_API_KEY` and `ROBLOX_API_KEY`. `-DryRun` only prints the commands. The template repo must be marked as a template on GitHub first (Victor action, vault decision 0014). Tests: `pwsh scripts/new-game.test.ps1`.
+
+Manual: Use "Use this template" on GitHub once the repo is marked as a template (or copy the folder), rename `name` in `default.project.json`, set `gameName` in `Config.luau`, create game passes and developer products in Creator Hub and fill their ids (each marked `TODO(victor)`), and create a separate dev place for MCP work.
 
 ## Game pipeline (short)
 
@@ -89,6 +93,8 @@ Pure logic: `tests/` via `lune run scripts/test`; types via `pwsh scripts/analyz
 
 ## Status
 
+Performance budget added 2026-11-03 ([ADR 0019](docs/adr/0019-performance-budget.md), [docs/performance.md](docs/performance.md)): `lune run scripts/perf-budget` fails CI when a remote's worst case passes the budget. The bandwidth numbers are chosen, not sourced; the probe and the Studio procedure have not been run in Studio yet.
+
 Verified locally on 2026-11-02: StyLua, Selene, `luau-lsp analyze` (0 errors), Lune tests and `rojo build`. CI has not run yet (no remote). Still unverified: Studio MCP with several Studios, the engine adapters (no engine tests until the Luau Execution API), and the new-solver pass (informational, reports errors on ProfileStore typing and `os.time` as a clock).
 
 ## Remotes (Zap)
@@ -101,6 +107,16 @@ pwsh scripts/generate-remotes.ps1       # regenerates src/shared/net/generated/ 
 ```
 
 How to add an event: [docs/architecture.md](docs/architecture.md#how-to-add-a-remote-event).
+
+## Performance budget
+
+Numbers live in `src/shared/perf/PerfBudget.luau`, each marked sourced (with URL in [docs/performance.md](docs/performance.md)) or chosen, not sourced.
+
+```powershell
+lune run scripts/perf-budget    # worst-case bytes/s per remote and per direction; exit 1 over budget
+```
+
+Adding a remote means adding its rate to `PerfBudget` (client remotes: the same limit your RateLimiter uses). Dev probe: `perfProbeEnabled` in Config, Studio only. Manual MicroProfiler procedure: [docs/performance.md](docs/performance.md).
 
 ## Coverage
 

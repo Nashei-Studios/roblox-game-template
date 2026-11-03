@@ -30,6 +30,8 @@ export type GameConfig = {
     purchaseLedgerSize: number,
     -- Seconds a receipt waits for its save to be confirmed before Roblox is told to retry.
     saveConfirmTimeoutSeconds: number,
+    -- Dev performance probe (ADR 0019). Keep false in production; it also needs Studio to start.
+    perfProbeEnabled: boolean?,
     gamePasses: { ProductConfig },
     developerProducts: { DeveloperProductConfig },
 }
@@ -42,6 +44,7 @@ Config.default = {
     autosaveIntervalSeconds = 120,
     purchaseLedgerSize = 50,
     saveConfirmTimeoutSeconds = 30,
+    perfProbeEnabled = false,
     gamePasses = {
         { name = "VIP", id = nil }, -- TODO(victor): set id
     },

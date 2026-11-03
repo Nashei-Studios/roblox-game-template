@@ -56,9 +56,15 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     { name = "Validation", register = require("../tests/net/Validation.test") },
     { name = "RateLimiter", register = require("../tests/net/RateLimiter.test") },
     {
+        name = "EnumOrder (generate-remotes)",
+        register = require("../tests/scripts/EnumOrder.test"),
+    },
+    {
         name = "PurchaseRequests",
         register = require("../tests/features/monetization/PurchaseRequests.test"),
     },
+    { name = "RemoteBudget", register = require("../tests/perf/RemoteBudget.test") },
+    { name = "ProbeEvaluator", register = require("../tests/perf/ProbeEvaluator.test") },
     {
         name = "StudioLockPolicy (hook)",
         register = require("../tests/claude/StudioLockPolicy.test"),

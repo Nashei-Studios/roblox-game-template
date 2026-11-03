@@ -84,6 +84,8 @@ jobs:
           cache: "true"
       - name: Unit tests (Lune)
         run: lune run scripts/test
+      - name: Performance budget (remote bandwidth)
+        run: lune run scripts/perf-budget
       - name: Build smoke
         run: |
           mkdir -p places
