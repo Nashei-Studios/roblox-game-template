@@ -36,6 +36,8 @@ How several coding agents (and humans) work on this repo at once without steppin
 
 Only the lock holder may drive Studio through the built-in MCP (`Roblox_Studio`) or run `rojo serve`.
 
+For Claude Code agents the lock is enforced by `.claude/hooks/studio-lock` (a PreToolUse hook, see `.claude/settings.json`): it blocks `mcp__Roblox_Studio__*` tools and `rojo serve` unless `.studio.lock` exists at the main checkout root and its `worktree=` equals the session's `git rev-parse --show-toplevel` (case-insensitive, slashes normalized). The decision is a pure module (`.claude/hooks/StudioLockPolicy.luau`) with tests in `tests/claude/`. Other agents and humans still rely on the protocol below.
+
 The lock file is `.studio.lock` at the root of the **main checkout** (all worktrees share one repository; find it with `git rev-parse --git-common-dir`, whose parent directory is the main checkout). It is gitignored. Format, one `key=value` per line:
 
 ```
@@ -76,6 +78,6 @@ If a step fails, stop and report; do not retry in a loop and do not bypass the l
 A PR from an agent merges only when all hold:
 
 1. CI is green: format, lint, analyze (stable solver), tests, `rojo build` smoke. The new-solver job is informational.
-2. A reviewer equivalent to `dds-reviewer` (design, SOLID, pattern abuse) and `type-auditor` (no `any`, typed exports) has been run on the diff, with findings fixed or recorded.
+2. A reviewer equivalent to `dds-reviewer` (design, SOLID, pattern abuse) and `type-auditor` (no `any`, typed exports) has been run on the diff, with findings fixed or recorded; in Claude Code the repo agent `luau-reviewer` (`.claude/agents/`) covers this checklist.
 3. A **human approves** anything that touches monetization (`ProcessReceipt`, ledger, grants) or player data (profile schema, `PlayerData`, `ProfileRepository`).
 4. The PR links its issue, states what changed and how it was verified, and adds an ADR when it makes an architectural decision.

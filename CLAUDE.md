@@ -30,6 +30,7 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - One git worktree and branch per agent; own one `features/<name>/` folder; cross-feature, `ports/`, `Main.*`, `vendor/`, CI go through the orchestrator.
 - Headless first: `stylua --check .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `rojo build` must pass before you ask for Studio.
 - Studio only while holding `.studio.lock` (main checkout root, gitignored: agent, worktree, branch, start time, rojo port). Max 3 agents, 1 Studio open at a time. Always pass `studio_id`. Delete the lock when done; never delete another agent's lock, report stale ones (over 2 h).
+- `.claude/` (settings, `hooks/studio-lock`, `agents/luau-reviewer`) enforces the lock for Claude Code: Studio MCP tools and `rojo serve` are blocked (exit 2) unless `.studio.lock` names this worktree. Run `luau-reviewer` on the diff before a PR.
 - Never merge `.rbxl` files. Monetization and player-data changes need human approval.
 
 ## Forbidden
