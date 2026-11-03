@@ -176,9 +176,9 @@ local remotes = ReplicatedStorage:WaitForChild("ZAP")
 local reliable = remotes:WaitForChild("ZAP_RELIABLE")
 assert(reliable:IsA("RemoteEvent"), "Expected ZAP_RELIABLE to be a RemoteEvent")
 
-export type ProductName = ("Coins100" | "SeedBundle")
 export type CropName = ("radish" | "carrot" | "pumpkin")
 export type PassName = ("ExtraPlots" | "AutoHarvest")
+export type ProductName = ("Coins100" | "SeedBundle")
 
 local function sendEvents()
 	if outgoing_used ~= 0 then

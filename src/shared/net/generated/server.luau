@@ -217,9 +217,9 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	player_map[player] = nil
 end)
-export type ProductName = ("Coins100" | "SeedBundle")
 export type CropName = ("radish" | "carrot" | "pumpkin")
 export type PassName = ("ExtraPlots" | "AutoHarvest")
+export type ProductName = ("Coins100" | "SeedBundle")
 
 local function sendEvents()
 	for player, outgoing in player_map do
