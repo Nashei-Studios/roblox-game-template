@@ -123,6 +123,46 @@ sequenceDiagram
   PDS->>R: handle.release() (final save, lock released)
 ```
 
+## How to add a remote event
+
+Remotes are generated from `net/schema.zap` (Zap, [ADR 0015](adr/0015-remote-layer-codegen.md)); the server edge stays ours ([ADR 0012](adr/0012-remote-validation-and-rate-limit.md)).
+
+1. **Schema.** Add an `event` to `net/schema.zap` (direction, reliability, named params). A remote carries intent only: never a price, a result or a player id. Prefer enums and bounded ranges over free strings and numbers.
+2. **Regenerate.** `pwsh scripts/generate-remotes.ps1`, then commit `src/shared/net/generated/`. CI regenerates with the pinned Zap and fails on `git diff --exit-code`.
+3. **Handler.** Write a pure module under `features/<name>/` with injected deps: rate limit first (`net/RateLimiter`), then `net/Validation` on every argument typed `unknown`, then the action. See `features/monetization/PurchaseRequests`. Wire it in `Main.server` only (`net.<Event>.setCallback`), and call `forget` on PlayerRemoving.
+4. **Tests.** A suite in `tests/` registered in `scripts/suites.luau`: valid request, invalid payload, rate-limited, and the malformed-payload path.
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant Z as Zap server layer (generated)
+  participant M as Main.server (composition root)
+  participant H as Handler (pure)
+  participant L as RateLimiter
+  participant V as Validation
+  C->>Z: fire(args)
+  Z->>Z: decode and check schema (enum, range, length)
+  alt outside the schema
+    Z-->>C: dropped by the generated layer
+  else decoded
+    Z->>M: setCallback(player, args)
+    M->>H: handle(userId, args as unknown)
+    H->>L: allow(userId)
+    alt over budget
+      H-->>M: rate_limited (nothing else runs)
+    else within budget
+      H->>V: validate each argument
+      alt invalid
+        H-->>M: typed rejection
+      else valid
+        H->>M: action (prompt, grant, ...)
+      end
+    end
+  end
+```
+
+Keep the schema enum of product names equal to `Config.default.developerProducts`. The handler also checks the names against Config, so a product missing from the schema is unreachable, not unsafe.
+
 ## Tradeoffs
 
 - **Types duplicated across ports and features.** Modules that must load under Lune cannot `require` siblings by Roblox instance path, so each declares a small local structural alias (`Result`, `ProfileHandle`). Cost: duplication, kept honest by the compiler (a structural mismatch fails `analyze`). Benefit: CI tests without Studio.

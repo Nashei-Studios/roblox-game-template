@@ -27,7 +27,8 @@ The MCP proxy built into Studio (`StudioMCP.exe`, signed by Roblox Corporation) 
 
 ```
 .
-├── rokit.toml               pinned toolchain (Rojo, StyLua, Selene, Lune, Luau LSP)
+├── rokit.toml               pinned toolchain (Rojo, StyLua, Selene, Lune, Luau LSP, Zap)
+├── net/schema.zap          remote schema (Zap); output in src/shared/net/generated/ (generated, do not edit)
 ├── default.project.json     Rojo map; only code folders are managed
 ├── .luaurc  selene.toml  stylua.toml   strict mode, lint std, format rules
 ├── .claude/                 Claude Code setup: settings.json (permissions, hook), hooks/studio-lock (Studio lock gate), agents/luau-reviewer
@@ -89,6 +90,17 @@ Pure logic: `tests/` via `lune run scripts/test`; types via `pwsh scripts/analyz
 ## Status
 
 Verified locally on 2026-11-02: StyLua, Selene, `luau-lsp analyze` (0 errors), Lune tests and `rojo build`. CI has not run yet (no remote). Still unverified: Studio MCP with several Studios, the engine adapters (no engine tests until the Luau Execution API), and the new-solver pass (informational, reports errors on ProfileStore typing and `os.time` as a clock).
+
+## Remotes (Zap)
+
+Typed remotes are generated from `net/schema.zap` with the Zap CLI pinned in `rokit.toml` ([ADR 0015](docs/adr/0015-remote-layer-codegen.md)). Zap decodes and checks the wire format; the server still rate-limits and validates every remote ([ADR 0012](docs/adr/0012-remote-validation-and-rate-limit.md)).
+
+```powershell
+rokit install                           # pins zap too; `rokit trust red-blox/zap` once if asked
+pwsh scripts/generate-remotes.ps1       # regenerates src/shared/net/generated/ (CI fails on a diff)
+```
+
+How to add an event: [docs/architecture.md](docs/architecture.md#how-to-add-a-remote-event).
 
 ## Coverage
 

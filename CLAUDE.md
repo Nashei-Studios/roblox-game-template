@@ -14,6 +14,7 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - `selene .` lint
 - `lune run scripts/test` unit tests (add new suites to the list in `scripts/suites.luau`)
 - `pwsh scripts/coverage.ps1` line coverage gate (75 % of the total, ADR 0017)
+- `pwsh scripts/generate-remotes.ps1` regenerate `src/shared/net/generated/` from `net/schema.zap` (never edit generated files)
 - `pwsh scripts/analyze.ps1` type-check (`-NewSolver` for the informational pass)
 - `rojo serve` sync to Studio
 
