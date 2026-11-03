@@ -17,6 +17,7 @@ local Flags = require(Shared.features.flags.Flags)
 local LedgerProvider = require(Shared.ports.LedgerProvider)
 local Monetization = require(Shared.features.monetization.Monetization)
 local PlayerData = require(Shared.features.playerdata.PlayerData)
+local ProductGrants = require(Shared.features.monetization.ProductGrants)
 local PlayerDataMigrations = require(Shared.features.playerdata.PlayerDataMigrations)
 local PlayerDataService = require(Shared.features.playerdata.PlayerDataService)
 
@@ -89,11 +90,28 @@ local ledgers: LedgerProvider.LedgerProvider = {
     end,
 }
 
+local productGrants = ProductGrants.new(Config.grantsByName(Config.default))
+
 local monetization = MonetizationService.new({
     ledgers = ledgers,
-    -- TODO(victor): grant the product (update the player's data) and return true only on success.
-    grant = function(): boolean
-        return false
+    -- True only when the product was delivered; a failed grant is not recorded, so Roblox
+    -- retries the receipt (see Monetization.processReceipt).
+    grant = function(receipt: Monetization.ReceiptInfo): boolean
+        local product = Config.findProductById(Config.default, receipt.productId)
+        if product == nil then
+            warn(`Receipt for unknown product id {receipt.productId}`)
+            return false
+        end
+        local data = playerData:get(tostring(receipt.playerId))
+        if data == nil then
+            return false
+        end
+        local applied = productGrants:apply(data, product.name)
+        if not applied.ok then
+            warn(`Could not grant "{product.name}": {applied.error.kind}`)
+            return false
+        end
+        return true
     end,
 })
 

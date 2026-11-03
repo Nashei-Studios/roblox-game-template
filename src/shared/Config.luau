@@ -11,6 +11,15 @@ export type ProductConfig = {
     id: number?,
 }
 
+-- What a developer product delivers (applied by features/monetization/ProductGrants).
+export type ProductGrant = { kind: "coins", amount: number }
+
+export type DeveloperProductConfig = {
+    name: string,
+    id: number?,
+    grant: ProductGrant,
+}
+
 export type GameConfig = {
     gameName: string,
     -- Seconds after which ProfileStore assumes a silent server is dead (ASSUME_DEAD).
@@ -18,7 +27,7 @@ export type GameConfig = {
     -- Seconds between ProfileStore autosaves (AUTO_SAVE_PERIOD).
     autosaveIntervalSeconds: number,
     gamePasses: { ProductConfig },
-    developerProducts: { ProductConfig },
+    developerProducts: { DeveloperProductConfig },
 }
 
 local Config = {}
@@ -31,7 +40,7 @@ Config.default = {
         { name = "VIP", id = nil }, -- TODO(victor): set id
     },
     developerProducts = {
-        { name = "Coins100", id = nil }, -- TODO(victor): set id
+        { name = "Coins100", id = nil, grant = { kind = "coins", amount = 100 } }, -- TODO(victor): set id
     },
 } :: GameConfig
 
@@ -60,22 +69,45 @@ function Config.validate(config: GameConfig): { string }
             table.insert(problems, `game pass "{pass.name}" has no id`)
         end
     end
+    local seenNames: { [string]: boolean } = {}
     for _, product in config.developerProducts do
         if product.id == nil then
             table.insert(problems, `developer product "{product.name}" has no id`)
+        end
+        if seenNames[product.name] then
+            table.insert(problems, `developer product "{product.name}" is declared twice`)
+        end
+        seenNames[product.name] = true
+        local grant = product.grant
+        if grant.kind ~= "coins" then
+            table.insert(problems, `developer product "{product.name}" has an unknown grant kind`)
+        elseif grant.amount ~= grant.amount or grant.amount <= 0 or grant.amount % 1 ~= 0 then
+            table.insert(
+                problems,
+                `developer product "{product.name}" grants an invalid amount (must be a positive integer)`
+            )
         end
     end
     return problems
 end
 
 --- Finds a developer product by its Roblox id, or nil when unknown.
-function Config.findProductById(config: GameConfig, productId: number): ProductConfig?
+function Config.findProductById(config: GameConfig, productId: number): DeveloperProductConfig?
     for _, product in config.developerProducts do
         if product.id == productId then
             return product
         end
     end
     return nil
+end
+
+--- Grant declarations keyed by product name, the input of ProductGrants.new.
+function Config.grantsByName(config: GameConfig): { [string]: ProductGrant }
+    local grants: { [string]: ProductGrant } = {}
+    for _, product in config.developerProducts do
+        grants[product.name] = product.grant
+    end
+    return grants
 end
 
 return Config
