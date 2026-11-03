@@ -133,11 +133,41 @@ if not RunService:IsRunning() then
 	local noop = function() end
 	return table.freeze({
 		sendEvents = noop,
+		StockChanged = table.freeze({
+			setCallback = noop
+		}),
+		Sell = table.freeze({
+			fire = noop
+		}),
 		RequestPurchase = table.freeze({
+			fire = noop
+		}),
+		RequestPass = table.freeze({
+			fire = noop
+		}),
+		PlotChanged = table.freeze({
+			setCallback = noop
+		}),
+		Plant = table.freeze({
+			fire = noop
+		}),
+		PassChanged = table.freeze({
+			setCallback = noop
+		}),
+		Harvest = table.freeze({
 			fire = noop
 		}),
 		CoinsChanged = table.freeze({
 			setCallback = noop
+		}),
+		BuySeed = table.freeze({
+			fire = noop
+		}),
+		BuyPlot = table.freeze({
+			fire = noop
+		}),
+		AutoHarvest = table.freeze({
+			fire = noop
 		}),
 	}) :: Events
 end
@@ -146,7 +176,9 @@ local remotes = ReplicatedStorage:WaitForChild("ZAP")
 local reliable = remotes:WaitForChild("ZAP_RELIABLE")
 assert(reliable:IsA("RemoteEvent"), "Expected ZAP_RELIABLE to be a RemoteEvent")
 
-export type ProductName = ("Coins100")
+export type ProductName = ("Coins100" | "SeedBundle")
+export type CropName = ("radish" | "carrot" | "pumpkin")
+export type PassName = ("ExtraPlots" | "AutoHarvest")
 
 local function sendEvents()
 	if outgoing_used ~= 0 then
@@ -164,8 +196,11 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(1)
-local reliable_event_queue: { [number]: { any } } = table.create(1)
+local reliable_events = table.create(4)
+local reliable_event_queue: { [number]: { any } } = table.create(4)
+reliable_event_queue[2] = {}
+reliable_event_queue[1] = {}
+reliable_event_queue[3] = {}
 reliable_event_queue[0] = {}
 reliable.OnClientEvent:Connect(function(buff, inst)
 	incoming_buff = buff
@@ -175,7 +210,46 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 	local len = buffer.len(buff)
 	while incoming_read < len do
 		local id = buffer.readu8(buff, read(1))
-		if id == 0 then -- CoinsChanged
+		if id == 2 then -- StockChanged
+			local value, value2, value3
+			value = buffer.readu8(incoming_buff, read(1))
+			value2 = buffer.readu16(incoming_buff, read(2))
+			value3 = buffer.readu16(incoming_buff, read(2))
+			if reliable_events[2] then
+				reliable_events[2](value, value2, value3)
+			else
+				table.insert(reliable_event_queue[2], { value, value2, value3 })
+				if #reliable_event_queue[2] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[2]} events in queue for StockChanged. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 1 then -- PlotChanged
+			local value, value2, value3
+			value = buffer.readu8(incoming_buff, read(1))
+			value2 = buffer.readu8(incoming_buff, read(1))
+			value3 = buffer.readu32(incoming_buff, read(4))
+			if reliable_events[1] then
+				reliable_events[1](value, value2, value3)
+			else
+				table.insert(reliable_event_queue[1], { value, value2, value3 })
+				if #reliable_event_queue[1] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[1]} events in queue for PlotChanged. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 3 then -- PassChanged
+			local value, value2
+			local bool_1 = buffer.readu8(incoming_buff, read(1))
+			value = bit32.btest(bool_1, 0b0000000000000001)
+			value2 = bit32.btest(bool_1, 0b0000000000000010)
+			if reliable_events[3] then
+				reliable_events[3](value, value2)
+			else
+				table.insert(reliable_event_queue[3], { value, value2 })
+				if #reliable_event_queue[3] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[3]} events in queue for PassChanged. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 0 then -- CoinsChanged
 			local value
 			value = buffer.readu32(incoming_buff, read(4))
 			if reliable_events[0] then
@@ -196,14 +270,109 @@ table.freeze(polling_queues_unreliable)
 
 local returns = {
 	sendEvents = sendEvents,
+	StockChanged = {
+		setCallback = function(callback: (crop: (number), seeds: (number), produce: (number)) -> ()): () -> ()
+			reliable_events[2] = callback
+			for _, value in reliable_event_queue[2] do
+				callback(unpack(value)				)
+
+			end
+			reliable_event_queue[2] = {}
+			return function()
+				reliable_events[2] = nil
+			end
+		end,
+	},
+	Sell = {
+		fire = function()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+		end,
+	},
 	RequestPurchase = {
-		fire = function(product: ("Coins100"))
+		fire = function(product: ("Coins100" | "SeedBundle"))
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 0)
+			local bool_2 = 0
+			local bool_2_pos_1 = alloc(1)
 			if product == "Coins100" then
+				bool_2 = bit32.bor(bool_2, 0b0000000000000001)
+			elseif product == "SeedBundle" then
+				local _
 			else
 				error("Invalid enumerator")
 			end
+			buffer.writeu8(outgoing_buff, bool_2_pos_1, bool_2)
+		end,
+	},
+	RequestPass = {
+		fire = function(pass: ("ExtraPlots" | "AutoHarvest"))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 7)
+			local bool_3 = 0
+			local bool_3_pos_1 = alloc(1)
+			if pass == "ExtraPlots" then
+				bool_3 = bit32.bor(bool_3, 0b0000000000000001)
+			elseif pass == "AutoHarvest" then
+				local _
+			else
+				error("Invalid enumerator")
+			end
+			buffer.writeu8(outgoing_buff, bool_3_pos_1, bool_3)
+		end,
+	},
+	PlotChanged = {
+		setCallback = function(callback: (plot: (number), crop: (number), readyAt: (number)) -> ()): () -> ()
+			reliable_events[1] = callback
+			for _, value in reliable_event_queue[1] do
+				callback(unpack(value)				)
+
+			end
+			reliable_event_queue[1] = {}
+			return function()
+				reliable_events[1] = nil
+			end
+		end,
+	},
+	Plant = {
+		fire = function(plot: (number), crop: ("radish" | "carrot" | "pumpkin"))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local bool_4 = 0
+			local bool_4_pos_1 = alloc(1)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, plot)
+			if crop == "radish" then
+				bool_4 = bit32.bor(bool_4, 0b0000000000000001)
+			elseif crop == "carrot" then
+				bool_4 = bit32.bor(bool_4, 0b0000000000000010)
+			elseif crop == "pumpkin" then
+				bool_4 = bit32.bor(bool_4, 0b0000000000000100)
+			else
+				error("Invalid enumerator")
+			end
+			buffer.writeu8(outgoing_buff, bool_4_pos_1, bool_4)
+		end,
+	},
+	PassChanged = {
+		setCallback = function(callback: (extraPlots: (boolean), autoHarvest: (boolean)) -> ()): () -> ()
+			reliable_events[3] = callback
+			for _, value in reliable_event_queue[3] do
+				callback(unpack(value)				)
+
+			end
+			reliable_event_queue[3] = {}
+			return function()
+				reliable_events[3] = nil
+			end
+		end,
+	},
+	Harvest = {
+		fire = function(plot: (number))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, plot)
 		end,
 	},
 	CoinsChanged = {
@@ -217,6 +386,36 @@ local returns = {
 			return function()
 				reliable_events[0] = nil
 			end
+		end,
+	},
+	BuySeed = {
+		fire = function(crop: ("radish" | "carrot" | "pumpkin"))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 5)
+			local bool_5 = 0
+			local bool_5_pos_1 = alloc(1)
+			if crop == "radish" then
+				bool_5 = bit32.bor(bool_5, 0b0000000000000001)
+			elseif crop == "carrot" then
+				bool_5 = bit32.bor(bool_5, 0b0000000000000010)
+			elseif crop == "pumpkin" then
+				bool_5 = bit32.bor(bool_5, 0b0000000000000100)
+			else
+				error("Invalid enumerator")
+			end
+			buffer.writeu8(outgoing_buff, bool_5_pos_1, bool_5)
+		end,
+	},
+	BuyPlot = {
+		fire = function()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+		end,
+	},
+	AutoHarvest = {
+		fire = function()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 6)
 		end,
 	},
 }

@@ -15,8 +15,12 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Shared = ReplicatedStorage.Shared
 local Analytics = require(Shared.features.analytics.Analytics)
 local AnalyticsTracker = require(Shared.features.analytics.AnalyticsTracker)
+local Clock = require(Shared.ports.Clock)
 local Config = require(Shared.Config)
 local Flags = require(Shared.features.flags.Flags)
+local Funnel = require(Shared.features.greenhouse.Funnel)
+local GreenhouseController = require(Shared.features.greenhouse.GreenhouseController)
+local GreenhouseData = require(Shared.features.greenhouse.GreenhouseData)
 local LedgerProvider = require(Shared.ports.LedgerProvider)
 local Monetization = require(Shared.features.monetization.Monetization)
 local PlayerData = require(Shared.features.playerdata.PlayerData)
@@ -33,7 +37,9 @@ local ProfileStore = require(ServerScriptService.Vendor.ProfileStore)
 local AnalyticsServiceSink = require(script.Parent.adapters.AnalyticsServiceSink)
 local ConfigServiceFlags = require(script.Parent.adapters.ConfigServiceFlags)
 local MonetizationService = require(script.Parent.features.monetization.MonetizationService)
+local GreenhouseBuilder = require(script.Parent.adapters.GreenhouseBuilder)
 local PerfProbe = require(script.Parent.dev.PerfProbe)
+local Validation = require(Shared.net.Validation)
 local ProfileStoreRepository = require(script.Parent.adapters.ProfileStoreRepository)
 
 -- Config is validated at boot; unset ids are reported, not hidden.
@@ -115,6 +121,43 @@ local playerData = PlayerDataService.new({
     end,
 })
 
+-- Greenhouse (ADR 0020). Growth is measured by the server clock only; the client sends intent.
+local serverClock: Clock.Clock = {
+    now = function(_self: Clock.Clock): number
+        return os.time()
+    end,
+}
+-- One token bucket per remote, from the same numbers the bandwidth calculator reads (ADR 0019).
+local limiters: { [string]: RateLimiter.RateLimiter } = {}
+for remoteName, limit in PerfBudget.clientRemotes do
+    limiters[remoteName] = RateLimiter.new({
+        capacity = limit.capacity,
+        refillPerSecond = limit.refillPerSecond,
+        clock = os.clock,
+    })
+end
+-- Pass ownership as the server read it from Roblox. Never filled from a client message.
+local ownedPasses: { [number]: { [string]: boolean } } = {}
+local greenhouse = GreenhouseController.new({
+    clock = serverClock,
+    dataFor = function(userId: number): PlayerData.PlayerData?
+        return playerData:get(tostring(userId))
+    end,
+    allow = function(userId: number, remote: string): boolean
+        local limiter = limiters[remote]
+        return limiter ~= nil and limiter:allow(userId)
+    end,
+    ownsPass = function(userId: number, passName: string): boolean
+        local owned = ownedPasses[userId]
+        return owned ~= nil and owned[passName] == true
+    end,
+    funnel = Funnel.new({
+        track = function(name: string, userId: number, sessionIndex: number): boolean
+            return tracker:track(name, userId, sessionIndex)
+        end,
+    }),
+})
+
 local ledgers: LedgerProvider.LedgerProvider = {
     ledgerFor = function(
         _self: LedgerProvider.LedgerProvider,
@@ -127,9 +170,6 @@ local ledgers: LedgerProvider.LedgerProvider = {
         return Monetization.newListLedger(data.purchaseIds, Config.default.purchaseLedgerSize)
     end,
 }
-
--- Largest value the CoinsChanged remote (u32 in net/schema.zap) can carry.
-local MAX_WIRE_COINS = 4294967295
 
 local productGrants = ProductGrants.new(Config.grantsByName(Config.default))
 
@@ -164,11 +204,8 @@ local monetization = MonetizationService.new({
             warn(`Could not grant "{product.name}": {applied.error.kind}`)
             return false
         end
-        local player = Players:GetPlayerByUserId(receipt.playerId)
-        if player ~= nil then
-            -- The wire type is u32: clamp instead of letting a large balance fail the send.
-            net.CoinsChanged.fire(player, math.min(data.coins, MAX_WIRE_COINS))
-        end
+        -- Coins and seeds reach the client with the next state flush (the wire clamps coins to u32).
+        greenhouse:markDirty(receipt.playerId)
         return true
     end,
 })
@@ -208,6 +245,94 @@ net.RequestPurchase.setCallback(function(player: Player, product)
     end
 end)
 
+-- Greenhouse remotes: the controller rate-limits, validates and applies the rule on the server.
+local function logRefusal(remote: string, userId: number, result: GreenhouseController.HandleResult)
+    if not result.ok then
+        warn(`{remote} from {userId} refused: {result.reason}`)
+    end
+end
+
+net.Plant.setCallback(function(player: Player, plot, crop)
+    logRefusal("Plant", player.UserId, greenhouse:plant(player.UserId, plot, crop))
+end)
+net.Harvest.setCallback(function(player: Player, plot)
+    logRefusal("Harvest", player.UserId, greenhouse:harvest(player.UserId, plot))
+end)
+net.Sell.setCallback(function(player: Player)
+    logRefusal("Sell", player.UserId, greenhouse:sell(player.UserId))
+end)
+net.BuyPlot.setCallback(function(player: Player)
+    logRefusal("BuyPlot", player.UserId, greenhouse:buyPlot(player.UserId))
+end)
+net.BuySeed.setCallback(function(player: Player, crop)
+    logRefusal("BuySeed", player.UserId, greenhouse:buySeed(player.UserId, crop))
+end)
+net.AutoHarvest.setCallback(function(player: Player)
+    logRefusal("AutoHarvest", player.UserId, greenhouse:autoHarvest(player.UserId))
+end)
+
+-- Passes: ownership is read from Roblox at join and after the purchase prompt, never from the client.
+local function findPass(name: string): Config.ProductConfig?
+    for _, pass in Config.default.gamePasses do
+        if pass.name == name then
+            return pass
+        end
+    end
+    return nil
+end
+
+local function refreshPasses(player: Player)
+    local owned: { [string]: boolean } = {}
+    for _, pass in Config.default.gamePasses do
+        local passId = pass.id
+        if passId ~= nil then
+            local ok, owns = pcall(function(): boolean
+                return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
+            end)
+            if ok then
+                owned[pass.name] = owns
+            else
+                warn(`Could not read pass "{pass.name}" ownership for {player.UserId}: {owns}`)
+            end
+        end
+    end
+    ownedPasses[player.UserId] = owned
+    greenhouse:passesChanged(player.UserId)
+end
+
+MarketplaceService.PromptGamePassPurchaseFinished:Connect(
+    function(player: Player, passId: number, wasPurchased: boolean)
+        if not wasPurchased then
+            return
+        end
+        for _, pass in Config.default.gamePasses do
+            if pass.id == passId then
+                local owned = ownedPasses[player.UserId] or {}
+                owned[pass.name] = true
+                ownedPasses[player.UserId] = owned
+                greenhouse:passesChanged(player.UserId)
+            end
+        end
+    end
+)
+
+net.RequestPass.setCallback(function(player: Player, pass)
+    local limiter = limiters.RequestPass
+    if limiter == nil or not limiter:allow(player.UserId) then
+        return
+    end
+    local checked = Validation.oneOf(
+        pass,
+        { GreenhouseData.PASS_EXTRA_PLOTS, GreenhouseData.PASS_AUTO_HARVEST }
+    )
+    local config = if checked.ok then findPass(checked.value) else nil
+    if config == nil or config.id == nil then
+        warn(`RequestPass from {player.UserId} dropped: unknown pass or no id configured`)
+        return
+    end
+    MarketplaceService:PromptGamePassPurchase(player, config.id)
+end)
+
 -- Engine events.
 Players.PlayerAdded:Connect(function(player: Player)
     local joined = playerData:join(tostring(player.UserId))
@@ -221,13 +346,46 @@ Players.PlayerAdded:Connect(function(player: Player)
         player:Kick("Could not load your data. Please rejoin.")
         return
     end
-    tracker:track("session_start", player.UserId, joined.value.sessionIndex)
+    refreshPasses(player)
+    -- session_start (and the tutorial events) come from the greenhouse funnel.
+    greenhouse:join(player.UserId, joined.value.sessionIndex)
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
     playerData:leave(tostring(player.UserId))
     purchaseLimiter:forget(player.UserId)
+    for _, limiter in limiters do
+        limiter:forget(player.UserId)
+    end
+    greenhouse:leave(player.UserId)
+    ownedPasses[player.UserId] = nil
 end)
+
+-- State sync: dirty plots and stock go out at most twice a second per player (PerfBudget).
+local FLUSH_INTERVAL_SECONDS = 0.5
+task.spawn(function()
+    while true do
+        task.wait(FLUSH_INTERVAL_SECONDS)
+        for _, player in Players:GetPlayers() do
+            greenhouse:flush(player.UserId, {
+                plot = function(plot: number, cropIndex: number, readyAt: number)
+                    net.PlotChanged.fire(player, plot, cropIndex, readyAt)
+                end,
+                stock = function(cropIndex: number, seeds: number, produce: number)
+                    net.StockChanged.fire(player, cropIndex, seeds, produce)
+                end,
+                coins = function(coins: number)
+                    net.CoinsChanged.fire(player, coins)
+                end,
+                passes = function(extraPlots: boolean, autoHarvest: boolean)
+                    net.PassChanged.fire(player, extraPlots, autoHarvest)
+                end,
+            })
+        end
+    end
+end)
+
+GreenhouseBuilder.new():build()
 
 PerfProbe.start(Config.default.perfProbeEnabled == true)
 

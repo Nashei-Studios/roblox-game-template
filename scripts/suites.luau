@@ -67,6 +67,7 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         name = "GreenhouseController",
         register = require("../tests/features/greenhouse/GreenhouseController.test"),
     },
+    { name = "PlotLayout", register = require("../tests/features/greenhouse/PlotLayout.test") },
     {
         name = "StudioLockPolicy (hook)",
         register = require("../tests/claude/StudioLockPolicy.test"),

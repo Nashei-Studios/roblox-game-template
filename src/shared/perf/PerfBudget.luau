@@ -60,10 +60,25 @@ local PerfBudget: Budget = {
     clientRemotes = {
         -- The limit Main.server.luau builds the RequestPurchase RateLimiter from.
         RequestPurchase = { capacity = 3, refillPerSecond = 0.5 },
+        -- Greenhouse (ADR 0020). A person taps a few plots a second at most; bursts are bounded.
+        Plant = { capacity = 6, refillPerSecond = 4 },
+        Harvest = { capacity = 6, refillPerSecond = 4 },
+        Sell = { capacity = 2, refillPerSecond = 0.5 },
+        BuyPlot = { capacity = 2, refillPerSecond = 0.5 },
+        BuySeed = { capacity = 6, refillPerSecond = 4 },
+        AutoHarvest = { capacity = 2, refillPerSecond = 0.5 },
+        RequestPass = { capacity = 2, refillPerSecond = 0.5 },
     },
     serverRemotes = {
         -- At most a couple of grants per second reach one player.
         CoinsChanged = { maxPerSecond = 2 },
+        -- Greenhouse: the controller flushes at most every 0.5 s (2 flushes per second). A flush
+        -- sends the dirty plots only, so 12 per second covers the join sync of up to 10 plots plus
+        -- the plant/harvest rate that the client limiters allow.
+        PlotChanged = { maxPerSecond = 12 },
+        -- 3 crops per flush, 2 flushes per second.
+        StockChanged = { maxPerSecond = 6 },
+        PassChanged = { maxPerSecond = 2 },
     },
     runtime = {
         maxHeartbeatMs = 16, -- sourced: server CPU time below 16 ms to hit 60 (production/analytics/performance)

@@ -111,6 +111,6 @@ return function(suite: harness.Harness)
         local data = { coins = 0, seeds = {} :: { [string]: number } }
         harness.equal(errorKind(newGrants():apply(data, "BadSeeds")), "invalid_amount", "amount")
         harness.equal(errorKind(newGrants():apply(data, "UnknownCrop")), "unknown_crop", "crop")
-        harness.equal(data.seeds.carrot, nil, "untouched")
+        harness.isTrue(next(data.seeds) == nil, "untouched")
     end)
 end

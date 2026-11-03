@@ -135,7 +135,40 @@ if not RunService:IsRunning() then
 	local noop = function() end
 	return table.freeze({
 		sendEvents = noop,
+		StockChanged = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
+		Sell = table.freeze({
+			setCallback = noop
+		}),
 		RequestPurchase = table.freeze({
+			setCallback = noop
+		}),
+		RequestPass = table.freeze({
+			setCallback = noop
+		}),
+		PlotChanged = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
+		Plant = table.freeze({
+			setCallback = noop
+		}),
+		PassChanged = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
+		Harvest = table.freeze({
 			setCallback = noop
 		}),
 		CoinsChanged = table.freeze({
@@ -144,6 +177,15 @@ if not RunService:IsRunning() then
 			fireExcept = noop,
 			fireList = noop,
 			fireSet = noop
+		}),
+		BuySeed = table.freeze({
+			setCallback = noop
+		}),
+		BuyPlot = table.freeze({
+			setCallback = noop
+		}),
+		AutoHarvest = table.freeze({
+			setCallback = noop
 		}),
 	}) :: Events
 end
@@ -175,7 +217,9 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	player_map[player] = nil
 end)
-export type ProductName = ("Coins100")
+export type ProductName = ("Coins100" | "SeedBundle")
+export type CropName = ("radish" | "carrot" | "pumpkin")
+export type PassName = ("ExtraPlots" | "AutoHarvest")
 
 local function sendEvents()
 	for player, outgoing in player_map do
@@ -195,7 +239,7 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(1)
+local reliable_events = table.create(8)
 reliable.OnServerEvent:Connect(function(player, buff, inst)
 	incoming_buff = buff
 	incoming_inst = inst
@@ -204,11 +248,75 @@ reliable.OnServerEvent:Connect(function(player, buff, inst)
 	local len = buffer.len(buff)
 	while incoming_read < len do
 		local id = buffer.readu8(buff, read(1))
-		if id == 0 then -- RequestPurchase
+		if id == 3 then -- Sell
 			local value
-			value = "Coins100"
+			if reliable_events[3] then
+				reliable_events[3](player, value)
+			end
+		elseif id == 0 then -- RequestPurchase
+			local value
+			local bool_1 = buffer.readu8(incoming_buff, read(1))
+			if bit32.btest(bool_1, 0b0000000000000001) then
+				value = "Coins100"
+			else
+				value = "SeedBundle"
+			end
 			if reliable_events[0] then
 				reliable_events[0](player, value)
+			end
+		elseif id == 7 then -- RequestPass
+			local value
+			local bool_2 = buffer.readu8(incoming_buff, read(1))
+			if bit32.btest(bool_2, 0b0000000000000001) then
+				value = "ExtraPlots"
+			else
+				value = "AutoHarvest"
+			end
+			if reliable_events[7] then
+				reliable_events[7](player, value)
+			end
+		elseif id == 1 then -- Plant
+			local value, value2
+			local bool_3 = buffer.readu8(incoming_buff, read(1))
+			value = buffer.readu8(incoming_buff, read(1))
+			if bit32.btest(bool_3, 0b0000000000000001) then
+				value2 = "radish"
+			elseif bit32.btest(bool_3, 0b0000000000000010) then
+				value2 = "carrot"
+			elseif bit32.btest(bool_3, 0b0000000000000100) then
+				value2 = "pumpkin"
+			end
+			if reliable_events[1] then
+				reliable_events[1](player, value, value2)
+			end
+		elseif id == 2 then -- Harvest
+			local value
+			value = buffer.readu8(incoming_buff, read(1))
+			if reliable_events[2] then
+				reliable_events[2](player, value)
+			end
+		elseif id == 5 then -- BuySeed
+			local value
+			local bool_4 = buffer.readu8(incoming_buff, read(1))
+			if bit32.btest(bool_4, 0b0000000000000001) then
+				value = "radish"
+			elseif bit32.btest(bool_4, 0b0000000000000010) then
+				value = "carrot"
+			elseif bit32.btest(bool_4, 0b0000000000000100) then
+				value = "pumpkin"
+			end
+			if reliable_events[5] then
+				reliable_events[5](player, value)
+			end
+		elseif id == 4 then -- BuyPlot
+			local value
+			if reliable_events[4] then
+				reliable_events[4](player, value)
+			end
+		elseif id == 6 then -- AutoHarvest
+			local value
+			if reliable_events[6] then
+				reliable_events[6](player, value)
 			end
 		else
 			error("Unknown event id")
@@ -220,11 +328,334 @@ table.freeze(polling_queues_unreliable)
 
 local returns = {
 	sendEvents = sendEvents,
+	StockChanged = {
+		fire = function(player: Player, crop: (number), seeds: (number), produce: (number))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, crop)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, seeds)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, produce)
+			player_map[player] = save()
+		end,
+		fireAll = function(crop: (number), seeds: (number), produce: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, crop)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, seeds)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, produce)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, crop: (number), seeds: (number), produce: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, crop)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, seeds)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, produce)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, crop: (number), seeds: (number), produce: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, crop)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, seeds)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, produce)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, crop: (number), seeds: (number), produce: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, crop)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, seeds)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, produce)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
+	Sell = {
+		setCallback = function(callback: (player: Player) -> ()): () -> ()
+			reliable_events[3] = callback
+			return function()
+				reliable_events[3] = nil
+			end
+		end,
+	},
 	RequestPurchase = {
-		setCallback = function(callback: (player: Player, product: ("Coins100")) -> ()): () -> ()
+		setCallback = function(callback: (player: Player, product: ("Coins100" | "SeedBundle")) -> ()): () -> ()
 			reliable_events[0] = callback
 			return function()
 				reliable_events[0] = nil
+			end
+		end,
+	},
+	RequestPass = {
+		setCallback = function(callback: (player: Player, pass: ("ExtraPlots" | "AutoHarvest")) -> ()): () -> ()
+			reliable_events[7] = callback
+			return function()
+				reliable_events[7] = nil
+			end
+		end,
+	},
+	PlotChanged = {
+		fire = function(player: Player, plot: (number), crop: (number), readyAt: (number))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, plot)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, crop)
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, readyAt)
+			player_map[player] = save()
+		end,
+		fireAll = function(plot: (number), crop: (number), readyAt: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, plot)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, crop)
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, readyAt)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, plot: (number), crop: (number), readyAt: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, plot)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, crop)
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, readyAt)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, plot: (number), crop: (number), readyAt: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, plot)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, crop)
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, readyAt)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, plot: (number), crop: (number), readyAt: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, plot)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, crop)
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, readyAt)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
+	Plant = {
+		setCallback = function(callback: (player: Player, plot: (number), crop: ("radish" | "carrot" | "pumpkin")) -> ()): () -> ()
+			reliable_events[1] = callback
+			return function()
+				reliable_events[1] = nil
+			end
+		end,
+	},
+	PassChanged = {
+		fire = function(player: Player, extraPlots: (boolean), autoHarvest: (boolean))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local bool_5 = 0
+			local bool_5_pos_1 = alloc(1)
+			if extraPlots then
+				bool_5 = bit32.bor(bool_5, 0b0000000000000001)
+			end
+			if autoHarvest then
+				bool_5 = bit32.bor(bool_5, 0b0000000000000010)
+			end
+			buffer.writeu8(outgoing_buff, bool_5_pos_1, bool_5)
+			player_map[player] = save()
+		end,
+		fireAll = function(extraPlots: (boolean), autoHarvest: (boolean))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local bool_6 = 0
+			local bool_6_pos_1 = alloc(1)
+			if extraPlots then
+				bool_6 = bit32.bor(bool_6, 0b0000000000000001)
+			end
+			if autoHarvest then
+				bool_6 = bit32.bor(bool_6, 0b0000000000000010)
+			end
+			buffer.writeu8(outgoing_buff, bool_6_pos_1, bool_6)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, extraPlots: (boolean), autoHarvest: (boolean))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local bool_7 = 0
+			local bool_7_pos_1 = alloc(1)
+			if extraPlots then
+				bool_7 = bit32.bor(bool_7, 0b0000000000000001)
+			end
+			if autoHarvest then
+				bool_7 = bit32.bor(bool_7, 0b0000000000000010)
+			end
+			buffer.writeu8(outgoing_buff, bool_7_pos_1, bool_7)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, extraPlots: (boolean), autoHarvest: (boolean))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local bool_8 = 0
+			local bool_8_pos_1 = alloc(1)
+			if extraPlots then
+				bool_8 = bit32.bor(bool_8, 0b0000000000000001)
+			end
+			if autoHarvest then
+				bool_8 = bit32.bor(bool_8, 0b0000000000000010)
+			end
+			buffer.writeu8(outgoing_buff, bool_8_pos_1, bool_8)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, extraPlots: (boolean), autoHarvest: (boolean))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local bool_9 = 0
+			local bool_9_pos_1 = alloc(1)
+			if extraPlots then
+				bool_9 = bit32.bor(bool_9, 0b0000000000000001)
+			end
+			if autoHarvest then
+				bool_9 = bit32.bor(bool_9, 0b0000000000000010)
+			end
+			buffer.writeu8(outgoing_buff, bool_9_pos_1, bool_9)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
+	Harvest = {
+		setCallback = function(callback: (player: Player, plot: (number)) -> ()): () -> ()
+			reliable_events[2] = callback
+			return function()
+				reliable_events[2] = nil
 			end
 		end,
 	},
@@ -297,6 +728,30 @@ local returns = {
 				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
 				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
 				player_map[player] = save()
+			end
+		end,
+	},
+	BuySeed = {
+		setCallback = function(callback: (player: Player, crop: ("radish" | "carrot" | "pumpkin")) -> ()): () -> ()
+			reliable_events[5] = callback
+			return function()
+				reliable_events[5] = nil
+			end
+		end,
+	},
+	BuyPlot = {
+		setCallback = function(callback: (player: Player) -> ()): () -> ()
+			reliable_events[4] = callback
+			return function()
+				reliable_events[4] = nil
+			end
+		end,
+	},
+	AutoHarvest = {
+		setCallback = function(callback: (player: Player) -> ()): () -> ()
+			reliable_events[6] = callback
+			return function()
+				reliable_events[6] = nil
 			end
 		end,
 	},
