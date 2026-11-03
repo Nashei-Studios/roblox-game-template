@@ -1,0 +1,8 @@
+# Factory timing: Reef (2026-11-reef)
+
+Third game of the 3-games-per-week factory. Times are wall clock, 2026-11-03, taken from `date` at the boundary of each stage by the worker. Duration is end minus start; waiting on a tool run is included.
+
+| # | Stage | Start | End | Minutes | Notes |
+|---|---|---|---|---|---|
+| 0 | Setup: worktree, read design, CLAUDE.md, template sources, baseline gate | 09:15 | 09:17:26 | 2 | Baseline: 130 tests, coverage 97.7 %; start time estimated, not taken with `date` |
+| 1 | docs: reef-flow.md, ADR 0021 | 09:17:26 | 09:20 | 3 | |
