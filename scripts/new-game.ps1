@@ -24,6 +24,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+. (Join-Path $PSScriptRoot 'game-note.ps1')
+
 $SlugPattern = '^[a-z0-9]+(-[a-z0-9]+)*$'
 $RequiredEnvVars = @(
     @{ Name = 'ASPHALT_API_KEY'; Purpose = 'assets key (asset:read, asset:write), used by asphalt sync' }
@@ -59,7 +61,11 @@ if ($DryRun) {
     Write-Output "[dry-run] gh $($createArgs -join ' ')"
     Write-Output "[dry-run] gh $($cloneArgs -join ' ')"
     Write-Output "[dry-run] set name '$Slug' in default.project.json and gameName '$title' in src/shared/Config.luau"
-    if ($VaultPath) { Write-Output "[dry-run] write game note under $VaultPath" }
+    if ($VaultPath) {
+        $dryNote = Get-GameNotePath $VaultPath (Get-Date -Format 'yyyy-MM') $Slug
+        if (Test-Path -LiteralPath $dryNote) { Write-Output "[dry-run] game note already exists, would leave unchanged: $dryNote" }
+        else { Write-Output "[dry-run] would write game note: $dryNote" }
+    }
 }
 else {
     & gh repo view $TemplateRepo --json isTemplate -q .isTemplate | Out-String | ForEach-Object {
@@ -90,8 +96,6 @@ else {
 
     if ($VaultPath) {
         $month = Get-Date -Format 'yyyy-MM'
-        $noteDir = Join-Path $VaultPath "games/$month-$Slug"
-        New-Item -ItemType Directory -Force -Path $noteDir | Out-Null
         $note = @"
 ---
 type: game
@@ -108,8 +112,7 @@ Core loop: _fill in_
 
 - $(Get-Date -Format 'yyyy-MM-dd'): stamped from the template
 "@
-        Set-Content -LiteralPath (Join-Path $noteDir 'index.md') -Value $note
-        Write-Output "Game note written: $noteDir/index.md"
+        Write-GameNote (Get-GameNotePath $VaultPath $month $Slug) $note
     }
 }
 
