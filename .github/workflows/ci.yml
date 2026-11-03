@@ -106,3 +106,18 @@ jobs:
           mv coverage.out logs/coverage.lcov
       - name: Gate (75 % of the total, per-file report)
         run: lune run scripts/coverage_report logs/coverage.lcov 75 src
+
+  remotes:
+    # Generated remotes must match net/schema.zap with the pinned Zap (ADR 0015).
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          version: v1.2.0
+          cache: "true"
+      - name: Regenerate the remote layer
+        run: pwsh scripts/generate-remotes.ps1
+      - name: Fail when the generated code is stale
+        run: git diff --exit-code -- src/shared/net/generated
