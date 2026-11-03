@@ -31,5 +31,31 @@ $r = Invoke-Stamp @('-Slug', 'tap-the-slime', '-DryRun')
 Assert-True ($r.Text -notmatch 'dummy-sentinel-value') 'never prints env var values'
 Remove-Item Env:ROBLOX_API_KEY
 
+# Vault note handling (temp folders only; never the real vault).
+. (Join-Path $PSScriptRoot 'game-note.ps1')
+$tmp = Join-Path ([IO.Path]::GetTempPath()) "new-game-test-$([guid]::NewGuid())"
+try {
+    $month = Get-Date -Format 'yyyy-MM'
+    $existing = Get-GameNotePath $tmp $month 'key-sprint'
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $existing) | Out-Null
+    Set-Content -LiteralPath $existing -Value 'hand-written design note'
+    $before = Get-Content -LiteralPath $existing -Raw
+    $out = Write-GameNote $existing 'STUB' | Out-String
+    Assert-True ((Get-Content -LiteralPath $existing -Raw) -ceq $before) 'existing note is left byte-identical'
+    Assert-True ($out -match 'Game note already exists: .*\(left unchanged\)') 'existing note is reported as left unchanged'
+
+    $fresh = Get-GameNotePath $tmp $month 'reef'
+    $out = Write-GameNote $fresh 'STUB' | Out-String
+    Assert-True ((Test-Path -LiteralPath $fresh) -and ((Get-Content -LiteralPath $fresh -Raw).Trim() -ceq 'STUB')) 'new note is written with its folder'
+    Assert-True ($out -match 'Game note written') 'new note is reported as written'
+
+    $r = Invoke-Stamp @('-Slug', 'key-sprint', '-DryRun', '-VaultPath', $tmp)
+    Assert-True ($r.Code -eq 0 -and $r.Text -match 'game note already exists, would leave unchanged') 'dry run warns it would leave an existing note'
+    Assert-True ((Get-Content -LiteralPath $existing -Raw) -ceq $before) 'dry run leaves the existing note intact'
+    $r = Invoke-Stamp @('-Slug', 'greenhouse', '-DryRun', '-VaultPath', $tmp)
+    Assert-True ($r.Text -match 'would write game note' -and -not (Test-Path -LiteralPath (Get-GameNotePath $tmp $month 'greenhouse'))) 'dry run says it would write a missing note without writing'
+}
+finally { Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue }
+
 if ($failures -gt 0) { Write-Output "$failures failed"; exit 1 }
 Write-Output 'all passed'
