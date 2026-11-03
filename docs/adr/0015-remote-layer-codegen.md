@@ -1,6 +1,6 @@
 # ADR 0015: Remote layer code generator (Zap vs Blink)
 
-- Status: proposed (waiting for a decision from Victor; nothing is integrated in the template)
+- Status: accepted 2026-11-03: option A applied as the recommended, reversible default while Victor was away (his standing instruction: apply the recommended option); a superseding ADR switches to B or C
 - Date: 2026-11-02
 - Source: spike D-27 (`spikes/zap-vs-blink`, outside this repo), R1 dev-system Q3. Follows ADR 0012.
 
