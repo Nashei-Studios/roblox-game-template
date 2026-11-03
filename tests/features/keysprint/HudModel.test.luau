@@ -74,5 +74,8 @@ return function(suite: harness.Harness)
         harness.equal(hud:view().stageText, "Stage 2 of 3", "next stage")
         hud:setProgress(3, 5)
         harness.equal(hud:view().stageText, "All stages cleared", "complete")
+        harness.isFalse(hud:view().showSkip, "no skip when complete")
+        hud:setProgress(0, 5)
+        harness.isTrue(hud:view().showSkip, "skip offered")
     end)
 end

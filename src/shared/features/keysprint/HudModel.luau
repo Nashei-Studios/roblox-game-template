@@ -18,6 +18,8 @@ export type View = {
     upgradeText: string,
     upgradeEnabled: boolean,
     stageText: string,
+    -- The Skip stage button is offered while a stage remains.
+    showSkip: boolean,
 }
 
 export type HudModel = {
@@ -86,6 +88,7 @@ function HudModelModule.new(): HudModel
                 upgradeText = upgradeText,
                 upgradeEnabled = price ~= nil and coins >= price,
                 stageText = stageText,
+                showSkip = highestStage < KeySprintRules.STAGE_COUNT,
             }
         end,
     }
