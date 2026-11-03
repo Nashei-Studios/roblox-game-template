@@ -1,6 +1,7 @@
 --!strict
 local InMemoryProfileRepository =
     require("../../../src/shared/features/playerdata/InMemoryProfileRepository")
+local PlayerDataMigrations = require("../../../src/shared/features/playerdata/PlayerDataMigrations")
 local PlayerData = require("../../../src/shared/features/playerdata/PlayerData")
 local PlayerDataService = require("../../../src/shared/features/playerdata/PlayerDataService")
 local harness = require("../../harness")
@@ -10,7 +11,13 @@ local function clone(data: PlayerData.PlayerData): PlayerData.PlayerData
         schemaVersion = data.schemaVersion,
         coins = data.coins,
         purchases = table.clone(data.purchases),
+        sessionCount = data.sessionCount,
     }
+end
+
+local function startSession(data: PlayerData.PlayerData): number
+    data.sessionCount += 1
+    return data.sessionCount
 end
 
 local function newService(lost: { string })
@@ -23,6 +30,8 @@ local function newService(lost: { string })
         onSessionLost = function(key: string)
             table.insert(lost, key)
         end,
+        migrate = PlayerDataMigrations.migrateInPlace,
+        startSession = startSession,
     })
     return service, repository
 end
@@ -51,12 +60,12 @@ return function(suite: harness.Harness)
         local service = newService({})
         local joined = service:join("1")
         if joined.ok then
-            joined.value.coins = 7
+            joined.value.data.coins = 7
         end
         harness.isTrue(service:leave("1").ok, "leave ok")
         harness.isTrue(service:get("1") == nil, "data dropped after leave")
         local rejoined = service:join("1")
-        harness.isTrue(rejoined.ok and rejoined.value.coins == 7, "coins persisted")
+        harness.isTrue(rejoined.ok and rejoined.value.data.coins == 7, "coins persisted")
     end)
 
     suite:test("leave without join reports not_active", function()
@@ -82,6 +91,8 @@ return function(suite: harness.Harness)
             onSessionLost = function(key: string)
                 table.insert(lost, key)
             end,
+            migrate = PlayerDataMigrations.migrateInPlace,
+            startSession = startSession,
         })
         service:join("1")
         harness.isTrue(captured ~= nil, "handle captured")
@@ -91,5 +102,69 @@ return function(suite: harness.Harness)
         end
         harness.equal(#lost, 1, "lost callbacks")
         harness.isTrue(service:get("1") == nil, "data dropped")
+    end)
+
+    suite:test("join returns a 1-based sessionIndex that grows across sessions", function()
+        local service = newService({})
+        local first = service:join("1")
+        harness.isTrue(first.ok and first.value.sessionIndex == 1, "first session")
+        service:leave("1")
+        local second = service:join("1")
+        harness.isTrue(second.ok and second.value.sessionIndex == 2, "second session")
+        local data = service:get("1")
+        harness.isTrue(data ~= nil and data.sessionCount == 2, "persisted count")
+    end)
+
+    suite:test("a failed migration fails the join, frees the lock and exposes no data", function()
+        local repository = InMemoryProfileRepository.new({
+            default = function(): PlayerData.PlayerData
+                local data = PlayerData.default()
+                data.schemaVersion = 99 -- written by a newer server
+                return data
+            end,
+            clone = clone,
+        })
+        local service = PlayerDataService.new({
+            repository = repository,
+            onSessionLost = function() end,
+            migrate = PlayerDataMigrations.migrateInPlace,
+            startSession = startSession,
+        })
+        local joined = service:join("1")
+        harness.isFalse(joined.ok, "join must fail")
+        if not joined.ok then
+            local failure: unknown = joined.error
+            harness.isTrue(
+                type(failure) == "table" and (failure :: { kind: string }).kind == "future_version",
+                "typed error"
+            )
+        end
+        harness.isTrue(service:get("1") == nil, "no data exposed")
+        harness.isTrue(repository:load("1").ok, "lock was released")
+    end)
+
+    suite:test("legacy v1 data is migrated before it is exposed", function()
+        local repository = InMemoryProfileRepository.new({
+            default = function(): PlayerData.PlayerData
+                local legacy = PlayerData.default()
+                legacy.schemaVersion = 1
+                legacy.coins = 40
+                return legacy
+            end,
+            clone = clone,
+        })
+        local service = PlayerDataService.new({
+            repository = repository,
+            onSessionLost = function() end,
+            migrate = PlayerDataMigrations.migrateInPlace,
+            startSession = startSession,
+        })
+        local joined = service:join("1")
+        harness.isTrue(joined.ok, "join ok")
+        if joined.ok then
+            harness.equal(joined.value.data.schemaVersion, 2, "schemaVersion")
+            harness.equal(joined.value.data.coins, 40, "coins kept")
+            harness.equal(joined.value.sessionIndex, 1, "sessionIndex")
+        end
     end)
 end

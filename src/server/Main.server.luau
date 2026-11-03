@@ -17,6 +17,7 @@ local Flags = require(Shared.features.flags.Flags)
 local LedgerProvider = require(Shared.ports.LedgerProvider)
 local Monetization = require(Shared.features.monetization.Monetization)
 local PlayerData = require(Shared.features.playerdata.PlayerData)
+local PlayerDataMigrations = require(Shared.features.playerdata.PlayerDataMigrations)
 local PlayerDataService = require(Shared.features.playerdata.PlayerDataService)
 
 local ProfileStore = require(ServerScriptService.Vendor.ProfileStore)
@@ -65,6 +66,14 @@ local playerData = PlayerDataService.new({
             player:Kick("Your data session ended on another server. Please rejoin.")
         end
     end,
+    -- Upgrade in place before anything reads the data (ADR 0014).
+    migrate = function(data: PlayerData.PlayerData)
+        return PlayerDataMigrations.migrateInPlace(data)
+    end,
+    startSession = function(data: PlayerData.PlayerData): number
+        data.sessionCount += 1
+        return data.sessionCount
+    end,
 })
 
 local ledgers: LedgerProvider.LedgerProvider = {
@@ -92,11 +101,16 @@ local monetization = MonetizationService.new({
 Players.PlayerAdded:Connect(function(player: Player)
     local joined = playerData:join(tostring(player.UserId))
     if not joined.ok then
+        local failure = joined.error
+        warn(
+            `Could not load data for {player.UserId}: {if type(failure) == "string"
+                then failure
+                else failure.kind}`
+        )
         player:Kick("Could not load your data. Please rejoin.")
         return
     end
-    -- TODO(victor): sessionIndex should count this player's sessions (store it in PlayerData).
-    tracker:track("session_start", player.UserId, 1)
+    tracker:track("session_start", player.UserId, joined.value.sessionIndex)
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)

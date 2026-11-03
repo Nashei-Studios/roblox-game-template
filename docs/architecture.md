@@ -130,4 +130,4 @@ sequenceDiagram
 - **ProfileStore is vendored, not rewritten** ([ADR 0010](adr/0010-profilestore-behind-profilerepository.md)): one more third-party file to audit and bump, in exchange for a battle-tested session lock. The port limits the blast radius if it is replaced.
 - **Engine adapters are untested until the Luau Execution API is wired** ([ADR 0005](adr/0005-tests-lune-then-luau-execution.md)). The port contract test (`tests/features/playerdata/ProfileRepository.contract.luau`) is ready to run against the real adapter.
 - **`Profile:Save()` is asynchronous** in ProfileStore, so `handle:save()` returns ok once the save is scheduled; failures arrive through `ProfileStore.OnError` (to wire per game).
-- **`sessionIndex` is a placeholder** in `Main.server`; a real count belongs in `PlayerData` (needs a schema version bump and a migration).
+- **Migrations are a pure chain, not ProfileStore hooks** ([ADR 0014](adr/0014-pure-migration-chain.md)): `PlayerDataService.join` runs `PlayerDataMigrations.migrateInPlace` before exposing data; a newer-schema profile fails the join instead of being downgraded.
