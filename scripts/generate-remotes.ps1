@@ -4,9 +4,9 @@
     Regenerates the typed remote layer from net/schema.zap with the Zap CLI pinned in rokit.toml (ADR 0015).
 .DESCRIPTION
     Zap writes src/shared/net/generated/{server,client,types}.luau. This script then normalizes
-    line endings to LF and adds a "generated, do not edit" header, so the output is identical on
-    Windows and Linux. CI runs it and fails on `git diff --exit-code`.
-    Needs `zap` from rokit.toml (`rokit install`; `rokit trust red-blox/zap` once if asked).
+    line endings to LF, adds a "generated, do not edit" header and sorts the enum aliases by name
+    (Zap's order changes between runs), so the output is identical on Windows and Linux. CI runs it and fails on `git diff --exit-code`.
+    Needs `zap` and `lune` from rokit.toml (`rokit install`; `rokit trust red-blox/zap` once if asked).
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -17,6 +17,7 @@ try {
     & zap net/schema.zap
     if ($LASTEXITCODE -ne 0) { throw "zap failed (exit $LASTEXITCODE)" }
     $header = '-- GENERATED FILE, DO NOT EDIT. Source: net/schema.zap. Regenerate: pwsh scripts/generate-remotes.ps1'
+    $generated = @()
     foreach ($name in 'server', 'client', 'types') {
         $path = "src/shared/net/generated/$name.luau"
         $lines = (Get-Content -Raw $path) -replace "`r`n", "`n" -split "`n"
@@ -26,7 +27,11 @@ try {
         [string[]]$head = if ($index -gt 0) { $lines[0..($index - 1)] } else { @() }
         $out = @($head) + @($header) + @($lines[$index..($lines.Count - 1)])
         [IO.File]::WriteAllText((Join-Path (Get-Location) $path), (($out -join "`n").TrimEnd("`n") + "`n"), [Text.UTF8Encoding]::new($false))
+        $generated += $path
     }
+    # Zap v0.6.29 emits the enum aliases in a run-dependent order; sort them by name (issue #10).
+    & lune run scripts/normalize-remotes @generated
+    if ($LASTEXITCODE -ne 0) { throw "normalize-remotes failed (exit $LASTEXITCODE)" }
 } finally {
     Pop-Location
 }
