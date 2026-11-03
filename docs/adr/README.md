@@ -24,5 +24,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0017](0017-luau-coverage-gate.md) | Line-coverage gate with the Luau CLI (75 % of the total) |
 | [0018](0018-studio-mcp-user-scope.md) | Studio MCP registered at user scope only (supersedes the registration clause of 0004) |
 | [0019](0019-performance-budget.md) | Performance budget: static remote-bandwidth calculator plus a dev probe |
+| [0020](0020-greenhouse-server-clock-and-flat-wire.md) | Greenhouse: timers on the server clock, flat wire, open design points taken simply (game-level, proposed) |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
