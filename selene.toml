@@ -1,2 +1,2 @@
 std = "roblox"
-exclude = ["types/**", "vendor/**"]
+exclude = ["types/**", "vendor/**", "src/shared/net/generated/**"]

@@ -1,2 +1,3 @@
 types/
 vendor/
+src/shared/net/generated/
