@@ -53,6 +53,12 @@ return function(suite: harness.Harness)
         harness.isTrue(Config.findProductById(config, 999) == nil, "unknown id")
     end)
 
+    suite:test("findProductByName matches only configured names", function()
+        local found = Config.findProductByName(Config.default, "Coins100")
+        harness.isTrue(found ~= nil and found.name == "Coins100", "found Coins100")
+        harness.isTrue(Config.findProductByName(Config.default, "Nope") == nil, "unknown name")
+    end)
+
     suite:test("default config declares what Coins100 delivers", function()
         local grants = Config.grantsByName(Config.default)
         local coins = grants["Coins100"]

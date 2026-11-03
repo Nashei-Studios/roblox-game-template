@@ -113,6 +113,16 @@ function Config.findProductById(config: GameConfig, productId: number): Develope
     return nil
 end
 
+--- Finds a developer product by its name, or nil when unknown.
+function Config.findProductByName(config: GameConfig, name: string): DeveloperProductConfig?
+    for _, product in config.developerProducts do
+        if product.name == name then
+            return product
+        end
+    end
+    return nil
+end
+
 --- Grant declarations keyed by product name, the input of ProductGrants.new.
 function Config.grantsByName(config: GameConfig): { [string]: ProductGrant }
     local grants: { [string]: ProductGrant } = {}
