@@ -7,6 +7,7 @@
 
 local AnalyticsService = game:GetService("AnalyticsService")
 local ConfigService = game:GetService("ConfigService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -22,6 +23,9 @@ local PlayerData = require(Shared.features.playerdata.PlayerData)
 local ProductGrants = require(Shared.features.monetization.ProductGrants)
 local PlayerDataMigrations = require(Shared.features.playerdata.PlayerDataMigrations)
 local PlayerDataService = require(Shared.features.playerdata.PlayerDataService)
+local PurchaseRequests = require(Shared.features.monetization.PurchaseRequests)
+local RateLimiter = require(Shared.net.RateLimiter)
+local net = require(Shared.net.generated.server)
 
 local ProfileStore = require(ServerScriptService.Vendor.ProfileStore)
 
@@ -122,6 +126,9 @@ local ledgers: LedgerProvider.LedgerProvider = {
     end,
 }
 
+-- Largest value the CoinsChanged remote (u32 in net/schema.zap) can carry.
+local MAX_WIRE_COINS = 4294967295
+
 local productGrants = ProductGrants.new(Config.grantsByName(Config.default))
 
 local monetization = MonetizationService.new({
@@ -155,9 +162,47 @@ local monetization = MonetizationService.new({
             warn(`Could not grant "{product.name}": {applied.error.kind}`)
             return false
         end
+        local player = Players:GetPlayerByUserId(receipt.playerId)
+        if player ~= nil then
+            -- The wire type is u32: clamp instead of letting a large balance fail the send.
+            net.CoinsChanged.fire(player, math.min(data.coins, MAX_WIRE_COINS))
+        end
         return true
     end,
 })
+
+-- Remotes (ADR 0012, ADR 0015): the generated layer decodes, PurchaseRequests rate-limits and
+-- validates, and only then is the purchase prompt opened.
+local purchaseLimiter = RateLimiter.new({
+    capacity = 3,
+    refillPerSecond = 0.5,
+    clock = os.clock,
+})
+local purchaseNames: { string } = {}
+for _, product in Config.default.developerProducts do
+    table.insert(purchaseNames, product.name)
+end
+local purchaseRequests = PurchaseRequests.new({
+    productNames = purchaseNames,
+    allow = function(userId: number): boolean
+        return purchaseLimiter:allow(userId)
+    end,
+    prompt = function(userId: number, productName: string): boolean
+        local player = Players:GetPlayerByUserId(userId)
+        local product = Config.findProductByName(Config.default, productName)
+        if player == nil or product == nil or product.id == nil then
+            return false
+        end
+        MarketplaceService:PromptProductPurchase(player, product.id)
+        return true
+    end,
+})
+net.RequestPurchase.setCallback(function(player: Player, product)
+    local handled = purchaseRequests:handle(player.UserId, product)
+    if not handled.ok then
+        warn(`RequestPurchase from {player.UserId} dropped: {handled.reason}`)
+    end
+end)
 
 -- Engine events.
 Players.PlayerAdded:Connect(function(player: Player)
@@ -177,6 +222,7 @@ end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
     playerData:leave(tostring(player.UserId))
+    purchaseLimiter:forget(player.UserId)
 end)
 
 if flags:getBoolean("purchasesEnabled") then
