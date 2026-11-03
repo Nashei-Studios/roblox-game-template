@@ -8,18 +8,116 @@ on:
 permissions:
   contents: read
 
+# Each job installs the pinned toolchain (rokit.toml) through the same community action,
+# checked 2026-11-02 (CompeyDev/setup-rokit v0.2.1) and pinned by commit SHA.
 jobs:
-  check:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          version: v1.2.0
+          cache: "true"
+      - run: stylua --check .
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          version: v1.2.0
+          cache: "true"
+      - run: selene .
+
+  analyze:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      # Community action that installs the tools pinned in rokit.toml.
-      # UNVERIFIED: confirm the action name and tag on the first CI run.
-      - uses: CompeyDev/setup-rokit@v0.1.2
-      - name: Format check
-        run: stylua --check .
-      - name: Lint
-        run: selene .
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          version: v1.2.0
+          cache: "true"
+      - name: Generate Lune types and sourcemap
+        run: |
+          lune setup
+          rojo sourcemap default.project.json -o sourcemap.json
+      - name: Analyze (stable solver, blocking)
+        run: >
+          luau-lsp analyze --sourcemap sourcemap.json
+          --definitions=@roblox=types/globalTypes.None.d.luau
+          --base-luaurc .luaurc src tests scripts
+
+  analyze-new-solver:
+    # Non-blocking drift detector (ADR 0008): the new solver is not the Studio default yet.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          version: v1.2.0
+          cache: "true"
+      - name: Generate Lune types and sourcemap
+        run: |
+          lune setup
+          rojo sourcemap default.project.json -o sourcemap.json
+      - name: Analyze (new solver, informational)
+        run: >
+          luau-lsp analyze --flag:LuauSolverV2=true --sourcemap sourcemap.json
+          --definitions=@roblox=types/globalTypes.None.d.luau
+          --base-luaurc .luaurc src tests scripts
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          version: v1.2.0
+          cache: "true"
       - name: Unit tests (Lune)
         run: lune run scripts/test
+      - name: Build smoke
+        run: |
+          mkdir -p places
+          rojo build default.project.json -o places/ci.rbxl
+
+  coverage:
+    # Line coverage gate (ADR 0017): luau --coverage, 75 % of the total, no file left unmeasured.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          version: v1.2.0
+          cache: "true"
+      - name: Run the suites with coverage
+        run: |
+          mkdir -p logs
+          luau --coverage scripts/test_luau.luau
+          mv coverage.out logs/coverage.lcov
+      - name: Gate (75 % of the total, per-file report)
+        run: lune run scripts/coverage_report logs/coverage.lcov 75 src
+
+  remotes:
+    # Generated remotes must match net/schema.zap with the pinned Zap (ADR 0015).
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          version: v1.2.0
+          cache: "true"
+      - name: Regenerate the remote layer
+        run: pwsh scripts/generate-remotes.ps1
+      - name: Fail when the generated code is stale
+        run: git diff --exit-code -- src/shared/net/generated

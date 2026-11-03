@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(stylua:*)",
+      "Bash(selene:*)",
+      "Bash(lune run scripts/test:*)",
+      "Bash(pwsh scripts/analyze.ps1:*)",
+      "Bash(pwsh scripts/coverage.ps1:*)",
+      "Bash(rojo build:*)",
+      "PowerShell(stylua:*)",
+      "PowerShell(selene:*)",
+      "PowerShell(lune run scripts/test:*)",
+      "PowerShell(pwsh scripts/analyze.ps1:*)",
+      "PowerShell(pwsh scripts/coverage.ps1:*)",
+      "PowerShell(rojo build:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/credentials*.json)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Edit(**/*.pem)",
+      "Edit(**/*.key)",
+      "Edit(**/credentials*.json)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__Roblox_Studio__.*",
+        "hooks": [{ "type": "command", "command": "lune run .claude/hooks/studio-lock" }]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [{ "type": "command", "command": "lune run .claude/hooks/studio-lock" }]
+      }
+    ]
+  }
+}

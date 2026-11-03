@@ -12,11 +12,23 @@ export type Harness = {
 
 type TestCase = { name: string, fn: TestFn }
 
+-- pcall is typed as returning only a boolean for `() -> ()`; this wrapper keeps the message.
+local function guardedCall(fn: TestFn): (boolean, string?)
+    local failure: string? = nil
+    local ok = xpcall(fn, function(err: unknown): ()
+        failure = tostring(err)
+    end)
+    return ok, failure
+end
+
 local harness = {}
 
 function harness.equal<T>(actual: T, expected: T, label: string?)
     if actual ~= expected then
-        error(`{label or "values"} differ: expected {tostring(expected)}, got {tostring(actual)}`, 2)
+        error(
+            `{label or "values"} differ: expected {tostring(expected)}, got {tostring(actual)}`,
+            2
+        )
     end
 end
 
@@ -42,7 +54,7 @@ function harness.new(): Harness
         run = function(_self: Harness): (number, number)
             local passed, failed = 0, 0
             for _, case in cases do
-                local ok, message = pcall(case.fn)
+                local ok, message = guardedCall(case.fn)
                 if ok then
                     passed += 1
                     print(`  PASS  {case.name}`)

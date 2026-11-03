@@ -16,30 +16,39 @@ A starting kit for monetized Roblox games: strict Luau, Rojo-synced code, a type
    - `rojo plugin install`
    - VS Code profile: `code --profile roblox --install-extension JohnnyMorganz.luau-lsp` (repeat for `evaera.vscode-rojo`, `Kampfkarren.selene-vscode`, `JohnnyMorganz.stylua`), then open the folder with `code --profile roblox .`
 4. `rojo serve`, open a dev place in Studio, click Connect in the Rojo plugin.
-5. Studio MCP (optional, see below): Assistant > Manage MCP Servers > Enable Studio as MCP server.
-6. First run formatting once: `stylua .` (the committed files were written without the tool available).
+5. Studio MCP (optional, see below): bootstrap installs and registers it at user scope; then Assistant > Manage MCP Servers > Enable Studio as MCP server.
+6. Check the headless gate passes before writing code: `stylua --check .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `pwsh scripts/coverage.ps1`, `rojo build default.project.json -o places/dev.rbxl`.
 
 ## Studio MCP
 
-`.mcp.json` registers the built-in server project-scoped as `Roblox_Studio` (`cmd.exe /c %LOCALAPPDATA%\Roblox\mcp.bat`). That path is derived from Roblox docs: after Studio installs, check the file exists and that `claude mcp list` shows the server. `cmd.exe` expands `%LOCALAPPDATA%` itself because it receives the argument as text; if your setup does not, replace it with the absolute path, e.g. `C:\\Users\\<you>\\AppData\\Local\\Roblox\\mcp.bat`. Use it on a dev or throwaway place only ([ADR 0004](docs/adr/0004-studio-mcp-builtin-only.md)).
+The MCP proxy built into Studio (`StudioMCP.exe`, signed by Roblox Corporation) is registered at **user scope only** as `Roblox_Studio` ([ADR 0018](docs/adr/0018-studio-mcp-user-scope.md)); there is no project `.mcp.json`, so no second proxy starts. `tools/roblox-studio-mcp.cmd` is the install source: `pwsh scripts/bootstrap.ps1` copies it to `~/.local/bin` and runs `claude mcp add --scope user Roblox_Studio -- cmd.exe /c <that path>` when `claude mcp get Roblox_Studio` fails. The launcher picks the newest `%LOCALAPPDATA%\Roblox\Versions\version-*\StudioMCP.exe` so Studio updates do not break the path. Studio must be open with **Enable Studio as MCP server** turned on (Assistant settings). Check with `claude mcp get Roblox_Studio`: it should list the tools. Use it on a dev or throwaway place only ([ADR 0004](docs/adr/0004-studio-mcp-builtin-only.md)), and only while holding the Studio lock: for Claude Code agents `.claude/hooks/studio-lock` blocks `Roblox_Studio` tools and `rojo serve` without it ([docs/multi-agent.md](docs/multi-agent.md)).
 
 ## Folder tree
 
 ```
 .
-├── rokit.toml               pinned toolchain (Rojo, StyLua, Selene, Lune, Luau LSP)
+├── rokit.toml               pinned toolchain (Rojo, StyLua, Selene, Lune, Luau LSP, Zap)
+├── net/schema.zap          remote schema (Zap); output in src/shared/net/generated/ (generated, do not edit)
 ├── default.project.json     Rojo map; only code folders are managed
 ├── .luaurc  selene.toml  stylua.toml   strict mode, lint std, format rules
-├── .mcp.json                project-scoped Studio MCP registration
+├── .claude/                 Claude Code setup: settings.json (permissions, hook), hooks/studio-lock (Studio lock gate), agents/luau-reviewer
 ├── .vscode/                 luau-lsp settings and recommended extensions
-├── .github/workflows/ci.yml format check, lint, Lune tests (PR and push to main)
+├── .github/workflows/ci.yml jobs: format, lint, analyze (+ non-blocking new solver), test (PR and push to main)
 ├── src/
 │   ├── shared/              -> ReplicatedStorage/Shared: pure logic, no engine services, Lune-testable
-│   ├── server/              -> ServerScriptService/Server: thin adapters over engine services
-│   └── client/              -> StarterPlayerScripts/Client: binds behavior to Studio-built UI
-├── tests/                   Lune tests, one file per pure module, plus a tiny harness
-├── scripts/                 test runner and the one-time bootstrap
-└── docs/                    roadmap, requirements, milestones, architecture, adr/, ai-logs/
+│   │   ├── ports/           types only: what features need from outside (ProfileRepository, Flags, AnalyticsSink, LedgerProvider)
+│   │   ├── features/<name>/ one folder per capability (analytics, flags, monetization, playerdata)
+│   │   └── net/             remote helpers: Validation, RateLimiter
+│   ├── server/              -> ServerScriptService/Server
+│   │   ├── Main.server.luau the only server Script: composition root
+│   │   ├── adapters/        ports implemented over engine services and ProfileStore
+│   │   └── features/<name>/ server-only services (MonetizationService)
+│   └── client/              -> StarterPlayerScripts/Client: Main.client binds behavior to Studio-built UI
+├── vendor/                  pinned third-party code with LICENSE and provenance (ProfileStore)
+├── types/                   Roblox definitions for luau-lsp analyze (data only)
+├── tests/                   mirrors src, plus a tiny harness and the ProfileRepository port contract
+├── scripts/                 test runner, analyze.ps1 and the one-time bootstrap
+└── docs/                    roadmap, requirements, milestones, architecture, adr/, multi-agent.md, ai-logs/
 ```
 
 Why this split: anything that needs only values lives in `shared` so Lune can test it in CI without Studio; anything that touches `DataStoreService` or `MarketplaceService` stays in `server` as a small adapter around a tested core.
@@ -50,16 +59,17 @@ Why this split: anything that needs only values lives in `shared` so Lune can te
 |---|---|---|
 | Strict Luau (ADR 0001) | No compile step, native tooling | No TypeScript ecosystem |
 | Partially managed Rojo (ADR 0002) | Safe merges | World/UI not in Git |
-| Pure core + injected backends | Lune-testable, no mocks of the engine | A thin adapter per service |
+| Pure core, ports and adapters (ADR 0009) | Lune-testable, no mocks of the engine | A thin adapter per service |
 | Local structural `Result` alias in pure modules | They load under Lune without engine `require` paths | Small duplication of the type |
 | Idempotent receipt ledger | No double grants | The ledger must persist with player data |
 
 ## Add a feature
 
-1. Put the decision and data shape in a pure module under `src/shared` with typed exports.
-2. Add `tests/<Module>.test.luau` and register it in `scripts/test.luau`.
-3. If it needs the engine, add a thin adapter under `src/server` (or `src/client`).
-4. `stylua .`, `selene .`, `lune run scripts/test`, then open a PR.
+1. Put the decision and data shape in a pure module under `src/shared/features/<feature>/` with typed exports and a `Deps` table for anything external.
+2. If it needs an external service, add a port type in `src/shared/ports` and an adapter in `src/server/adapters`; wire it in `Main.server.luau` (the only place that builds adapters).
+3. Add `tests/features/<feature>/<Module>.test.luau` and register it in `scripts/suites.luau`.
+4. For a remote: validate every argument with `shared/net/Validation` and gate it with a `RateLimiter` (ADR 0012).
+5. `stylua .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `pwsh scripts/coverage.ps1`, then open a PR (CI runs the same). Several agents at once: read `docs/multi-agent.md`.
 
 ## Start a new game from this template
 
@@ -75,8 +85,33 @@ No community MCP servers; no secrets in the repo; nothing that moves real money 
 
 ## Tests
 
-Pure logic: `tests/` via `lune run scripts/test` (runs in CI). Engine-bound adapters have no automated tests yet; the plan is the Open Cloud Luau Execution API once Victor creates the key ([ADR 0005](docs/adr/0005-tests-lune-then-luau-execution.md)).
+Pure logic: `tests/` via `lune run scripts/test`; types via `pwsh scripts/analyze.ps1` (both run in CI). Adapters are tested with fakes (`tests/adapters/`); behavior against the real engine has no automated tests yet, the plan is the Open Cloud Luau Execution API once Victor creates the key ([ADR 0005](docs/adr/0005-tests-lune-then-luau-execution.md)).
 
-## Status and unverified items
+## Status
 
-Nothing here has been executed yet: no Studio, Rokit, Rojo or Lune were installed when this was written. First CI/Lune run may need small fixes (formatter diff, Lune `require` of `*.test` files, Selene on test files, the `CompeyDev/setup-rokit` action tag).
+Verified locally on 2026-11-02: StyLua, Selene, `luau-lsp analyze` (0 errors), Lune tests and `rojo build`. CI has not run yet (no remote). Still unverified: Studio MCP with several Studios, the engine adapters (no engine tests until the Luau Execution API), and the new-solver pass (informational, reports errors on ProfileStore typing and `os.time` as a clock).
+
+## Remotes (Zap)
+
+Typed remotes are generated from `net/schema.zap` with the Zap CLI pinned in `rokit.toml` ([ADR 0015](docs/adr/0015-remote-layer-codegen.md)). Zap decodes and checks the wire format; the server still rate-limits and validates every remote ([ADR 0012](docs/adr/0012-remote-validation-and-rate-limit.md)).
+
+```powershell
+rokit install                           # pins zap too; `rokit trust red-blox/zap` once if asked
+pwsh scripts/generate-remotes.ps1       # regenerates src/shared/net/generated/ (CI fails on a diff)
+```
+
+How to add an event: [docs/architecture.md](docs/architecture.md#how-to-add-a-remote-event).
+
+## Coverage
+
+Line coverage of the pure Luau code, measured with the Luau CLI ([ADR 0017](docs/adr/0017-luau-coverage-gate.md)):
+
+```powershell
+rokit install                      # pins luau and lune (rokit.toml); `rokit trust luau-lang/luau` once if asked
+pwsh scripts/coverage.ps1          # runs the suites under `luau --coverage`, writes logs/coverage.lcov, prints the table
+```
+
+- The gate is 75 % of the TOTAL lines (`-Threshold` to try another value) and also fails when a file that is not excluded never appears in the lcov (a module no test loads would otherwise hide).
+- Excluded: `vendor/`, `types/`, `tests/`, `generated/`, `src/shared/ports/`, `Main.*` and any file that touches `game` (engine code). The report lists every excluded file.
+- This is line coverage only (no branches). Tests that need the engine are out of scope until the Luau Execution API job exists (ADR 0005).
+- `scripts/suites.luau` is the runtime-neutral runner; `scripts/test.luau` is its Lune entry and `scripts/test_luau.luau` its Luau CLI entry.

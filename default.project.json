@@ -14,6 +14,12 @@
       "$ignoreUnknownInstances": true,
       "Server": {
         "$path": "src/server"
+      },
+      "Vendor": {
+        "$className": "Folder",
+        "ProfileStore": {
+          "$path": "vendor/ProfileStore/ProfileStore.luau"
+        }
       }
     },
     "StarterPlayer": {

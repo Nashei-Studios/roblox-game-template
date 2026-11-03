@@ -1,6 +1,6 @@
 --!strict
-local Analytics = require("../src/shared/Analytics")
-local harness = require("./harness")
+local Analytics = require("../../../src/shared/features/analytics/Analytics")
+local harness = require("../../harness")
 
 return function(suite: harness.Harness)
     suite:test("isFunnelEvent accepts known names and rejects others", function()

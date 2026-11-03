@@ -4,8 +4,8 @@
     One-time, idempotent machine setup for this template (Windows, PowerShell 7).
 .DESCRIPTION
     Checks Studio, installs the pinned toolchain via Rokit, installs the Rojo Studio
-    plugin, creates the `roblox` VS Code profile with 4 extensions, checks the Studio
-    MCP registration, and prints what is still manual. Opens no windows.
+    plugin, creates the `roblox` VS Code profile with 4 extensions, installs and registers the Studio
+    MCP launcher at user scope, and prints what is still manual. Opens no windows.
     Safe to re-run. Every step prints OK or FAIL; exit code is 1 if any step failed.
 #>
 Set-StrictMode -Version Latest
@@ -63,10 +63,27 @@ if (Test-Command 'code') {
     Write-Step 'VS Code CLI (code)' $false 'not on PATH'
 }
 
-# 5. Studio MCP registered for Claude Code (project scope comes from .mcp.json).
+# 5. Studio MCP launcher installed under $HOME\.local\bin and registered at USER scope only (ADR 0018).
+$launcherSource = Join-Path $repoRoot 'tools\roblox-studio-mcp.cmd'
+$launcherDir = Join-Path $HOME '.local\bin'
+$launcherTarget = Join-Path $launcherDir 'roblox-studio-mcp.cmd'
+$needsCopy = (-not (Test-Path $launcherTarget)) -or
+    ((Get-FileHash $launcherSource).Hash -ne (Get-FileHash $launcherTarget).Hash)
+if ($needsCopy) {
+    New-Item -ItemType Directory -Force $launcherDir | Out-Null
+    Copy-Item -Force $launcherSource $launcherTarget
+    Write-Step 'Studio MCP launcher copied' (Test-Path $launcherTarget) $launcherTarget
+} else {
+    Write-Step 'Studio MCP launcher up to date' $true $launcherTarget
+}
 if (Test-Command 'claude') {
-    $mcpList = (& claude mcp list 2>&1 | Out-String)
-    Write-Step 'claude mcp list shows Roblox_Studio' ($mcpList -match 'Roblox_Studio') 'a failed health check is normal until Studio is open with MCP enabled'
+    & claude mcp get Roblox_Studio 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Step 'Roblox_Studio already registered (user scope)' $true 'left untouched'
+    } else {
+        & claude mcp add --scope user Roblox_Studio -- cmd.exe /c $launcherTarget 2>&1 | Out-Null
+        Write-Step 'Roblox_Studio registered at user scope' ($LASTEXITCODE -eq 0) 'a failed health check is normal until Studio is open with MCP enabled'
+    }
 } else {
     Write-Step 'Claude Code CLI (claude)' $false 'not on PATH'
 }
@@ -76,7 +93,7 @@ Write-Host 'Still manual (cannot be automated safely):'
 Write-Host '  1. Log in to Roblox Studio and enable 2FA on the account.'
 Write-Host '  2. In Studio: Assistant > Manage MCP Servers > Enable Studio as MCP server.'
 Write-Host '  3. Open a DEV/throwaway place first, never a production place.'
-Write-Host '  4. Verify the mcp.bat path exists: %LOCALAPPDATA%\Roblox\mcp.bat'
+Write-Host '  4. Check the MCP answers (Studio open): claude mcp get Roblox_Studio'
 Write-Host '  5. Start syncing: `rojo serve`, then Connect in the Rojo plugin.'
 
 if ($script:failures -gt 0) {
