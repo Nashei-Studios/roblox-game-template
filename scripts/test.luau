@@ -36,6 +36,18 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         name = "PlayerDataService",
         register = require("../tests/features/playerdata/PlayerDataService.test"),
     },
+    {
+        name = "AnalyticsServiceSink (adapter)",
+        register = require("../tests/adapters/AnalyticsServiceSink.test"),
+    },
+    {
+        name = "ConfigServiceFlags (adapter)",
+        register = require("../tests/adapters/ConfigServiceFlags.test"),
+    },
+    {
+        name = "ProfileStoreRepository (adapter)",
+        register = require("../tests/adapters/ProfileStoreRepository.test"),
+    },
     { name = "Validation", register = require("../tests/net/Validation.test") },
     { name = "RateLimiter", register = require("../tests/net/RateLimiter.test") },
 }

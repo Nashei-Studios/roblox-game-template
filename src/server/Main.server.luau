@@ -5,6 +5,8 @@
     events. Game-specific wiring goes here; logic goes in features.
 ]]
 
+local AnalyticsService = game:GetService("AnalyticsService")
+local ConfigService = game:GetService("ConfigService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -48,11 +50,36 @@ local store: ProfileStoreRepository.StoreLike<PlayerData.PlayerData> = {
     end,
 }
 local repository = ProfileStoreRepository.new(store)
-local flags = Flags.new(ConfigServiceFlags.new(), Config.flagDefaults)
+local flags = Flags.new(
+    ConfigServiceFlags.new({
+        configService = {
+            GetConfigAsync = function(_self: unknown): ConfigServiceFlags.ConfigSnapshotLike
+                return ConfigService:GetConfigAsync()
+            end,
+        },
+    }),
+    Config.flagDefaults
+)
 
 -- Feature services.
 local tracker = AnalyticsTracker.new({
-    sink = AnalyticsServiceSink.new(),
+    sink = AnalyticsServiceSink.new({
+        analytics = {
+            LogCustomEvent = function(
+                _self: unknown,
+                player: Player,
+                eventName: string,
+                value: number
+            )
+                AnalyticsService:LogCustomEvent(player, eventName, value)
+            end,
+        },
+        players = {
+            GetPlayerByUserId = function(_self: unknown, userId: number): Player?
+                return Players:GetPlayerByUserId(userId)
+            end,
+        },
+    }),
     clock = function(): number
         return os.time()
     end,

@@ -3,32 +3,58 @@
     Adapter: FlagSource over Experience Configs (ConfigService, ADR 0011).
     GetConfigAsync returns a point-in-time snapshot; this adapter refreshes it when Roblox
     reports an update so flag reads see the latest staged/rolled-out values.
-    Engine-only: not testable under Lune. Pure fallback logic is in features/flags/Flags.luau.
+    ConfigService is injected (ADR 0009) so this file loads under Lune and is tested with a
+    fake. Pure fallback logic is in features/flags/Flags.luau.
 ]]
 
-local ConfigService = game:GetService("ConfigService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- Structurally identical to ports/Flags.luau (kept local so this file loads under Lune).
+type FlagValue = boolean | number | string
 
-local FlagsPort = require(ReplicatedStorage.Shared.ports.Flags)
+type FlagSource = {
+    get: (self: FlagSource, name: string) -> FlagValue?,
+}
+
+-- The slice of ConfigService and its ConfigSnapshot that this adapter uses.
+export type ConfigSnapshotLike = {
+    UpdateAvailable: {
+        Connect: (self: unknown, listener: () -> ()) -> unknown,
+    },
+    Refresh: (self: unknown) -> (),
+    GetValue: (self: unknown, name: string) -> unknown,
+}
+
+export type ConfigServiceLike = {
+    GetConfigAsync: (self: unknown) -> ConfigSnapshotLike,
+}
+
+export type Deps = {
+    configService: ConfigServiceLike,
+    -- Defaults to the engine `warn`; tests capture it.
+    warn: ((message: string) -> ())?,
+}
 
 local ConfigServiceFlags = {}
 
 --- Returns nil when Experience Configs cannot be loaded; callers then use in-repo defaults.
-function ConfigServiceFlags.new(): FlagsPort.FlagSource?
-    local loaded, snapshot = pcall(function()
-        return ConfigService:GetConfigAsync()
+function ConfigServiceFlags.new(deps: Deps): FlagSource?
+    local report: (message: string) -> () = deps.warn
+        or function(message: string)
+            warn(message)
+        end
+    local loaded, snapshot = pcall(function(): ConfigSnapshotLike
+        return deps.configService:GetConfigAsync()
     end)
     if not loaded then
-        warn(`Experience Configs unavailable, using in-repo flag defaults: {snapshot}`)
+        report(`Experience Configs unavailable, using in-repo flag defaults: {snapshot}`)
         return nil
     end
-    local config: ConfigSnapshot = snapshot
+    local config: ConfigSnapshotLike = snapshot
     config.UpdateAvailable:Connect(function()
         config:Refresh()
     end)
 
-    local source: FlagsPort.FlagSource = {
-        get = function(_self: FlagsPort.FlagSource, name: string): FlagsPort.FlagValue?
+    local source: FlagSource = {
+        get = function(_self: FlagSource, name: string): FlagValue?
             local value: unknown = config:GetValue(name)
             if type(value) == "boolean" or type(value) == "number" or type(value) == "string" then
                 return value

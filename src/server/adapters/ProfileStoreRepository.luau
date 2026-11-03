@@ -2,16 +2,29 @@
 --[[
     Adapter: ProfileRepository<T> over ProfileStore (vendor/ProfileStore, ADR 0010).
     ProfileStore owns session locking, autosave, retries and release on shutdown; this file
-    only translates its Profile object to the typed port. Not unit-testable under Lune (it
-    needs the engine); the port contract is tested against the in-memory fake.
+    only translates its Profile object to the typed port. The store is injected, so it loads
+    under Lune and is tested with a fake store; behavior against the real ProfileStore is R4
+    (Luau Execution API).
 ]]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- Structurally identical to ports/ProfileRepository.luau (kept local so this file loads under
+-- Lune; the compiler checks the match where Main.server hands the repository to the service).
+type Result<T, E> = { ok: true, value: T } | { ok: false, error: E }
 
-local ProfileRepository = require(ReplicatedStorage.Shared.ports.ProfileRepository)
+type ProfileError = "session_unavailable" | "not_active" | "save_failed"
 
-type ProfileError = ProfileRepository.ProfileError
-type Result<T, E> = ProfileRepository.Result<T, E>
+type ProfileHandle<T> = {
+    key: string,
+    data: T,
+    isActive: (self: ProfileHandle<T>) -> boolean,
+    save: (self: ProfileHandle<T>) -> Result<nil, ProfileError>,
+    release: (self: ProfileHandle<T>) -> Result<nil, ProfileError>,
+    onSessionEnd: (self: ProfileHandle<T>, listener: () -> ()) -> (),
+}
+
+type ProfileRepository<T> = {
+    load: (self: ProfileRepository<T>, key: string) -> Result<ProfileHandle<T>, ProfileError>,
+}
 
 -- The slice of ProfileStore's Profile that this adapter uses.
 export type ProfileLike<T> = {
@@ -36,12 +49,12 @@ export type StoreLike<T> = {
 
 local ProfileStoreRepository = {}
 
-function ProfileStoreRepository.new<T>(store: StoreLike<T>): ProfileRepository.ProfileRepository<T>
-    local repository: ProfileRepository.ProfileRepository<T> = {
+function ProfileStoreRepository.new<T>(store: StoreLike<T>): ProfileRepository<T>
+    local repository: ProfileRepository<T> = {
         load = function(
-            _self: ProfileRepository.ProfileRepository<T>,
+            _self: ProfileRepository<T>,
             key: string
-        ): Result<ProfileRepository.ProfileHandle<T>, ProfileError>
+        ): Result<ProfileHandle<T>, ProfileError>
             local profile = store:StartSessionAsync(key, nil)
             if profile == nil then
                 return { ok = false, error = "session_unavailable" }
@@ -49,15 +62,13 @@ function ProfileStoreRepository.new<T>(store: StoreLike<T>): ProfileRepository.P
             -- Fill fields added to the template since this profile was last saved.
             profile:Reconcile()
 
-            local handle: ProfileRepository.ProfileHandle<T> = {
+            local handle: ProfileHandle<T> = {
                 key = key,
                 data = profile.Data,
-                isActive = function(_handle: ProfileRepository.ProfileHandle<T>): boolean
+                isActive = function(_handle: ProfileHandle<T>): boolean
                     return profile:IsActive()
                 end,
-                save = function(
-                    _handle: ProfileRepository.ProfileHandle<T>
-                ): Result<nil, ProfileError>
+                save = function(_handle: ProfileHandle<T>): Result<nil, ProfileError>
                     if not profile:IsActive() then
                         return { ok = false, error = "not_active" }
                     end
@@ -65,19 +76,14 @@ function ProfileStoreRepository.new<T>(store: StoreLike<T>): ProfileRepository.P
                     profile:Save()
                     return { ok = true, value = nil }
                 end,
-                release = function(
-                    _handle: ProfileRepository.ProfileHandle<T>
-                ): Result<nil, ProfileError>
+                release = function(_handle: ProfileHandle<T>): Result<nil, ProfileError>
                     if not profile:IsActive() then
                         return { ok = false, error = "not_active" }
                     end
                     profile:EndSession()
                     return { ok = true, value = nil }
                 end,
-                onSessionEnd = function(
-                    _handle: ProfileRepository.ProfileHandle<T>,
-                    listener: () -> ()
-                )
+                onSessionEnd = function(_handle: ProfileHandle<T>, listener: () -> ())
                     profile.OnSessionEnd:Connect(listener)
                 end,
             }
