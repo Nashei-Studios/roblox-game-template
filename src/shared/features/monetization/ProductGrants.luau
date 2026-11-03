@@ -1,6 +1,7 @@
 --!strict
 --[[
-    Pure product delivery (D-38): what each developer product gives the player.
+    Pure product delivery (D-38): what each developer product gives the player (coins, or
+    clearing the next stage with a skipStage grant).
     Loads under Lune. The grant table comes from Config.developerProducts (see
     `Config.grantsByName`); this module only applies it to player data.
 
@@ -10,10 +11,12 @@
 ]]
 
 -- Structurally identical to Config.ProductGrant (kept local so this file loads under Lune).
-export type ProductGrant = { kind: "coins", amount: number }
+export type ProductGrant =
+    { kind: "coins", amount: number }
+    | { kind: "skipStage", maxStage: number }
 
 -- The slice of PlayerData that grants write to.
-export type GrantTarget = { coins: number }
+export type GrantTarget = { coins: number, highestStage: number }
 
 export type GrantError =
     { kind: "unknown_product", productName: string }
@@ -40,6 +43,23 @@ function ProductGrantsModule.new(grants: { [string]: ProductGrant }): ProductGra
                     ok = false,
                     error = { kind = "unknown_product", productName = productName },
                 }
+            end
+            if grant.kind == "skipStage" then
+                local maxStage = grant.maxStage
+                if maxStage ~= maxStage or maxStage < 1 or maxStage % 1 ~= 0 then
+                    return {
+                        ok = false,
+                        error = {
+                            kind = "invalid_amount",
+                            productName = productName,
+                            amount = maxStage,
+                        },
+                    }
+                end
+                -- At the last stage this is a granted no-op: failing it would make Roblox
+                -- retry the receipt forever (ADR 0016, ADR 0020).
+                data.highestStage = math.min(maxStage, data.highestStage + 1)
+                return { ok = true, value = nil }
             end
             local amount = grant.amount
             if

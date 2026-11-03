@@ -1,0 +1,78 @@
+--!strict
+local HudModel = require("../../../src/shared/features/keysprint/HudModel")
+local KeySprintRules = require("../../../src/shared/features/keysprint/KeySprintRules")
+local harness = require("../../harness")
+
+return function(suite: harness.Harness)
+    suite:test("a fresh HUD is empty and shows the key prompt", function()
+        local view = HudModel.new():view()
+        harness.equal(view.meterFill, 0, "meter")
+        harness.equal(view.coinsText, "0", "coins")
+        harness.isTrue(view.showKeyPrompt, "prompt")
+        harness.equal(view.promptText, "Press E", "prompt text")
+    end)
+
+    suite:test("the meter fills between multiplier 1 and the cap", function()
+        local hud = HudModel.new()
+        hud:setMultiplier(3, 5)
+        harness.equal(hud:view().meterFill, 0.5, "half")
+        hud:setMultiplier(5, 5)
+        harness.equal(hud:view().meterFill, 1, "full")
+        hud:setMultiplier(99, 5)
+        harness.equal(hud:view().meterFill, 1, "clamped")
+        hud:setMultiplier(1, 5)
+        harness.equal(hud:view().meterFill, 0, "empty")
+    end)
+
+    suite:test("the multiplier text shows one decimal and the cap", function()
+        local hud = HudModel.new()
+        hud:setMultiplier(2.34, 5)
+        harness.equal(hud:view().multiplierText, "x2.3 / x5", "text")
+    end)
+
+    suite:test("a degenerate cap of 1 does not divide by zero", function()
+        local hud = HudModel.new()
+        hud:setMultiplier(1, 1)
+        harness.equal(hud:view().meterFill, 1, "cap 1 is full")
+    end)
+
+    suite:test("the upgrade button shows the price and is enabled only when affordable", function()
+        local hud = HudModel.new()
+        hud:setProgress(0, 5)
+        hud:setCoins(10)
+        local poor = hud:view()
+        harness.equal(
+            poor.upgradeText,
+            `Upgrade cap: {KeySprintRules.CAP_PRICES[5]} coins`,
+            "label"
+        )
+        harness.isFalse(poor.upgradeEnabled, "too poor")
+        hud:setCoins(KeySprintRules.CAP_PRICES[5] :: number)
+        harness.isTrue(hud:view().upgradeEnabled, "affordable")
+    end)
+
+    suite:test("at the maximum cap the button says so and is disabled", function()
+        local hud = HudModel.new()
+        hud:setProgress(0, KeySprintRules.MAX_CAP)
+        hud:setCoins(1e9)
+        local view = hud:view()
+        harness.equal(view.upgradeText, "Cap maxed", "label")
+        harness.isFalse(view.upgradeEnabled, "disabled")
+    end)
+
+    suite:test("coins are grouped with thousands separators", function()
+        local hud = HudModel.new()
+        hud:setCoins(1234567)
+        harness.equal(hud:view().coinsText, "1,234,567", "grouped")
+    end)
+
+    suite:test("the key prompt hides after the first press and the stage text follows", function()
+        local hud = HudModel.new()
+        hud:notePress()
+        harness.isFalse(hud:view().showKeyPrompt, "hidden")
+        hud:setProgress(1, 5)
+        harness.equal(hud:view().stageText, "Stage 2 of 3", "next stage")
+        hud:setProgress(3, 5)
+        harness.equal(hud:view().stageText, "All stages cleared", "complete")
+    end)
+end

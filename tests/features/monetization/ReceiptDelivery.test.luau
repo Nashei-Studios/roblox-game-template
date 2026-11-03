@@ -20,6 +20,8 @@ local function clone(data: PlayerData.PlayerData): PlayerData.PlayerData
         coins = data.coins,
         purchaseIds = table.clone(data.purchaseIds),
         sessionCount = data.sessionCount,
+        highestStage = data.highestStage,
+        multiplierCap = data.multiplierCap,
     }
 end
 

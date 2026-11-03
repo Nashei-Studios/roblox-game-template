@@ -1,11 +1,12 @@
 --!strict
 local Config = require("../src/shared/Config")
+local KeySprintRules = require("../src/shared/features/keysprint/KeySprintRules")
 local harness = require("./harness")
 
 return function(suite: harness.Harness)
     suite:test("default config reports every unset id", function()
         local problems = Config.validate(Config.default)
-        harness.equal(#problems, 2, "problem count")
+        harness.equal(#problems, 4, "problem count")
     end)
 
     suite:test("a fully configured game has no problems", function()
@@ -107,6 +108,42 @@ return function(suite: harness.Harness)
             saveConfirmTimeoutSeconds = 0,
             gamePasses = {},
             developerProducts = {},
+        }
+        harness.equal(#Config.validate(config), 1, "problem count")
+    end)
+
+    suite:test("default config declares 2 passes and 2 products with no ids", function()
+        harness.equal(#Config.default.gamePasses, 2, "passes")
+        harness.equal(#Config.default.developerProducts, 2, "products")
+        for _, pass in Config.default.gamePasses do
+            harness.isTrue(pass.id == nil, `{pass.name} id is a TODO, never invented`)
+        end
+        for _, product in Config.default.developerProducts do
+            harness.isTrue(product.id == nil, `{product.name} id is a TODO, never invented`)
+        end
+    end)
+
+    suite:test("default config names the key sprint monetization items", function()
+        harness.equal(Config.default.gamePasses[1].name, "FasterCharge", "pass 1")
+        harness.equal(Config.default.gamePasses[2].name, "Trail", "pass 2")
+        local skip = Config.grantsByName(Config.default)["SkipStage"]
+        harness.isTrue(skip ~= nil and skip.kind == "skipStage", "skip grant")
+        if skip ~= nil and skip.kind == "skipStage" then
+            harness.equal(skip.maxStage, KeySprintRules.STAGE_COUNT, "maxStage")
+        end
+    end)
+
+    suite:test("validate rejects a skipStage grant with a bad maxStage", function()
+        local config: Config.GameConfig = {
+            gameName = "Test",
+            sessionLockTimeoutSeconds = 60,
+            autosaveIntervalSeconds = 30,
+            purchaseLedgerSize = 50,
+            saveConfirmTimeoutSeconds = 30,
+            gamePasses = {},
+            developerProducts = {
+                { name = "Skip", id = 5, grant = { kind = "skipStage", maxStage = 0 } },
+            },
         }
         harness.equal(#Config.validate(config), 1, "problem count")
     end)

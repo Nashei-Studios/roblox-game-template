@@ -6,13 +6,17 @@
     `Config.validate` reports every missing id so a misconfigured game fails loudly.
 ]]
 
+local KeySprintRules = require("./features/keysprint/KeySprintRules")
+
 export type ProductConfig = {
     name: string,
     id: number?,
 }
 
 -- What a developer product delivers (applied by features/monetization/ProductGrants).
-export type ProductGrant = { kind: "coins", amount: number }
+export type ProductGrant =
+    { kind: "coins", amount: number }
+    | { kind: "skipStage", maxStage: number }
 
 export type DeveloperProductConfig = {
     name: string,
@@ -46,10 +50,16 @@ Config.default = {
     saveConfirmTimeoutSeconds = 30,
     perfProbeEnabled = false,
     gamePasses = {
-        { name = "VIP", id = nil }, -- TODO(victor): set id
+        { name = "FasterCharge", id = nil }, -- TODO(victor): set id
+        { name = "Trail", id = nil }, -- TODO(victor): set id
     },
     developerProducts = {
         { name = "Coins100", id = nil, grant = { kind = "coins", amount = 100 } }, -- TODO(victor): set id
+        {
+            name = "SkipStage",
+            id = nil, -- TODO(victor): set id
+            grant = { kind = "skipStage", maxStage = KeySprintRules.STAGE_COUNT },
+        },
     },
 } :: GameConfig
 
@@ -94,13 +104,26 @@ function Config.validate(config: GameConfig): { string }
         end
         seenNames[product.name] = true
         local grant = product.grant
-        if grant.kind ~= "coins" then
+        if grant.kind == "coins" then
+            if grant.amount ~= grant.amount or grant.amount <= 0 or grant.amount % 1 ~= 0 then
+                table.insert(
+                    problems,
+                    `developer product "{product.name}" grants an invalid amount (must be a positive integer)`
+                )
+            end
+        elseif grant.kind == "skipStage" then
+            if
+                grant.maxStage ~= grant.maxStage
+                or grant.maxStage < 1
+                or grant.maxStage % 1 ~= 0
+            then
+                table.insert(
+                    problems,
+                    `developer product "{product.name}" has an invalid maxStage (must be a positive integer)`
+                )
+            end
+        else
             table.insert(problems, `developer product "{product.name}" has an unknown grant kind`)
-        elseif grant.amount ~= grant.amount or grant.amount <= 0 or grant.amount % 1 ~= 0 then
-            table.insert(
-                problems,
-                `developer product "{product.name}" grants an invalid amount (must be a positive integer)`
-            )
         end
     end
     return problems

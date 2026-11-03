@@ -7,6 +7,8 @@
     keep `PlayerDataMigrations.CURRENT_SCHEMA_VERSION` in sync (a test enforces it).
 ]]
 
+local KeySprintRules = require("../keysprint/KeySprintRules")
+
 export type PlayerData = {
     schemaVersion: number,
     coins: number,
@@ -14,11 +16,14 @@ export type PlayerData = {
     purchaseIds: { string },
     -- Sessions started by this player, counting the current one (see PlayerDataService.join).
     sessionCount: number,
+    -- Key sprint: the last stage cleared (0 = none) and the player's multiplier cap.
+    highestStage: number,
+    multiplierCap: number,
 }
 
 local PlayerDataModule = {}
 
-PlayerDataModule.CURRENT_SCHEMA_VERSION = 3
+PlayerDataModule.CURRENT_SCHEMA_VERSION = 4
 
 --- A fresh table on every call (profiles mutate their data in place).
 function PlayerDataModule.default(): PlayerData
@@ -27,6 +32,8 @@ function PlayerDataModule.default(): PlayerData
         coins = 0,
         purchaseIds = {},
         sessionCount = 0,
+        highestStage = 0,
+        multiplierCap = KeySprintRules.BASE_CAP,
     }
 end
 

@@ -62,6 +62,38 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     { name = "RemoteBudget", register = require("../tests/perf/RemoteBudget.test") },
     { name = "ProbeEvaluator", register = require("../tests/perf/ProbeEvaluator.test") },
     {
+        name = "ChargeMeter",
+        register = require("../tests/features/keysprint/ChargeMeter.test"),
+    },
+    {
+        name = "StageLayout",
+        register = require("../tests/features/keysprint/StageLayout.test"),
+    },
+    {
+        name = "StageRuns",
+        register = require("../tests/features/keysprint/StageRuns.test"),
+    },
+    {
+        name = "Progression",
+        register = require("../tests/features/keysprint/Progression.test"),
+    },
+    {
+        name = "Funnel",
+        register = require("../tests/features/keysprint/Funnel.test"),
+    },
+    {
+        name = "PressBatcher",
+        register = require("../tests/features/keysprint/PressBatcher.test"),
+    },
+    {
+        name = "HudModel",
+        register = require("../tests/features/keysprint/HudModel.test"),
+    },
+    {
+        name = "KeySprintController",
+        register = require("../tests/features/keysprint/KeySprintController.test"),
+    },
+    {
         name = "StudioLockPolicy (hook)",
         register = require("../tests/claude/StudioLockPolicy.test"),
     },
