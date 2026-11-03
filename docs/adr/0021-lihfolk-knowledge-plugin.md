@@ -50,5 +50,15 @@ Negative:
 - The settings name a local path: a clone on another machine warns that the marketplace is missing until the kit is installed there.
 - Two checkers can disagree with each other (LihFolk's rules and our Selene config); our CI stays the gate.
 - Notes can go stale; a new LihFolk version means a new intake and a re-read of its hooks.
+- Supply-chain surface (flagged by the automated security review on 2026-11-03, accepted): the hook runs from a folder outside the repository, so whoever can write to `D:\Victor\Roblox\kits\lihfolk-vault-v2.5.0\` can change what runs on every Luau edit. On this single-user machine that is the same trust boundary as `~/.claude` itself. Moving the two keys to `settings.local.json` was rejected because worktree workers would lose the plugin. The extraction is read-only, and these hashes identify the reviewed files; a mismatch means re-review before use:
+
+  | File | sha256 |
+  |---|---|
+  | `hooks/hooks.json` | `4ad60968e00ffb80af3b9f86ce3ca5861e8bad7dc5640d8ee4bb3002ae116df0` |
+  | `hooks/scripts/lihfolk-check.sh` | `1a54a9923d6d787f6fbcad5310d054cf40ac9a309b828c33eab1c94a9357e127` |
+  | `hooks/scripts/lihfolk-check.awk` | `dfc5629604827f1bbbbdaf5c9d72bf30268b8d1cf52e6a8422cc81cd5894d776` |
+  | `hooks/scripts/lihfolk-check.ps1` | `c761df48e3ddc1150318d0a16e3ae95d9223e862f8735a8a20352bfc7a1f548d` |
+  | `hooks/scripts/rules.tsv` | `b4ffa45cefb3ea0cb2c1750984086436b7b1c3d2f70b46172513e890923c1612` |
+  | `LihFolk Vault V2/_tools/vault.py` | `c5ddaff4f834215634c9218989d15d6093ee31af88943a7522e30793fe539026` |
 
 What would change it: LihFolk publishing signed releases with a changelog of hook changes (then option A becomes acceptable), or the checker producing noise that slows workers down (then disable the hook with `LIHFOLK_HOOK=off` and keep only the router).
