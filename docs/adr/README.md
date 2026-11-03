@@ -19,6 +19,7 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0012](0012-remote-validation-and-rate-limit.md) | Remote validation and rate limiting; code-gen spike deferred |
 | [0013](0013-multi-agent-protocol.md) | Multi-agent protocol: worktree per agent, headless first, Studio lock |
 | [0014](0014-pure-migration-chain.md) | Pure per-version migration chain for player data (golden fixtures) |
+| [0015](0015-remote-layer-codegen.md) | Remote layer code generator, Zap vs Blink (proposed, waiting for a decision) |
 | [0016](0016-confirmed-save-before-purchase-granted.md) | PurchaseGranted only after the save is confirmed; bounded ordered ledger |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
