@@ -160,6 +160,9 @@ if not RunService:IsRunning() then
 		RequestPlusPrompt = table.freeze({
 			setCallback = noop
 		}),
+		RequestCommunityCheck = table.freeze({
+			setCallback = noop
+		}),
 		RedeemCode = table.freeze({
 			setCallback = noop
 		}),
@@ -214,7 +217,7 @@ Players.PlayerRemoving:Connect(function(player)
 	player_map[player] = nil
 end)
 export type AdPlacementName = ("Default")
-export type NotificationKind = ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable")
+export type NotificationKind = ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member")
 export type PlusPlacementName = ("menu")
 export type PrivateServerSettingName = ("maxPlayers")
 export type ProductName = ("Coins100")
@@ -238,7 +241,7 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(9)
+local reliable_events = table.create(10)
 reliable.OnServerEvent:Connect(function(player, buff, inst)
 	incoming_buff = buff
 	incoming_inst = inst
@@ -290,6 +293,11 @@ reliable.OnServerEvent:Connect(function(player, buff, inst)
 			value = "menu"
 			if reliable_events[6] then
 				reliable_events[6](player, value)
+			end
+		elseif id == 9 then -- RequestCommunityCheck
+			local value
+			if reliable_events[9] then
+				reliable_events[9](player, value)
 			end
 		elseif id == 1 then -- RedeemCode
 			local value
@@ -454,6 +462,14 @@ local returns = {
 			end
 		end,
 	},
+	RequestCommunityCheck = {
+		setCallback = function(callback: (player: Player) -> ()): () -> ()
+			reliable_events[9] = callback
+			return function()
+				reliable_events[9] = nil
+			end
+		end,
+	},
 	RedeemCode = {
 		setCallback = function(callback: (player: Player, code: (string)) -> ()): () -> ()
 			reliable_events[1] = callback
@@ -463,7 +479,7 @@ local returns = {
 		end,
 	},
 	Notify = {
-		fire = function(player: Player, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number))
+		fire = function(player: Player, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number))
 			load_player(player)
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
@@ -487,6 +503,10 @@ local returns = {
 				bool_2 = bit32.bor(bool_2, 0b0000000010000000)
 			elseif kind == "session_gift_unavailable" then
 				bool_2 = bit32.bor(bool_2, 0b0000000100000000)
+			elseif kind == "community_reward_claimed" then
+				bool_2 = bit32.bor(bool_2, 0b0000001000000000)
+			elseif kind == "community_not_member" then
+				bool_2 = bit32.bor(bool_2, 0b0000010000000000)
 			else
 				error("Invalid enumerator")
 			end
@@ -495,7 +515,7 @@ local returns = {
 			buffer.writeu16(outgoing_buff, bool_2_pos_1, bool_2)
 			player_map[player] = save()
 		end,
-		fireAll = function(kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number))
+		fireAll = function(kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number))
 			load_empty()
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
@@ -519,6 +539,10 @@ local returns = {
 				bool_3 = bit32.bor(bool_3, 0b0000000010000000)
 			elseif kind == "session_gift_unavailable" then
 				bool_3 = bit32.bor(bool_3, 0b0000000100000000)
+			elseif kind == "community_reward_claimed" then
+				bool_3 = bit32.bor(bool_3, 0b0000001000000000)
+			elseif kind == "community_not_member" then
+				bool_3 = bit32.bor(bool_3, 0b0000010000000000)
 			else
 				error("Invalid enumerator")
 			end
@@ -534,7 +558,7 @@ local returns = {
 				player_map[player] = save()
 			end
 		end,
-		fireExcept = function(except: Player, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number))
+		fireExcept = function(except: Player, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number))
 			load_empty()
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
@@ -558,6 +582,10 @@ local returns = {
 				bool_4 = bit32.bor(bool_4, 0b0000000010000000)
 			elseif kind == "session_gift_unavailable" then
 				bool_4 = bit32.bor(bool_4, 0b0000000100000000)
+			elseif kind == "community_reward_claimed" then
+				bool_4 = bit32.bor(bool_4, 0b0000001000000000)
+			elseif kind == "community_not_member" then
+				bool_4 = bit32.bor(bool_4, 0b0000010000000000)
 			else
 				error("Invalid enumerator")
 			end
@@ -575,7 +603,7 @@ local returns = {
 				end
 			end
 		end,
-		fireList = function(list: { [unknown]: Player }, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number))
+		fireList = function(list: { [unknown]: Player }, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number))
 			load_empty()
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
@@ -599,6 +627,10 @@ local returns = {
 				bool_5 = bit32.bor(bool_5, 0b0000000010000000)
 			elseif kind == "session_gift_unavailable" then
 				bool_5 = bit32.bor(bool_5, 0b0000000100000000)
+			elseif kind == "community_reward_claimed" then
+				bool_5 = bit32.bor(bool_5, 0b0000001000000000)
+			elseif kind == "community_not_member" then
+				bool_5 = bit32.bor(bool_5, 0b0000010000000000)
 			else
 				error("Invalid enumerator")
 			end
@@ -614,7 +646,7 @@ local returns = {
 				player_map[player] = save()
 			end
 		end,
-		fireSet = function(set: { [Player]: any }, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number))
+		fireSet = function(set: { [Player]: any }, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number))
 			load_empty()
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
@@ -638,6 +670,10 @@ local returns = {
 				bool_6 = bit32.bor(bool_6, 0b0000000010000000)
 			elseif kind == "session_gift_unavailable" then
 				bool_6 = bit32.bor(bool_6, 0b0000000100000000)
+			elseif kind == "community_reward_claimed" then
+				bool_6 = bit32.bor(bool_6, 0b0000001000000000)
+			elseif kind == "community_not_member" then
+				bool_6 = bit32.bor(bool_6, 0b0000010000000000)
 			else
 				error("Invalid enumerator")
 			end

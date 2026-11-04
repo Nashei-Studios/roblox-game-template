@@ -7,9 +7,12 @@
 ]]
 
 local CodesConfig = require("./features/codes/CodesConfig")
+local CommunityRewardConfig = require("./features/community-reward/CommunityRewardConfig")
+local LeaderboardsConfig = require("./features/leaderboards/LeaderboardsConfig")
 local NotificationsConfig = require("./features/notifications/NotificationsConfig")
 local SoundConfig = require("./features/sound/SoundConfig")
 local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
+local UiConfig = require("./features/ui/UiConfig")
 
 export type ProductConfig = {
     name: string,
@@ -118,6 +121,11 @@ export type GameConfig = {
     privateServers: PrivateServersConfig?,
     plusPrompt: PlusPromptConfig?,
     robuxTransfers: RobuxTransfersConfig?,
+    -- UI kit, leaderboards and community join reward (issues #23, #25, #36). Optional so a game
+    -- can omit what it does not use; the defaults below ship all three (the reward disabled).
+    ui: UiConfig.UiConfig?,
+    leaderboards: LeaderboardsConfig.LeaderboardsConfig?,
+    communityReward: CommunityRewardConfig.CommunityRewardConfig?,
 }
 
 local Config = {}
@@ -208,6 +216,17 @@ Config.default = {
                 style = "info",
                 durationSeconds = 3,
             },
+            community_reward_claimed = {
+                text = "Thanks for joining! +{amount} coins",
+                style = "success",
+                durationSeconds = 4,
+                sound = "reward",
+            },
+            community_not_member = {
+                text = "Join the community to get your reward",
+                style = "info",
+                durationSeconds = 4,
+            },
         },
     },
     sound = {
@@ -259,6 +278,84 @@ Config.default = {
         enabled = false,
         minAmount = 10,
         maxAmount = 500,
+    },
+    -- UI kit: tokens derived for this template (reasons in docs/design/DESIGN.md).
+    ui = {
+        theme = {
+            studs = false,
+            palette = {
+                background = "#0E1220",
+                surface = "#171C30",
+                surfaceRaised = "#222945",
+                textPrimary = "#F2F5FF",
+                textMuted = "#B4BCD8",
+                accent = "#FFB020",
+                onAccent = "#1B1300",
+                success = "#3DDC84",
+                warning = "#FFD166",
+                danger = "#FF6B6B",
+                focus = "#7CC4FF",
+            },
+            radius = 12,
+            strokeThickness = 1,
+            spacing = { sm = 6, md = 12, lg = 20 },
+            textSize = { caption = 12, body = 16, title = 22 },
+            font = "GothamMedium",
+            buttonHeight = 48,
+            touchTargetMin = 44,
+            reference = { shortSide = 360, longSide = 640 },
+            scale = { min = 0.75, max = 2 },
+            motionSeconds = 0.15,
+        },
+        menus = {
+            { id = "hud", title = "HUD", modal = false },
+            { id = "shop", title = "Shop", modal = true, toggleKey = "B", togglePad = "ButtonY" },
+            {
+                id = "rewards",
+                title = "Rewards",
+                modal = true,
+                toggleKey = "R",
+                togglePad = "ButtonX",
+            },
+            { id = "settings", title = "Settings", modal = true, toggleKey = "P" },
+            {
+                id = "boards",
+                title = "Leaderboards",
+                modal = true,
+                toggleKey = "L",
+                togglePad = "DPadUp",
+            },
+        },
+        strings = {
+            close = "Close",
+            buy = "Buy",
+            pricePending = "...",
+            priceUnavailable = "Unavailable",
+            claimDaily = "Claim daily reward",
+            giftReady = "Claim gift",
+            volumeMusic = "Music",
+            volumeSfx = "Effects",
+            boardEmpty = "No scores yet",
+            joinCommunity = "Join our community",
+            checkAgain = "Check again",
+            coinsLabel = "Coins",
+        },
+    },
+    leaderboards = {
+        leaderstats = { "coins" },
+        writeSeconds = 60,
+        boards = {
+            Coins = { stat = "coins", refreshSeconds = 120, size = 10, resetCycle = "never" },
+            WeeklyCoins = { stat = "coins", refreshSeconds = 120, size = 10, resetCycle = "weekly" },
+        },
+    },
+    -- Off until Victor confirms the Community Standards allow rewarding a join (open [GAP]).
+    communityReward = {
+        enabled = false,
+        communityId = nil, -- TODO(victor): set the community id
+        reward = nil, -- TODO(victor): e.g. { kind = "coins", amount = 100 }
+        recheckCooldownSeconds = 30,
+        promptJoin = true,
     },
 } :: GameConfig
 
@@ -474,6 +571,21 @@ function Config.validate(config: GameConfig): { string }
     validatePrivateServers(config, problems)
     validatePlusPrompt(config, problems)
     validateRobuxTransfers(config, problems)
+    if config.ui ~= nil then
+        for _, problem in UiConfig.validate(config.ui) do
+            table.insert(problems, problem)
+        end
+    end
+    if config.leaderboards ~= nil then
+        for _, problem in LeaderboardsConfig.validate(config.leaderboards) do
+            table.insert(problems, problem)
+        end
+    end
+    if config.communityReward ~= nil then
+        for _, problem in CommunityRewardConfig.validate(config.communityReward) do
+            table.insert(problems, problem)
+        end
+    end
     return problems
 end
 

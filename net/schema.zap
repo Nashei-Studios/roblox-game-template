@@ -35,6 +35,8 @@ type NotificationKind = enum {
 	"daily_unavailable",
 	"session_gift_claimed",
 	"session_gift_unavailable",
+	"community_reward_claimed",
+	"community_not_member",
 }
 
 type VolumeGroup = enum { "music", "sfx" }
@@ -126,4 +128,12 @@ event RequestPrivateServerSetting = {
 	type: Reliable,
 	call: SingleSync,
 	data: (setting: PrivateServerSettingName, value: u16),
+}
+
+-- Client -> server. Intent only: "check my community membership again". The server decides.
+event RequestCommunityCheck = {
+	from: Client,
+	type: Reliable,
+	call: SingleSync,
+	data: (),
 }
