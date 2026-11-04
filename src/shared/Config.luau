@@ -86,15 +86,50 @@ Config.default = {
         dedupeSeconds = 2,
         maxWaitSeconds = 20,
         kinds = {
-            code_redeemed = { text = "Code redeemed: +{amount} coins", style = "success", durationSeconds = 4, sound = "reward" },
+            code_redeemed = {
+                text = "Code redeemed: +{amount} coins",
+                style = "success",
+                durationSeconds = 4,
+                sound = "reward",
+            },
             code_invalid = { text = "That code is not valid", style = "error", durationSeconds = 3 },
-            code_expired = { text = "That code has expired", style = "warning", durationSeconds = 3 },
-            code_used = { text = "You already used that code", style = "warning", durationSeconds = 3 },
-            code_cooldown = { text = "Wait a moment before trying another code", style = "info", durationSeconds = 3 },
-            daily_claimed = { text = "Daily reward: +{amount} coins", style = "success", durationSeconds = 4, sound = "reward" },
-            daily_unavailable = { text = "Your daily reward is not ready", style = "info", durationSeconds = 3 },
-            session_gift_claimed = { text = "Gift: +{amount} coins", style = "success", durationSeconds = 4, sound = "reward" },
-            session_gift_unavailable = { text = "That gift is not ready yet", style = "info", durationSeconds = 3 },
+            code_expired = {
+                text = "That code has expired",
+                style = "warning",
+                durationSeconds = 3,
+            },
+            code_used = {
+                text = "You already used that code",
+                style = "warning",
+                durationSeconds = 3,
+            },
+            code_cooldown = {
+                text = "Wait a moment before trying another code",
+                style = "info",
+                durationSeconds = 3,
+            },
+            daily_claimed = {
+                text = "Daily reward: +{amount} coins",
+                style = "success",
+                durationSeconds = 4,
+                sound = "reward",
+            },
+            daily_unavailable = {
+                text = "Your daily reward is not ready",
+                style = "info",
+                durationSeconds = 3,
+            },
+            session_gift_claimed = {
+                text = "Gift: +{amount} coins",
+                style = "success",
+                durationSeconds = 4,
+                sound = "reward",
+            },
+            session_gift_unavailable = {
+                text = "That gift is not ready yet",
+                style = "info",
+                durationSeconds = 3,
+            },
         },
     },
     sound = {

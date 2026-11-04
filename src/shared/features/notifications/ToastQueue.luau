@@ -51,7 +51,7 @@ function ToastQueueModule.new(options: Options): ToastQueue
             return "queued"
         end,
         pop = function(_self: ToastQueue, now: number): Pending?
-            while #items > | do
+            while #items > 0 do
                 local first = table.remove(items, 1) :: Pending
                 if now - first.enqueuedAt <= options.maxWaitSeconds then
                     return first

@@ -242,7 +242,10 @@ local function readV4(raw: unknown): MigrationResult
             sessionCount = v3.value.sessionCount,
             redeemedCodes = codes,
             timeRewards = { lastDay = time.lastDay, streak = time.streak },
-            settings = { musicVolume = settingsRecord.musicVolume, sfxVolume = settingsRecord.sfxVolume },
+            settings = {
+                musicVolume = settingsRecord.musicVolume,
+                sfxVolume = settingsRecord.sfxVolume,
+            },
         },
     }
 end

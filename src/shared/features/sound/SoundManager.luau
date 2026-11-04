@@ -54,7 +54,10 @@ function SoundManagerModule.new(deps: Deps): SoundManager
     local fadeSeconds = deps.config.fadeSeconds
 
     local function apply(layer: Layer)
-        deps.engine:setGain(layer.handle, Mixer.mix(layer.entry.volume, volumes.music) * layer.level)
+        deps.engine:setGain(
+            layer.handle,
+            Mixer.mix(layer.entry.volume, volumes.music) * layer.level
+        )
     end
 
     local manager: SoundManager = {

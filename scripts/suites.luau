@@ -65,6 +65,40 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     },
     { name = "RemoteBudget", register = require("../tests/perf/RemoteBudget.test") },
     { name = "ProbeEvaluator", register = require("../tests/perf/ProbeEvaluator.test") },
+    { name = "CodesConfig", register = require("../tests/features/codes/CodesConfig.test") },
+    { name = "Codes", register = require("../tests/features/codes/Codes.test") },
+    { name = "CodeRequests", register = require("../tests/features/codes/CodeRequests.test") },
+    { name = "StreakClock", register = require("../tests/features/timerewards/StreakClock.test") },
+    {
+        name = "SessionGifts",
+        register = require("../tests/features/timerewards/SessionGifts.test"),
+    },
+    { name = "TimeRewards", register = require("../tests/features/timerewards/TimeRewards.test") },
+    {
+        name = "TimeRewardRequests",
+        register = require("../tests/features/timerewards/TimeRewardRequests.test"),
+    },
+    {
+        name = "TimeRewardsConfig",
+        register = require("../tests/features/timerewards/TimeRewardsConfig.test"),
+    },
+    { name = "ToastQueue", register = require("../tests/features/notifications/ToastQueue.test") },
+    {
+        name = "ToastController",
+        register = require("../tests/features/notifications/ToastController.test"),
+    },
+    {
+        name = "NotificationsConfig",
+        register = require("../tests/features/notifications/NotificationsConfig.test"),
+    },
+    { name = "Mixer", register = require("../tests/features/sound/Mixer.test") },
+    { name = "SoundManager", register = require("../tests/features/sound/SoundManager.test") },
+    { name = "SoundSettings", register = require("../tests/features/sound/SoundSettings.test") },
+    { name = "SoundConfig", register = require("../tests/features/sound/SoundConfig.test") },
+    {
+        name = "RemoteNotifier and RemoteSoundPush (adapters)",
+        register = require("../tests/adapters/RemoteNotifier.test"),
+    },
     {
         name = "StudioLockPolicy (hook)",
         register = require("../tests/claude/StudioLockPolicy.test"),

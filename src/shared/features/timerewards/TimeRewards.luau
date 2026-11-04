@@ -102,8 +102,13 @@ function TimeRewardsModule.new(deps: Deps): TimeRewards
             if session == nil then
                 return { ok = false, error = "no_session" }
             end
-            local checked =
-                SessionGifts.check(deps.config.sessionGifts, giftId, session.joinedAt, deps.now(), session.claimed)
+            local checked = SessionGifts.check(
+                deps.config.sessionGifts,
+                giftId,
+                session.joinedAt,
+                deps.now(),
+                session.claimed
+            )
             if not checked.ok then
                 return { ok = false, error = checked.reason }
             end

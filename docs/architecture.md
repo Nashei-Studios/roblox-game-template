@@ -166,6 +166,48 @@ sequenceDiagram
 
 Keep the schema enum of product names equal to `Config.default.developerProducts`. The handler also checks the names against Config, so a product missing from the schema is unreachable, not unsafe.
 
+## Engagement modules
+
+Codes, time rewards, notifications and sound (ADR 0025, implementing ADR 0022). Pure logic in `src/shared/features/`, one port each, engine code only in `src/server/adapters/` (`RemoteNotifier`, `RemoteSoundPush`) and `src/client/presenters/` (`SetCoreToastRenderer`, `SoundEnginePresenter`). `Main.server` and `Main.client` are the only places that wire them.
+
+```mermaid
+classDiagram
+    class Config {
+        +codes
+        +timeRewards
+        +notifications
+        +sound
+        +validate() problems
+    }
+    class Codes { <<port>> +redeem(userId, text) }
+    class TimeRewards { <<port>> +claimDaily(userId) +claimSession(userId, giftId) }
+    class Notifier { <<port>> +notify(userId, kind, amount) }
+    class SoundSettings { <<port>> +setVolume(userId, group, percent) }
+    class ToastRenderer { <<port>> +show(toast) +hide(id) }
+    class SoundEngine { <<port>> +start(assetId, gain, looped) }
+    class ProductGrants
+    class PlayerData
+    Codes <|.. CodesService
+    TimeRewards <|.. TimeRewardsService
+    SoundSettings <|.. SoundSettingsService
+    Notifier <|.. RemoteNotifier
+    ToastRenderer <|.. SetCoreToastRenderer
+    SoundEngine <|.. SoundEnginePresenter
+    CodesService --> ProductGrants
+    TimeRewardsService --> ProductGrants
+    ProductGrants --> PlayerData
+    CodesService --> Config
+    TimeRewardsService --> Config
+    ToastController --> ToastRenderer
+    SoundManager --> SoundEngine
+    CodeRequests --> Codes
+    CodeRequests --> Notifier
+```
+
+Remotes (all in `net/schema.zap` and `PerfBudget`): client to server `RedeemCode`, `ClaimDailyReward`, `ClaimSessionGift`, `SetVolume` (intent only, each behind a `RateLimiter` and `Validation`); server to client `Notify`, `SoundSettings` (no client-callable handler). Player data v4 adds `redeemedCodes`, `timeRewards` and `settings` (migration `v3ToV4`).
+
+How to add a code, a reward, a toast or a sound: README, "Engagement modules". What is forbidden: same section. Two lists must change together when a toast kind is added: `NotificationKind` in `net/schema.zap` and `NotificationsConfig.REQUIRED_KINDS`.
+
 ## Performance budget
 
 One config (`PerfBudget`) feeds three consumers: the CI calculator, the RequestPurchase limiter in `Main.server`, and the Studio probe. Flow and alternatives: [ADR 0019](adr/0019-performance-budget.md); manual procedure: [performance.md](performance.md). The calculator is static and sees only remote payloads, not replication or physics traffic.

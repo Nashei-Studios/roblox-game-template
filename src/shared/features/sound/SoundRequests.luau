@@ -8,10 +8,7 @@
 local SoundSettings = require("../../ports/SoundSettings")
 local Validation = require("../../net/Validation")
 
-export type Rejection =
-    "rate_limited"
-    | Validation.ValidationError
-    | SoundSettings.SetVolumeError
+export type Rejection = "rate_limited" | Validation.ValidationError | SoundSettings.SetVolumeError
 
 export type HandleResult = { ok: true } | { ok: false, reason: Rejection }
 
@@ -21,7 +18,12 @@ export type Deps = {
 }
 
 export type SoundRequests = {
-    handle: (self: SoundRequests, userId: number, group: unknown, percent: unknown) -> HandleResult,
+    handle: (
+        self: SoundRequests,
+        userId: number,
+        group: unknown,
+        percent: unknown
+    ) -> HandleResult,
 }
 
 local SoundRequestsModule = {}
@@ -41,7 +43,7 @@ function SoundRequestsModule.new(deps: Deps): SoundRequests
             if not checked.ok then
                 return { ok = false, reason = checked.error }
             end
-            local failure = deps.settings:setVolume(
+            local failure: SoundSettings.SetVolumeError? = deps.settings:setVolume(
                 userId,
                 if checked.value == "music" then "music" else "sfx",
                 percent

@@ -17,7 +17,8 @@ export type HandleResult = { ok: true, amount: number } | { ok: false, reason: R
 export type Deps = {
     timeRewards: TimeRewards.TimeRewards,
     notifier: Notifier.Notifier,
-    allow: (userId: number) -> boolean,
+    allowDaily: (userId: number) -> boolean,
+    allowSession: (userId: number) -> boolean,
     -- Ids of Config.default.timeRewards.sessionGifts.
     giftIds: { string },
 }
@@ -32,7 +33,7 @@ local TimeRewardRequestsModule = {}
 function TimeRewardRequestsModule.new(deps: Deps): TimeRewardRequests
     local handler: TimeRewardRequests = {
         handleDaily = function(_self: TimeRewardRequests, userId: number): HandleResult
-            if not deps.allow(userId) then
+            if not deps.allowDaily(userId) then
                 return { ok = false, reason = "rate_limited" }
             end
             local claimed = deps.timeRewards:claimDaily(userId)
@@ -48,7 +49,7 @@ function TimeRewardRequestsModule.new(deps: Deps): TimeRewardRequests
             userId: number,
             giftId: unknown
         ): HandleResult
-            if not deps.allow(userId) then
+            if not deps.allowSession(userId) then
                 return { ok = false, reason = "rate_limited" }
             end
             local checked = Validation.oneOf(giftId, deps.giftIds)
