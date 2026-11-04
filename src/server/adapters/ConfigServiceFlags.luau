@@ -31,31 +31,48 @@ export type Deps = {
     configService: ConfigServiceLike,
     -- Defaults to the engine `warn`; tests capture it.
     warn: ((message: string) -> ())?,
+    -- Runs the snapshot load off the boot path. Defaults to `task.spawn`; tests defer it.
+    spawn: ((load: () -> ()) -> ())?,
 }
 
 local ConfigServiceFlags = {}
 
---- Returns nil when Experience Configs cannot be loaded; callers then use in-repo defaults.
+--- Never blocks: GetConfigAsync can hang (e.g. an unpublished place in Studio), so the snapshot
+--- loads in the background. Until it arrives, or if it fails, `get` returns nil and callers use
+--- in-repo defaults.
 function ConfigServiceFlags.new(deps: Deps): FlagSource?
     local report: (message: string) -> () = deps.warn
         or function(message: string)
             warn(message)
         end
-    local loaded, snapshot = pcall(function(): ConfigSnapshotLike
-        return deps.configService:GetConfigAsync()
-    end)
-    if not loaded then
-        report(`Experience Configs unavailable, using in-repo flag defaults: {snapshot}`)
-        return nil
-    end
-    local config: ConfigSnapshotLike = snapshot
-    config.UpdateAvailable:Connect(function()
-        config:Refresh()
+    local spawn: (load: () -> ()) -> () = deps.spawn
+        or function(load: () -> ())
+            task.spawn(load)
+        end
+    local config: ConfigSnapshotLike? = nil
+
+    spawn(function()
+        local loaded, snapshot = pcall(function(): ConfigSnapshotLike
+            return deps.configService:GetConfigAsync()
+        end)
+        if not loaded then
+            report(`Experience Configs unavailable, using in-repo flag defaults: {snapshot}`)
+            return
+        end
+        local live: ConfigSnapshotLike = snapshot
+        live.UpdateAvailable:Connect(function()
+            live:Refresh()
+        end)
+        config = live
     end)
 
     local source: FlagSource = {
         get = function(_self: FlagSource, name: string): FlagValue?
-            local value: unknown = config:GetValue(name)
+            local live = config
+            if live == nil then
+                return nil
+            end
+            local value: unknown = live:GetValue(name)
             if type(value) == "boolean" or type(value) == "number" or type(value) == "string" then
                 return value
             end
