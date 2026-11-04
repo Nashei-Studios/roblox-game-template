@@ -1,6 +1,6 @@
 # ADR 0022: Game systems as config-driven feature modules behind ports
 
-- Status: proposed
+- Status: accepted (2026-11-04, under vault decisions 0022, 0023 and 0024)
 - Date: 2026-11-04
 - Source: vault research `research/essentials-replacements-2026` and `research/rblx-essentials-spike-e`, vault decisions 0022 and 0023, vault issue #61
 
