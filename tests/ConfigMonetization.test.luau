@@ -52,8 +52,12 @@ return function(suite: harness.Harness)
             local config = baseConfig()
             local unset: Config.SubscriptionConfig =
                 { name = "A", subscriptionId = nil, benefits = {}, replacesPassName = "Nope" }
-            local set: Config.SubscriptionConfig =
-                { name = "A", subscriptionId = "EXP-1", benefits = { "x" }, replacesPassName = "VIP" }
+            local set: Config.SubscriptionConfig = {
+                name = "A",
+                subscriptionId = "EXP-1",
+                benefits = { "x" },
+                replacesPassName = "VIP",
+            }
             config.subscriptions = { unset, set }
             local problems = Config.validate(config)
             harness.isTrue(hasProblem(problems, "has no subscriptionId"), "id")

@@ -36,8 +36,8 @@ The MCP proxy built into Studio (`StudioMCP.exe`, signed by Roblox Corporation) 
 ├── .github/workflows/ci.yml jobs: check (format, lint, remotes, PR title), analyze (+ non-blocking new solver), test (tests, perf, build, coverage); skipped for drafts and docs-only changes
 ├── src/
 │   ├── shared/              -> ReplicatedStorage/Shared: pure logic, no engine services, Lune-testable
-│   │   ├── ports/           types only: what features need from outside (ProfileRepository, Flags, AnalyticsSink, LedgerProvider)
-│   │   ├── features/<name>/ one folder per capability (analytics, flags, monetization, playerdata)
+│   │   ├── ports/           types only: what features need from outside (ProfileRepository, Flags, AnalyticsSink, LedgerProvider, SubscriptionPort, AdGateway, ServerContext, PlusPort, RobuxTransferGateway, PriceLookup)
+│   │   ├── features/<name>/ one folder per capability (analytics, flags, monetization, playerdata, subscriptions, rewardedads, privateserver, plus, robuxtransfers, pricing)
 │   │   ├── net/             remote helpers: Validation, RateLimiter
 │   │   └── perf/            PerfBudget (the numbers), RemoteBudget (static bandwidth), ProbeEvaluator (ADR 0019)
 │   ├── server/              -> ServerScriptService/Server
@@ -75,7 +75,8 @@ Why this split: anything that needs only values lives in `shared` so Lune can te
 
 ## Start a new game from this template
 
-Preferred: `pwsh scripts/new-game.ps1 -Slug <kebab-case-slug> [-VaultPath <vault>] [-DryRun]`. It validates the slug, runs `gh repo create vruizz22/<slug> --private --template vruizz22/roblox-game-template`, clones into `D:\Victor\Repositoriosoblox\games\<slug>`, renames the game in `default.project.json`, `Config.luau` and this README, writes `games/<yyyy-mm>-<slug>/index.md` in the vault only when `-VaultPath` is given, and prints the names (never values) of `ASPHALT_API_KEY` and `ROBLOX_API_KEY`. `-DryRun` only prints the commands. The template repo must be marked as a template on GitHub first (Victor action, vault decision 0014). Tests: `pwsh scripts/new-game.test.ps1`.
+Preferred: `pwsh scripts/new-game.ps1 -Slug <kebab-case-slug> [-VaultPath <vault>] [-DryRun]`. It validates the slug, runs `gh repo create vruizz22/<slug> --private --template vruizz22/roblox-game-template`, clones into `D:\Victor\Repositorios
+oblox\games\<slug>`, renames the game in `default.project.json`, `Config.luau` and this README, writes `games/<yyyy-mm>-<slug>/index.md` in the vault only when `-VaultPath` is given, and prints the names (never values) of `ASPHALT_API_KEY` and `ROBLOX_API_KEY`. `-DryRun` only prints the commands. The template repo must be marked as a template on GitHub first (Victor action, vault decision 0014). Tests: `pwsh scripts/new-game.test.ps1`.
 
 Manual: Use "Use this template" on GitHub once the repo is marked as a template (or copy the folder), rename `name` in `default.project.json`, set `gameName` in `Config.luau`, create game passes and developer products in Creator Hub and fill their ids (each marked `TODO(victor)`), and create a separate dev place for MCP work.
 
@@ -96,6 +97,15 @@ Pure logic: `tests/` via `lune run scripts/test`; types via `pwsh scripts/analyz
 Performance budget added 2026-11-03 ([ADR 0019](docs/adr/0019-performance-budget.md), [docs/performance.md](docs/performance.md)): `lune run scripts/perf-budget` fails CI when a remote's worst case passes the budget. The bandwidth numbers are chosen, not sourced; the probe and the Studio procedure have not been run in Studio yet.
 
 Verified locally on 2026-11-02: StyLua, Selene, `luau-lsp analyze` (0 errors), Lune tests and `rojo build`. CI has not run yet (no remote). Still unverified: Studio MCP with several Studios, the engine adapters (no engine tests until the Luau Execution API), and the new-solver pass (informational, reports errors on ProfileStore typing and `os.time` as a clock).
+
+## Monetization surfaces
+
+Subscriptions, rewarded video ads, private servers, the Roblox Plus sign-up prompt and Robux transfers are config-driven modules behind ports (table, diagram, "how to add an item" and the forbidden list: [docs/architecture.md](docs/architecture.md#monetization-surfaces); decisions: ADR 0022 on the `docs/game-systems-adr` branch and [ADR 0023](docs/adr/0023-plus-prompt-robux-transfers-and-runtime-prices.md)).
+
+- Config keys: `subscriptions` (+ `subscriptionPollSeconds`), `rewardedAds`, `privateServers`, `plusPrompt`, `robuxTransfers`. Ads, private servers, the Plus prompt and transfers ship disabled; ids ship `nil`.
+- Prices are never literals: read them through the `PriceLookup` port and format with `PriceLabel`. A test fails if `Config.default` holds a price-like number. `privateServers.expectedMonthlyPrice` is the one exception: the platform sets that price in Creator Hub, so it is only an expected value for the release checklist and is never shown.
+- Release checklist for these surfaces: set the real ids in Config; compare the Creator Hub private server price with `expectedMonthlyPrice`; turn rewarded ads on only when the experience is eligible (public, 2 thousand monthly unique visitors, ID-verified publisher with 2FA, per the docs); keep transfers off unless the game needs them.
+- Forbidden here: granting from a remote or an ad-finished signal, trusting saved subscription status, a literal price in a UI, an engine call outside `src/server/adapters/`.
 
 ## Remotes (Zap)
 
