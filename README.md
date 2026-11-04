@@ -100,7 +100,7 @@ Verified locally on 2026-11-02: StyLua, Selene, `luau-lsp analyze` (0 errors), L
 
 ## Monetization surfaces
 
-Subscriptions, rewarded video ads, private servers, the Roblox Plus sign-up prompt and Robux transfers are config-driven modules behind ports (table, diagram, "how to add an item" and the forbidden list: [docs/architecture.md](docs/architecture.md#monetization-surfaces); decisions: ADR 0022 on the `docs/game-systems-adr` branch and [ADR 0023](docs/adr/0023-plus-prompt-robux-transfers-and-runtime-prices.md)).
+Subscriptions, rewarded video ads, private servers, the Roblox Plus sign-up prompt and Robux transfers are config-driven modules behind ports (table, diagram, "how to add an item" and the forbidden list: [docs/architecture.md](docs/architecture.md#monetization-surfaces); decisions: ADR 0022 on the `docs/game-systems-adr` branch and [ADR 0024](docs/adr/0024-plus-prompt-robux-transfers-and-runtime-prices.md)).
 
 - Config keys: `subscriptions` (+ `subscriptionPollSeconds`), `rewardedAds`, `privateServers`, `plusPrompt`, `robuxTransfers`. Ads, private servers, the Plus prompt and transfers ship disabled; ids ship `nil`.
 - Prices are never literals: read them through the `PriceLookup` port and format with `PriceLabel`. A test fails if `Config.default` holds a price-like number. `privateServers.expectedMonthlyPrice` is the one exception: the platform sets that price in Creator Hub, so it is only an expected value for the release checklist and is never shown.

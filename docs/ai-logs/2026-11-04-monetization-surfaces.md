@@ -4,7 +4,7 @@ Issues: #31 (subscriptions), #32 (rewarded ads), #33 (private servers). Added at
 
 ## Decisions
 
-- One pure feature per surface under `src/shared/features/`, one port each under `src/shared/ports/`, one engine adapter each under `src/server/adapters/`, wired only in `Main.server` (ADR 0022 on the `docs/game-systems-adr` branch, [ADR 0023](../adr/0023-plus-prompt-robux-transfers-and-runtime-prices.md)).
+- One pure feature per surface under `src/shared/features/`, one port each under `src/shared/ports/`, one engine adapter each under `src/server/adapters/`, wired only in `Main.server` (ADR 0022 on the `docs/game-systems-adr` branch, [ADR 0024](../adr/0024-plus-prompt-robux-transfers-and-runtime-prices.md)).
 - Four intent-only remotes (`RequestRewardedAd`, `RequestPlusPrompt`, `RequestRobuxTransfer`, `RequestPrivateServerSetting`) in `net/schema.zap` and `PerfBudget`.
 - Prices are never literals; `privateServers.expectedMonthlyPrice` is the only price-like number and is checklist-only.
 

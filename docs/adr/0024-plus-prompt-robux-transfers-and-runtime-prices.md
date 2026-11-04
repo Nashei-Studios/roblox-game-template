@@ -1,4 +1,4 @@
-# ADR 0023: Plus sign-up prompt, Robux transfers and runtime prices
+# ADR 0024: Plus sign-up prompt, Robux transfers and runtime prices
 
 - Status: accepted 2026-11-04, revisable
 - Date: 2026-11-04

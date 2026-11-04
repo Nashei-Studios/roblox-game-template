@@ -168,7 +168,7 @@ Keep the schema enum of product names equal to `Config.default.developerProducts
 
 ## Monetization surfaces
 
-Five revenue modules sit on top of the receipt flow, each one a pure feature behind one port with an engine adapter (ADR 0022 on the `docs/game-systems-adr` branch, PR #22, and [ADR 0023](adr/0023-plus-prompt-robux-transfers-and-runtime-prices.md)). `Main.server` is the only place an adapter is chosen, so a paid pack becomes a second adapter of the same port and callers do not change.
+Five revenue modules sit on top of the receipt flow, each one a pure feature behind one port with an engine adapter (ADR 0022 on the `docs/game-systems-adr` branch, PR #22, and [ADR 0024](adr/0024-plus-prompt-robux-transfers-and-runtime-prices.md)). `Main.server` is the only place an adapter is chosen, so a paid pack becomes a second adapter of the same port and callers do not change.
 
 | Module | Pure logic (`src/shared/features/`) | Port (`src/shared/ports/`) | Adapter (`src/server/adapters/`) | Remote | Config key |
 |---|---|---|---|---|---|
