@@ -20,12 +20,14 @@ jobs:
   query:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    if: github.ref == 'refs/heads/main'
     env:
       ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
-      ROBLOX_ANALYTICS_KEY: ${{ secrets.ROBLOX_ANALYTICS_KEY }}
     steps:
       - name: Check configuration
         id: config
+        env:
+          ROBLOX_ANALYTICS_KEY: ${{ secrets.ROBLOX_ANALYTICS_KEY }}
         run: |
           if [ -z "$ROBLOX_UNIVERSE_ID" ] || [ -z "$ROBLOX_ANALYTICS_KEY" ]; then
             echo "ROBLOX_UNIVERSE_ID or ROBLOX_ANALYTICS_KEY is not set, skipping"
@@ -39,9 +41,11 @@ jobs:
         if: steps.config.outputs.run == 'true'
         with:
           version: v1.2.0
-          cache: "true"
+          cache: "false"
       - name: Query own analytics
         if: steps.config.outputs.run == 'true'
+        env:
+          ROBLOX_ANALYTICS_KEY: ${{ secrets.ROBLOX_ANALYTICS_KEY }}
         run: lune run scripts/own-analytics logs/own-analytics.json 30
       - name: Upload private artifact
         if: steps.config.outputs.run == 'true'
