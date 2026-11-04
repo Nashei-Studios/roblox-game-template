@@ -48,10 +48,18 @@ local function serviceReturning(
     }
 end
 
+-- Runs the load at once, as task.spawn does when GetConfigAsync returns without yielding.
+local function runNow(load: () -> ())
+    load()
+end
+
 return function(suite: harness.Harness)
     suite:test("reads boolean, number and string values and ignores other types", function()
         local fake = newSnapshot({ flag = true, count = 4, label = "x", nested = { 1 } })
-        local source = ConfigServiceFlags.new({ configService = serviceReturning(fake.snapshot) })
+        local source = ConfigServiceFlags.new({
+            configService = serviceReturning(fake.snapshot),
+            spawn = runNow,
+        })
         harness.isTrue(source ~= nil, "source")
         if source ~= nil then
             harness.equal(source:get("flag"), true, "boolean")
@@ -64,25 +72,56 @@ return function(suite: harness.Harness)
 
     suite:test("refreshes the snapshot when Roblox reports an update", function()
         local fake = newSnapshot({})
-        ConfigServiceFlags.new({ configService = serviceReturning(fake.snapshot) })
+        ConfigServiceFlags.new({ configService = serviceReturning(fake.snapshot), spawn = runNow })
         harness.equal(fake.refreshes(), 0, "before")
         fake.fireUpdate()
         harness.equal(fake.refreshes(), 1, "after")
     end)
 
-    suite:test("returns nil and warns when Experience Configs cannot load", function()
-        local warnings: { string } = {}
-        local source = ConfigServiceFlags.new({
-            configService = {
-                GetConfigAsync = function(_self: unknown): ConfigServiceFlags.ConfigSnapshotLike
-                    error("HTTP 500")
+    suite:test(
+        "warns once and reads nil (in-repo defaults) when Experience Configs cannot load",
+        function()
+            local warnings: { string } = {}
+            local source = ConfigServiceFlags.new({
+                configService = {
+                    GetConfigAsync = function(
+                        _self: unknown
+                    ): ConfigServiceFlags.ConfigSnapshotLike
+                        error("HTTP 500")
+                    end,
+                },
+                warn = function(message: string)
+                    table.insert(warnings, message)
                 end,
-            },
-            warn = function(message: string)
-                table.insert(warnings, message)
-            end,
-        })
-        harness.isTrue(source == nil, "no source")
-        harness.equal(#warnings, 1, "warnings")
-    end)
+                spawn = runNow,
+            })
+            harness.isTrue(source ~= nil, "source always returned")
+            if source ~= nil then
+                harness.isTrue(source:get("flag") == nil, "defaults apply")
+            end
+            harness.equal(#warnings, 1, "warnings")
+        end
+    )
+
+    suite:test(
+        "does not block boot when GetConfigAsync never returns (unpublished place)",
+        function()
+            local pending: { () -> () } = {}
+            local fake = newSnapshot({ flag = true })
+            local source = ConfigServiceFlags.new({
+                configService = serviceReturning(fake.snapshot),
+                -- A spawn that defers the load models a GetConfigAsync that has not returned yet.
+                spawn = function(load: () -> ())
+                    table.insert(pending, load)
+                end,
+            })
+            harness.isTrue(source ~= nil, "returned before the load finished")
+            if source ~= nil then
+                harness.isTrue(source:get("flag") == nil, "defaults while loading")
+                harness.equal(#pending, 1, "load scheduled once")
+                pending[1]()
+                harness.equal(source:get("flag"), true, "live value once loaded")
+            end
+        end
+    )
 end
