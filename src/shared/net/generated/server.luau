@@ -145,7 +145,19 @@ if not RunService:IsRunning() then
 		SetVolume = table.freeze({
 			setCallback = noop
 		}),
+		RequestRobuxTransfer = table.freeze({
+			setCallback = noop
+		}),
+		RequestRewardedAd = table.freeze({
+			setCallback = noop
+		}),
 		RequestPurchase = table.freeze({
+			setCallback = noop
+		}),
+		RequestPrivateServerSetting = table.freeze({
+			setCallback = noop
+		}),
+		RequestPlusPrompt = table.freeze({
 			setCallback = noop
 		}),
 		RedeemCode = table.freeze({
@@ -201,7 +213,10 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	player_map[player] = nil
 end)
+export type AdPlacementName = ("Default")
 export type NotificationKind = ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable")
+export type PlusPlacementName = ("menu")
+export type PrivateServerSettingName = ("maxPlayers")
 export type ProductName = ("Coins100")
 export type VolumeGroup = ("music" | "sfx")
 
@@ -223,7 +238,7 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(5)
+local reliable_events = table.create(9)
 reliable.OnServerEvent:Connect(function(player, buff, inst)
 	incoming_buff = buff
 	incoming_inst = inst
@@ -244,11 +259,37 @@ reliable.OnServerEvent:Connect(function(player, buff, inst)
 			if reliable_events[4] then
 				reliable_events[4](player, value, value2)
 			end
+		elseif id == 7 then -- RequestRobuxTransfer
+			local value, value2
+			value = buffer.readf64(incoming_buff, read(8))
+			value2 = buffer.readu16(incoming_buff, read(2))
+			if reliable_events[7] then
+				reliable_events[7](player, value, value2)
+			end
+		elseif id == 5 then -- RequestRewardedAd
+			local value
+			value = "Default"
+			if reliable_events[5] then
+				reliable_events[5](player, value)
+			end
 		elseif id == 0 then -- RequestPurchase
 			local value
 			value = "Coins100"
 			if reliable_events[0] then
 				reliable_events[0](player, value)
+			end
+		elseif id == 8 then -- RequestPrivateServerSetting
+			local value, value2
+			value = "maxPlayers"
+			value2 = buffer.readu16(incoming_buff, read(2))
+			if reliable_events[8] then
+				reliable_events[8](player, value, value2)
+			end
+		elseif id == 6 then -- RequestPlusPrompt
+			local value
+			value = "menu"
+			if reliable_events[6] then
+				reliable_events[6](player, value)
 			end
 		elseif id == 1 then -- RedeemCode
 			local value
@@ -373,11 +414,43 @@ local returns = {
 			end
 		end,
 	},
+	RequestRobuxTransfer = {
+		setCallback = function(callback: (player: Player, receiverUserId: (number), amount: (number)) -> ()): () -> ()
+			reliable_events[7] = callback
+			return function()
+				reliable_events[7] = nil
+			end
+		end,
+	},
+	RequestRewardedAd = {
+		setCallback = function(callback: (player: Player, placement: ("Default")) -> ()): () -> ()
+			reliable_events[5] = callback
+			return function()
+				reliable_events[5] = nil
+			end
+		end,
+	},
 	RequestPurchase = {
 		setCallback = function(callback: (player: Player, product: ("Coins100")) -> ()): () -> ()
 			reliable_events[0] = callback
 			return function()
 				reliable_events[0] = nil
+			end
+		end,
+	},
+	RequestPrivateServerSetting = {
+		setCallback = function(callback: (player: Player, setting: ("maxPlayers"), value: (number)) -> ()): () -> ()
+			reliable_events[8] = callback
+			return function()
+				reliable_events[8] = nil
+			end
+		end,
+	},
+	RequestPlusPrompt = {
+		setCallback = function(callback: (player: Player, placement: ("menu")) -> ()): () -> ()
+			reliable_events[6] = callback
+			return function()
+				reliable_events[6] = nil
 			end
 		end,
 	},

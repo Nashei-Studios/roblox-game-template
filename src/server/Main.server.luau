@@ -5,16 +5,19 @@
     events. Game-specific wiring goes here; logic goes in features.
 ]]
 
+local AdService = game:GetService("AdService")
 local AnalyticsService = game:GetService("AnalyticsService")
 local ConfigService = game:GetService("ConfigService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local TeleportService = game:GetService("TeleportService")
 
 local Shared = ReplicatedStorage.Shared
 local Analytics = require(Shared.features.analytics.Analytics)
 local AnalyticsTracker = require(Shared.features.analytics.AnalyticsTracker)
+local BenefitReconciler = require(Shared.features.subscriptions.BenefitReconciler)
 local Config = require(Shared.Config)
 local Flags = require(Shared.features.flags.Flags)
 local LedgerProvider = require(Shared.ports.LedgerProvider)
@@ -23,10 +26,15 @@ local PlayerData = require(Shared.features.playerdata.PlayerData)
 local ProductGrants = require(Shared.features.monetization.ProductGrants)
 local PlayerDataMigrations = require(Shared.features.playerdata.PlayerDataMigrations)
 local PlayerDataService = require(Shared.features.playerdata.PlayerDataService)
+local PlusPrompt = require(Shared.features.plus.PlusPrompt)
+local PrivateServer = require(Shared.features.privateserver.PrivateServer)
 local PurchaseRequests = require(Shared.features.monetization.PurchaseRequests)
 local PerfBudget = require(Shared.perf.PerfBudget)
 local RateLimiter = require(Shared.net.RateLimiter)
+local RewardedAds = require(Shared.features.rewardedads.RewardedAds)
+local RobuxTransfers = require(Shared.features.robuxtransfers.RobuxTransfers)
 local net = require(Shared.net.generated.server)
+
 local NetTypes = require(Shared.net.generated.types)
 -- Engagement modules (ADR 0025): requires.
 local CodeRequests = require(Shared.features.codes.CodeRequests)
@@ -42,9 +50,15 @@ local AnalyticsServiceSink = require(script.Parent.adapters.AnalyticsServiceSink
 local ConfigServiceFlags = require(script.Parent.adapters.ConfigServiceFlags)
 local MonetizationService = require(script.Parent.features.monetization.MonetizationService)
 local PerfProbe = require(script.Parent.dev.PerfProbe)
+local ProfileStoreRepository = require(script.Parent.adapters.ProfileStoreRepository)
 local RemoteNotifier = require(script.Parent.adapters.RemoteNotifier)
 local RemoteSoundPush = require(script.Parent.adapters.RemoteSoundPush)
-local ProfileStoreRepository = require(script.Parent.adapters.ProfileStoreRepository)
+local RobloxAdService = require(script.Parent.adapters.RobloxAdService)
+local RobloxMarketplaceSubscriptions =
+    require(script.Parent.adapters.RobloxMarketplaceSubscriptions)
+local RobloxPlusSubscription = require(script.Parent.adapters.RobloxPlusSubscription)
+local RobloxRobuxTransfers = require(script.Parent.adapters.RobloxRobuxTransfers)
+local RobloxServerContext = require(script.Parent.adapters.RobloxServerContext)
 
 -- Config is validated at boot; unset ids are reported, not hidden.
 local problems = Config.validate(Config.default)
@@ -218,6 +232,380 @@ net.RequestPurchase.setCallback(function(player: Player, product)
     end
 end)
 
+-- Monetization surfaces (ADR 0022). Each module sits behind a port; these are the engine
+-- adapters and the only place they are chosen. A pack adapter would replace one line here.
+local remoteLimiters: { RateLimiter.RateLimiter } = {}
+local function limiterFor(remoteName: string): RateLimiter.RateLimiter
+    local limit = PerfBudget.clientRemotes[remoteName]
+    local limiter = RateLimiter.new({
+        capacity = limit.capacity,
+        refillPerSecond = limit.refillPerSecond,
+        clock = os.clock,
+    })
+    table.insert(remoteLimiters, limiter)
+    return limiter
+end
+
+local function playerById(userId: number): Player?
+    return Players:GetPlayerByUserId(userId)
+end
+
+-- Experience subscriptions: benefits follow the LIVE status (join, change event and a poll,
+-- because the engine fires the event only after the purchase modal closes).
+local subscriptionEntries = BenefitReconciler.entriesFromConfig(Config.default)
+local reconciler = BenefitReconciler.new({
+    entries = subscriptionEntries,
+    port = RobloxMarketplaceSubscriptions.new({
+        marketplace = {
+            GetUserSubscriptionStatusAsync = function(
+                _self: unknown,
+                player: Player,
+                subscriptionId: string
+            ): RobloxMarketplaceSubscriptions.StatusLike
+                local status =
+                    MarketplaceService:GetUserSubscriptionStatusAsync(player, subscriptionId)
+                return { IsSubscribed = status.IsSubscribed == true }
+            end,
+            UserOwnsGamePassAsync = function(
+                _self: unknown,
+                userId: number,
+                passId: number
+            ): boolean
+                return MarketplaceService:UserOwnsGamePassAsync(userId, passId)
+            end,
+        },
+        players = {
+            GetPlayerByUserId = function(_self: unknown, userId: number): Player?
+                return playerById(userId)
+            end,
+            ConnectStatusChanged = function(
+                _self: unknown,
+                listener: (player: Player, subscriptionId: string) -> ()
+            ): () -> ()
+                local connection = Players.UserSubscriptionStatusChanged:Connect(listener)
+                return function()
+                    connection:Disconnect()
+                end
+            end,
+            UserIdOf = function(_self: unknown, player: Player): number
+                return player.UserId
+            end,
+        },
+    }),
+    -- Default grant: a replicated attribute per benefit name; a game replaces this with its own.
+    apply = function(userId: number, entry: BenefitReconciler.Entry, active: boolean)
+        local player = playerById(userId)
+        if player == nil then
+            return
+        end
+        for _, benefit in entry.benefits do
+            player:SetAttribute(`Benefit_{benefit}`, active)
+        end
+    end,
+})
+local function logReconcileFailures(userId: number, failures: { BenefitReconciler.Failure })
+    for _, failure in failures do
+        warn(`Subscription "{failure.subscription}" lookup failed for {userId}: {failure.message}`)
+    end
+end
+if #subscriptionEntries > 0 then
+    Players.UserSubscriptionStatusChanged:Connect(function(player: Player, subscriptionId: string)
+        logReconcileFailures(player.UserId, reconciler:onChanged(player.UserId, subscriptionId))
+    end)
+    task.spawn(function()
+        while true do
+            task.wait(Config.default.subscriptionPollSeconds or 300)
+            for _, player in Players:GetPlayers() do
+                logReconcileFailures(player.UserId, reconciler:reconcile(player.UserId))
+            end
+        end
+    end)
+end
+
+-- Rewarded video ads: opt-in, off by default; the reward is a developer product granted by
+-- the receipt flow above, never by this remote.
+local rewardedAdsConfig = Config.default.rewardedAds
+local rewardedAds: RewardedAds.RewardedAds? = nil
+if rewardedAdsConfig ~= nil then
+    local adsLimiter = limiterFor("RequestRewardedAd")
+    rewardedAds = RewardedAds.new({
+        config = rewardedAdsConfig,
+        productIdOf = function(productName: string): number?
+            local product = Config.findProductByName(Config.default, productName)
+            return if product ~= nil then product.id else nil
+        end,
+        gateway = RobloxAdService.new({
+            adService = {
+                CreateAdRewardFromDevProductId = function(_self: unknown, productId: number)
+                    return AdService:CreateAdRewardFromDevProductId(productId)
+                end,
+                ShowRewardedVideoAdAsync = function(
+                    _self: unknown,
+                    player: Player,
+                    reward,
+                    placementId: number?
+                ): string
+                    return AdService:ShowRewardedVideoAdAsync(player, reward, placementId).Name
+                end,
+            },
+            players = {
+                GetPlayerByUserId = function(_self: unknown, userId: number): Player?
+                    return playerById(userId)
+                end,
+            },
+        }),
+        allow = function(userId: number): boolean
+            return adsLimiter:allow(userId)
+        end,
+        dayKey = function(): number
+            return os.time() // 86400
+        end,
+    })
+end
+net.RequestRewardedAd.setCallback(function(player: Player, placement)
+    if rewardedAds == nil then
+        return
+    end
+    local handled = rewardedAds:handle(player.UserId, placement)
+    if not handled.ok and handled.reason ~= "disabled" then
+        warn(
+            `RequestRewardedAd from {player.UserId} dropped: {handled.reason} {handled.detail or ""}`
+        )
+    end
+end)
+
+-- Private servers: owner settings and TeleportInitFailed. The platform sets the price.
+local privateServersConfig = Config.default.privateServers
+local privateServer: PrivateServer.PrivateServer? = nil
+if privateServersConfig ~= nil then
+    local settingLimiter = limiterFor("RequestPrivateServerSetting")
+    local serverContext = RobloxServerContext.new({
+        game = {
+            PrivateServerId = game.PrivateServerId,
+            PrivateServerOwnerId = game.PrivateServerOwnerId,
+        },
+        teleport = {
+            ConnectInitFailed = function(
+                _self: unknown,
+                listener: (
+                    player: Player,
+                    resultName: string,
+                    message: string,
+                    targetPlaceId: number,
+                    options: TeleportOptions
+                ) -> ()
+            ): () -> ()
+                local connection = TeleportService.TeleportInitFailed:Connect(
+                    function(player, result, message, targetPlaceId, options)
+                        listener(player, result.Name, message, targetPlaceId, options)
+                    end
+                )
+                return function()
+                    connection:Disconnect()
+                end
+            end,
+            TeleportAsync = function(
+                _self: unknown,
+                placeId: number,
+                players: { Player },
+                options: TeleportOptions
+            )
+                TeleportService:TeleportAsync(placeId, players, options)
+            end,
+            UserIdOf = function(_self: unknown, player: Player): number
+                return player.UserId
+            end,
+        },
+        log = function(message: string)
+            warn(message)
+        end,
+    })
+    local created = PrivateServer.new({
+        config = privateServersConfig,
+        context = serverContext,
+        allow = function(userId: number): boolean
+            return settingLimiter:allow(userId)
+        end,
+        delay = function(seconds: number, action: () -> ())
+            task.delay(seconds, action)
+        end,
+        -- A game applies the setting here (for example Players.MaxPlayers is read-only at
+        -- runtime, so a game decides what each setting means).
+        onSettingChanged = function(setting: string, value: number)
+            print(`Private server setting {setting} = {value}`)
+        end,
+    })
+    privateServer = created
+    if privateServersConfig.enabled then
+        serverContext:onTeleportFailed(function(failure)
+            local decision = created:handleTeleportFailed(failure)
+            if decision ~= "retrying" then
+                warn(`Teleport for {failure.userId} failed ({failure.result}): {decision}`)
+            end
+        end)
+    end
+end
+net.RequestPrivateServerSetting.setCallback(function(player: Player, setting, value)
+    if privateServer == nil then
+        return
+    end
+    local handled = privateServer:handleSetting(player.UserId, setting, value)
+    if not handled.ok and handled.reason ~= "disabled" then
+        warn(`RequestPrivateServerSetting from {player.UserId} dropped: {handled.reason}`)
+    end
+end)
+
+-- Roblox Plus sign-up prompt: only when the player presses the button.
+local plusConfig = Config.default.plusPrompt
+local plusPrompt: PlusPrompt.PlusPrompt? = nil
+if plusConfig ~= nil then
+    local plusLimiter = limiterFor("RequestPlusPrompt")
+    local plusPort = RobloxPlusSubscription.new({
+        players = {
+            GetPlayerByUserId = function(_self: unknown, userId: number): Player?
+                return playerById(userId)
+            end,
+            HasPlus = function(_self: unknown, player: Player): boolean
+                return player.HasRobloxSubscription
+            end,
+            ConnectPlusChanged = function(
+                _self: unknown,
+                listener: (player: Player) -> ()
+            ): () -> ()
+                local connections: { RBXScriptConnection } = {}
+                local function watch(player: Player)
+                    table.insert(
+                        connections,
+                        player:GetPropertyChangedSignal("HasRobloxSubscription"):Connect(function()
+                            listener(player)
+                        end)
+                    )
+                end
+                for _, player in Players:GetPlayers() do
+                    watch(player)
+                end
+                table.insert(connections, Players.PlayerAdded:Connect(watch))
+                return function()
+                    for _, connection in connections do
+                        connection:Disconnect()
+                    end
+                end
+            end,
+            UserIdOf = function(_self: unknown, player: Player): number
+                return player.UserId
+            end,
+        },
+        marketplace = {
+            PromptRobloxSubscriptionPurchase = function(_self: unknown, player: Player)
+                MarketplaceService:PromptRobloxSubscriptionPurchase(player)
+            end,
+        },
+    })
+    local createdPlus = PlusPrompt.new({
+        config = plusConfig,
+        port = plusPort,
+        allow = function(userId: number): boolean
+            return plusLimiter:allow(userId)
+        end,
+        clock = os.clock,
+        -- Server-confirmed sign-up: a game can thank the player here. No payout code: the
+        -- platform credits the sign-up bonus to the experience by itself.
+        onSubscribed = function(userId: number)
+            print(`Player {userId} signed up for Roblox Plus through this game`)
+        end,
+    })
+    plusPrompt = createdPlus
+    plusPort:onPlusChanged(function(userId: number, hasPlus: boolean)
+        createdPlus:onPlusChanged(userId, hasPlus)
+    end)
+end
+net.RequestPlusPrompt.setCallback(function(player: Player, placement)
+    if plusPrompt == nil then
+        return
+    end
+    local handled = plusPrompt:handle(player.UserId, placement)
+    if not handled.ok and handled.reason ~= "disabled" then
+        warn(`RequestPlusPrompt from {player.UserId} dropped: {handled.reason}`)
+    end
+end)
+
+-- In-game Robux transfers: off by default; the platform runs the prompt and its age checks.
+local transfersConfig = Config.default.robuxTransfers
+local robuxTransfers: RobuxTransfers.RobuxTransfers? = nil
+if transfersConfig ~= nil then
+    local transferLimiter = limiterFor("RequestRobuxTransfer")
+    local transferGateway = RobloxRobuxTransfers.new({
+        marketplace = {
+            PromptRobuxTransferAsync = function(
+                _self: unknown,
+                sender: Player,
+                receiverUserId: number,
+                amount: number
+            ): string
+                return MarketplaceService:PromptRobuxTransferAsync(sender, receiverUserId, amount)
+            end,
+            BindTransferReceipt = function(
+                _self: unknown,
+                receiptTypeName: string,
+                handler: (
+                    info: RobloxRobuxTransfers.ReceiptInfoLike
+                ) -> boolean
+            ): () -> ()
+                local receiptType = Enum.ReceiptType:FromName(receiptTypeName)
+                if receiptType == nil then
+                    error(`Unknown receipt type {receiptTypeName}`)
+                end
+                local connection = MarketplaceService:BindReceiptHandler(
+                    receiptType,
+                    function(info: RobloxRobuxTransfers.ReceiptInfoLike)
+                        return if handler(info)
+                            then Enum.ReceiptDecision.Processed
+                            else Enum.ReceiptDecision.NotProcessedYet
+                    end
+                )
+                return function()
+                    connection:Disconnect()
+                end
+            end,
+        },
+        players = {
+            GetPlayerByUserId = function(_self: unknown, userId: number): Player?
+                return playerById(userId)
+            end,
+        },
+    })
+    local createdTransfers = RobuxTransfers.new({
+        config = transfersConfig,
+        gateway = transferGateway,
+        allow = function(userId: number): boolean
+            return transferLimiter:allow(userId)
+        end,
+        isPlayerPresent = function(userId: number): boolean
+            return playerById(userId) ~= nil
+        end,
+        onReceipt = function(receipt)
+            print(`Robux transfer {receipt.side} receipt {receipt.transferRequestId}`)
+        end,
+    })
+    robuxTransfers = createdTransfers
+    if transfersConfig.enabled then
+        transferGateway:bindReceipts(function(receipt)
+            return createdTransfers:decideReceipt(receipt)
+        end)
+    end
+end
+net.RequestRobuxTransfer.setCallback(function(player: Player, receiverUserId, amount)
+    if robuxTransfers == nil then
+        return
+    end
+    local handled = robuxTransfers:handle(player.UserId, receiverUserId, amount)
+    if not handled.ok and handled.reason ~= "disabled" then
+        warn(
+            `RequestRobuxTransfer from {player.UserId} dropped: {handled.reason} {handled.detail or ""}`
+        )
+    end
+end)
+
 -- Engagement modules (ADR 0025): promo codes, time rewards, notifications, sound.
 -- Rewards use the existing ProductGrants path; every remote is rate-limited from PerfBudget.
 local engagementPlayers = {
@@ -225,7 +613,7 @@ local engagementPlayers = {
         return Players:GetPlayerByUserId(userId)
     end,
 }
-local function limiterFor(remote: string): RateLimiter.RateLimiter
+local function engagementLimiterFor(remote: string): RateLimiter.RateLimiter
     local limit = PerfBudget.clientRemotes[remote]
     return RateLimiter.new({
         capacity = limit.capacity,
@@ -234,10 +622,10 @@ local function limiterFor(remote: string): RateLimiter.RateLimiter
     })
 end
 local engagementLimiters: { [string]: RateLimiter.RateLimiter } = {
-    RedeemCode = limiterFor("RedeemCode"),
-    ClaimDailyReward = limiterFor("ClaimDailyReward"),
-    ClaimSessionGift = limiterFor("ClaimSessionGift"),
-    SetVolume = limiterFor("SetVolume"),
+    RedeemCode = engagementLimiterFor("RedeemCode"),
+    ClaimDailyReward = engagementLimiterFor("ClaimDailyReward"),
+    ClaimSessionGift = engagementLimiterFor("ClaimSessionGift"),
+    SetVolume = engagementLimiterFor("SetVolume"),
 }
 local notificationKinds: { [string]: boolean } = {}
 for kind in Config.default.notifications.kinds do
@@ -339,6 +727,8 @@ Players.PlayerAdded:Connect(function(player: Player)
     tracker:track("session_start", player.UserId, joined.value.sessionIndex)
     timeRewards:startSession(player.UserId)
     soundSettings:sendCurrent(player.UserId)
+    -- Benefits come from the live status, never from the saved profile.
+    logReconcileFailures(player.UserId, reconciler:reconcile(player.UserId))
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
@@ -348,6 +738,16 @@ Players.PlayerRemoving:Connect(function(player: Player)
     timeRewards:forget(player.UserId)
     for _, limiter in engagementLimiters do
         limiter:forget(player.UserId)
+    end
+    for _, limiter in remoteLimiters do
+        limiter:forget(player.UserId)
+    end
+    reconciler:forget(player.UserId)
+    if rewardedAds ~= nil then
+        rewardedAds:forget(player.UserId)
+    end
+    if plusPrompt ~= nil then
+        plusPrompt:forget(player.UserId)
     end
 end)
 

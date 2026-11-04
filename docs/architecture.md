@@ -72,7 +72,7 @@ Dependency direction: `adapters -> ports <- features`. A feature never requires 
 src/
   shared/                    -> ReplicatedStorage/Shared. Loads under Lune: no engine services.
     Config.luau  Result.luau   typed config; typed Result
-    ports/                   types only: what features need from the outside world
+    ports/                   types only: what features need from the outside world (ProfileRepository, Flags, AnalyticsSink, LedgerProvider, SubscriptionPort, AdGateway, ServerContext, PlusPort, RobuxTransferGateway, PriceLookup)
     features/<feature>/      one folder per capability; the template stays genre-agnostic
     net/                     remote helpers: Validation, RateLimiter (ADR 0012)
     perf/                    PerfBudget config, RemoteBudget calculator, ProbeEvaluator (ADR 0019)
@@ -208,9 +208,79 @@ Remotes (all in `net/schema.zap` and `PerfBudget`): client to server `RedeemCode
 
 How to add a code, a reward, a toast or a sound: README, "Engagement modules". What is forbidden: same section. Two lists must change together when a toast kind is added: `NotificationKind` in `net/schema.zap` and `NotificationsConfig.REQUIRED_KINDS`.
 
+## Monetization surfaces
+
+Five revenue modules sit on top of the receipt flow, each one a pure feature behind one port with an engine adapter (ADR 0022 on the `docs/game-systems-adr` branch, PR #22, and [ADR 0024](adr/0024-plus-prompt-robux-transfers-and-runtime-prices.md)). `Main.server` is the only place an adapter is chosen, so a paid pack becomes a second adapter of the same port and callers do not change.
+
+| Module | Pure logic (`src/shared/features/`) | Port (`src/shared/ports/`) | Adapter (`src/server/adapters/`) | Remote | Config key |
+|---|---|---|---|---|---|
+| Experience subscriptions | `subscriptions/BenefitReconciler` | `SubscriptionPort` | `RobloxMarketplaceSubscriptions` | none (the client prompts with the engine API) | `subscriptions`, `subscriptionPollSeconds` |
+| Rewarded video ads | `rewardedads/RewardedAds` | `AdGateway` | `RobloxAdService` | `RequestRewardedAd` | `rewardedAds` |
+| Private servers | `privateserver/PrivateServer` | `ServerContext` | `RobloxServerContext` | `RequestPrivateServerSetting` | `privateServers` |
+| Roblox Plus prompt | `plus/PlusPrompt` | `PlusPort` | `RobloxPlusSubscription` | `RequestPlusPrompt` | `plusPrompt` |
+| Robux transfers | `robuxtransfers/RobuxTransfers` | `RobuxTransferGateway` | `RobloxRobuxTransfers` | `RequestRobuxTransfer` | `robuxTransfers` |
+| Runtime prices (support) | `pricing/PriceLabel` | `PriceLookup` | `RobloxPriceLookup` | none | none (no display price in Config) |
+
+```mermaid
+classDiagram
+    class Config
+    class BenefitReconciler
+    class RewardedAds
+    class PrivateServer
+    class PlusPrompt
+    class RobuxTransfers
+    class PriceLabel
+    class SubscriptionPort { <<port>> }
+    class AdGateway { <<port>> }
+    class ServerContext { <<port>> }
+    class PlusPort { <<port>> }
+    class RobuxTransferGateway { <<port>> }
+    class PriceLookup { <<port>> }
+    BenefitReconciler --> SubscriptionPort
+    RewardedAds --> AdGateway
+    PrivateServer --> ServerContext
+    PlusPrompt --> PlusPort
+    RobuxTransfers --> RobuxTransferGateway
+    PriceLabel --> PriceLookup
+    BenefitReconciler --> Config
+    RewardedAds --> Config
+    PrivateServer --> Config
+    PlusPrompt --> Config
+    RobuxTransfers --> Config
+    SubscriptionPort <|.. RobloxMarketplaceSubscriptions
+    AdGateway <|.. RobloxAdService
+    ServerContext <|.. RobloxServerContext
+    PlusPort <|.. RobloxPlusSubscription
+    RobuxTransferGateway <|.. RobloxRobuxTransfers
+    PriceLookup <|.. RobloxPriceLookup
+```
+
+Rules that hold for all five:
+
+- **Config-driven.** Every price-free value (ids, labels, caps, cooldowns, bounds) comes from `Config`, and `Config.validate` reports each problem. Ids stay `nil` until a game sets them. A disabled surface is not validated; an enabled one must be complete.
+- **Opt-in and off by default.** Rewarded ads, private servers, the Plus prompt and Robux transfers ship with `enabled = false`.
+- **Intent-only remotes.** Each remote carries a name or a number the server re-checks (rate limiter, then `Validation`, then Config bounds). All four are in `net/schema.zap` and in `PerfBudget`.
+- **Money path.** Nothing is granted from a remote. Rewarded ad rewards are Config developer products delivered by `ProcessReceipt` after a confirmed save (ADR 0016). Subscription benefits are reconciled from the live status and never read from saved data. The Plus sign-up bonus is credited by the platform. Transfers grant nothing.
+- **Subscriptions.** Status is re-read on join, on `UserSubscriptionStatusChanged` and on a poll (`subscriptionPollSeconds`), because the engine fires the event only after the purchase modal closes, so a Store tab purchase made mid-session is found by the poll. The first answer for a player always calls `apply`, so a benefit persisted by an old session is revoked. A lookup failure keeps the previous state and is logged. A legacy game pass owner keeps the benefit.
+- **Rewarded ads.** Availability (`GetAdAvailabilityNowAsync`) is a client-only call owned by the client script that holds the button; every `notReady`, `interrupted` or ineligible outcome is a normal result, so the button just hides. The disclosure text and button label come from Config. A daily cap counts completed ads per server and day (not persisted across servers).
+- **Private servers.** The platform sells them and sets the price in Creator Hub. `expectedMonthlyPrice` is only for the release checklist and is never shown. `TeleportInitFailed` retries `Failure` and `Flooded` up to `teleportRetries` times, and nothing else.
+- **Prices.** Never a literal: read through `PriceLookup` and format with `PriceLabel.format` (Plus subscribers pay 10 to 20 percent less). A test fails if `Config.default` holds a price-like number.
+
+### How to add an item
+
+- **A subscription:** add `{ name, subscriptionId, benefits, replacesPassName? }` to `Config.default.subscriptions` (id from Creator Hub), then replace the default `apply` in `Main.server` if the benefit is more than an attribute. Test: extend `tests/features/subscriptions/BenefitReconciler.test.luau`.
+- **A rewarded ad placement:** create the developer product and the Creator Hub placement, add the product to `developerProducts` with its grant, add `{ name, placementId, rewardProduct, label }` to `rewardedAds.placements`, add the name to `AdPlacementName` in `net/schema.zap`, run `pwsh scripts/generate-remotes.ps1`. Turn `enabled` on only when the experience is eligible.
+- **A private server setting:** add `{ name, min, max, default }` to `privateServers.settings`, the name to `PrivateServerSettingName` in the schema, regenerate, and act on it in `onSettingChanged` in `Main.server`.
+- **A Plus placement:** add the name to `plusPrompt.placements` and `PlusPlacementName` in the schema, regenerate.
+- **A pack instead of the in-house adapter:** write a second adapter of the same port (at least 75 percent coverage, ADR 0022) and change the one line in `Main.server` that builds it.
+
+### Forbidden
+
+A literal price or a price-like number in `Config` or a UI (the test fails); a grant from a remote or from a client "ad finished" signal; trusting saved subscription status; prompting Plus or opening an ad without a player request; a transfer reward that skips the ledger; an engine call outside `src/server/adapters/`; a remote that carries a price, a reward or a user id of the caller; a fake id in `Config`.
+
 ## Performance budget
 
-One config (`PerfBudget`) feeds three consumers: the CI calculator, the RequestPurchase limiter in `Main.server`, and the Studio probe. Flow and alternatives: [ADR 0019](adr/0019-performance-budget.md); manual procedure: [performance.md](performance.md). The calculator is static and sees only remote payloads, not replication or physics traffic.
+One config (`PerfBudget`) feeds three consumers: the CI calculator, the client remote limiters in `Main.server` (RequestPurchase and the four monetization remotes), and the Studio probe. Flow and alternatives: [ADR 0019](adr/0019-performance-budget.md); manual procedure: [performance.md](performance.md). The calculator is static and sees only remote payloads, not replication or physics traffic.
 
 ## Tradeoffs
 

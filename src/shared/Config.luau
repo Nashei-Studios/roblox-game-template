@@ -25,6 +25,72 @@ export type DeveloperProductConfig = {
     grant: ProductGrant,
 }
 
+-- Experience subscription (Creator Hub > Monetization > Subscriptions). Ids are strings ("EXP-...").
+-- `benefits` are game-defined perk names; the reconciler grants and revokes them by LIVE status.
+export type SubscriptionConfig = {
+    name: string,
+    subscriptionId: string?,
+    benefits: { string },
+    -- Name of a gamePasses entry whose owners keep the benefit (legacy pass migrated to this sub).
+    replacesPassName: string?,
+}
+
+-- Rewarded video ad slot. The reward is a developer product (by name), delivered by the
+-- Monetization receipt path; `label` is the text shown on the opt-in button.
+export type RewardedAdPlacementConfig = {
+    name: string,
+    -- Placement id from Creator Hub > Monetization > Ads > Placements. nil = default placement.
+    placementId: number?,
+    rewardProduct: string,
+    label: string,
+}
+
+export type RewardedAdsConfig = {
+    -- Keep false until the experience meets the eligibility conditions (docs: public, 2 thousand
+    -- monthly unique visitors, ID-verified publisher with 2FA).
+    enabled: boolean,
+    -- Text that tells the player this is an ad (docs require a clear disclosure).
+    disclosureLabel: string,
+    -- Max completed ads per player per UTC day on one server.
+    dailyCap: number,
+    placements: { RewardedAdPlacementConfig },
+}
+
+export type PrivateServerSettingConfig = {
+    name: string,
+    min: number,
+    max: number,
+    default: number,
+}
+
+export type PrivateServersConfig = {
+    enabled: boolean,
+    -- EXPECTED monthly price in Robux. The real price is set in Creator Hub (code cannot set
+    -- it): this value is only compared by the release checklist and is never shown in the UI.
+    expectedMonthlyPrice: number,
+    -- Retries after a TeleportInitFailed with a retryable result, and the wait between them.
+    teleportRetries: number,
+    teleportRetryDelaySeconds: number,
+    settings: { PrivateServerSettingConfig },
+}
+
+-- Roblox Plus sign-up prompt (earns a bonus per new subscriber who signs up through the game).
+export type PlusPromptConfig = {
+    enabled: boolean,
+    -- Named spots where the player can ask for the prompt (a button they press, never forced).
+    placements: { string },
+    -- Minimum seconds between two prompts to the same player.
+    cooldownSeconds: number,
+    maxPromptsPerSession: number,
+}
+
+-- In-game Robux transfers by Plus subscribers (the game earns a share of each transfer).
+export type RobuxTransfersConfig = {
+    enabled: boolean,
+    minAmount: number,
+    maxAmount: number,
+}
+
 export type GameConfig = {
     gameName: string,
     -- Seconds after which ProfileStore assumes a silent server is dead (ASSUME_DEAD).
@@ -44,9 +110,21 @@ export type GameConfig = {
     timeRewards: TimeRewardsConfig.TimeRewardsConfig,
     notifications: NotificationsConfig.NotificationsConfig,
     sound: SoundConfig.SoundConfig,
+    -- Monetization surfaces (ADR 0022). Optional so a game can omit what it does not sell.
+    subscriptions: { SubscriptionConfig }?,
+    -- Seconds between live re-reads of subscription status (covers Store tab purchases).
+    subscriptionPollSeconds: number?,
+    rewardedAds: RewardedAdsConfig?,
+    privateServers: PrivateServersConfig?,
+    plusPrompt: PlusPromptConfig?,
+    robuxTransfers: RobuxTransfersConfig?,
 }
 
 local Config = {}
+
+-- Platform bounds of one Robux transfer (docs: production/monetization/robux-transfers).
+Config.ROBUX_TRANSFER_PLATFORM_MIN = 10
+Config.ROBUX_TRANSFER_PLATFORM_MAX = 500
 
 Config.default = {
     gameName = "My Game", -- TODO(victor): set the game name
@@ -143,6 +221,45 @@ Config.default = {
         defaultVolumes = { music = 60, sfx = 80 },
         fadeSeconds = 1.5,
     },
+    -- Add { name, subscriptionId, benefits } entries once subscriptions exist in Creator Hub.
+    subscriptions = {},
+    subscriptionPollSeconds = 300,
+    rewardedAds = {
+        enabled = false, -- opt-in; turn on only when the experience is eligible
+        disclosureLabel = "Watch an ad to get a reward",
+        dailyCap = 5,
+        -- Mirrors AdPlacementName in net/schema.zap. The reward must be a developer product.
+        placements = {
+            {
+                name = "Default",
+                placementId = nil, -- TODO(victor): Creator Hub placement id (optional)
+                rewardProduct = "Coins100",
+                label = "Watch an ad for 100 coins",
+            },
+        },
+    },
+    privateServers = {
+        enabled = false,
+        expectedMonthlyPrice = 100, -- expected only; the real price is set in Creator Hub
+        teleportRetries = 2,
+        teleportRetryDelaySeconds = 2,
+        -- Mirrors PrivateServerSettingName in net/schema.zap.
+        settings = {
+            { name = "maxPlayers", min = 2, max = 12, default = 8 },
+        },
+    },
+    plusPrompt = {
+        enabled = false,
+        -- Mirrors PlusPlacementName in net/schema.zap.
+        placements = { "menu" },
+        cooldownSeconds = 600,
+        maxPromptsPerSession = 2,
+    },
+    robuxTransfers = {
+        enabled = false,
+        minAmount = 10,
+        maxAmount = 500,
+    },
 } :: GameConfig
 
 --- In-repo fallbacks for live-ops flags (Experience Configs override them; see features/flags).
@@ -152,6 +269,150 @@ Config.flagDefaults = {
     },
     numbers = {},
 } :: { booleans: { [string]: boolean }, numbers: { [string]: number } }
+
+local function isPositiveInteger(value: number): boolean
+    return value == value and value >= 1 and value % 1 == 0
+end
+
+local function validateSubscriptions(config: GameConfig, problems: { string })
+    local subscriptions = config.subscriptions
+    if subscriptions == nil or #subscriptions == 0 then
+        return
+    end
+    local pollSeconds = config.subscriptionPollSeconds
+    if pollSeconds == nil or pollSeconds <= 0 then
+        table.insert(problems, "subscriptionPollSeconds must be positive when subscriptions exist")
+    end
+    local seen: { [string]: boolean } = {}
+    for _, subscription in subscriptions do
+        if subscription.subscriptionId == nil or subscription.subscriptionId == "" then
+            table.insert(problems, `subscription "{subscription.name}" has no subscriptionId`)
+        end
+        if seen[subscription.name] then
+            table.insert(problems, `subscription "{subscription.name}" is declared twice`)
+        end
+        seen[subscription.name] = true
+        if #subscription.benefits == 0 then
+            table.insert(problems, `subscription "{subscription.name}" has no benefits`)
+        end
+        local passName = subscription.replacesPassName
+        if passName ~= nil then
+            local found = false
+            for _, pass in config.gamePasses do
+                found = found or pass.name == passName
+            end
+            if not found then
+                table.insert(
+                    problems,
+                    `subscription "{subscription.name}" replaces unknown game pass "{passName}"`
+                )
+            end
+        end
+    end
+end
+
+local function validateRewardedAds(config: GameConfig, problems: { string })
+    local ads = config.rewardedAds
+    if ads == nil or not ads.enabled then
+        return
+    end
+    if ads.disclosureLabel == "" then
+        table.insert(problems, "rewardedAds.disclosureLabel is empty")
+    end
+    if not isPositiveInteger(ads.dailyCap) then
+        table.insert(problems, "rewardedAds.dailyCap must be a positive integer")
+    end
+    if #ads.placements == 0 then
+        table.insert(problems, "rewardedAds is enabled but has no placements")
+    end
+    local seen: { [string]: boolean } = {}
+    for _, placement in ads.placements do
+        if seen[placement.name] then
+            table.insert(problems, `rewarded ad placement "{placement.name}" is declared twice`)
+        end
+        seen[placement.name] = true
+        if placement.label == "" then
+            table.insert(problems, `rewarded ad placement "{placement.name}" has no label`)
+        end
+        if Config.findProductByName(config, placement.rewardProduct) == nil then
+            table.insert(
+                problems,
+                `rewarded ad placement "{placement.name}" rewards unknown developer product "{placement.rewardProduct}"`
+            )
+        end
+    end
+end
+
+local function validatePrivateServers(config: GameConfig, problems: { string })
+    local servers = config.privateServers
+    if servers == nil or not servers.enabled then
+        return
+    end
+    if not isPositiveInteger(servers.expectedMonthlyPrice) then
+        table.insert(problems, "privateServers.expectedMonthlyPrice must be a positive integer")
+    end
+    if servers.teleportRetries < 0 or servers.teleportRetries % 1 ~= 0 then
+        table.insert(problems, "privateServers.teleportRetries must be a non-negative integer")
+    end
+    if servers.teleportRetryDelaySeconds <= 0 then
+        table.insert(problems, "privateServers.teleportRetryDelaySeconds must be positive")
+    end
+    local seen: { [string]: boolean } = {}
+    for _, setting in servers.settings do
+        if seen[setting.name] then
+            table.insert(problems, `private server setting "{setting.name}" is declared twice`)
+        end
+        seen[setting.name] = true
+        local ordered = setting.min <= setting.default and setting.default <= setting.max
+        if not ordered or setting.min % 1 ~= 0 or setting.max % 1 ~= 0 then
+            table.insert(
+                problems,
+                `private server setting "{setting.name}" needs integer min <= default <= max`
+            )
+        end
+    end
+end
+
+local function validatePlusPrompt(config: GameConfig, problems: { string })
+    local plus = config.plusPrompt
+    if plus == nil or not plus.enabled then
+        return
+    end
+    if #plus.placements == 0 then
+        table.insert(problems, "plusPrompt is enabled but has no placements")
+    end
+    local seen: { [string]: boolean } = {}
+    for _, placement in plus.placements do
+        if placement == "" or seen[placement] then
+            table.insert(problems, "plusPrompt.placements must be unique non-empty names")
+        end
+        seen[placement] = true
+    end
+    if plus.cooldownSeconds <= 0 then
+        table.insert(problems, "plusPrompt.cooldownSeconds must be positive")
+    end
+    if not isPositiveInteger(plus.maxPromptsPerSession) then
+        table.insert(problems, "plusPrompt.maxPromptsPerSession must be a positive integer")
+    end
+end
+
+local function validateRobuxTransfers(config: GameConfig, problems: { string })
+    local transfers = config.robuxTransfers
+    if transfers == nil or not transfers.enabled then
+        return
+    end
+    local withinPlatform = transfers.minAmount >= Config.ROBUX_TRANSFER_PLATFORM_MIN
+        and transfers.maxAmount <= Config.ROBUX_TRANSFER_PLATFORM_MAX
+    if not withinPlatform or transfers.minAmount > transfers.maxAmount then
+        table.insert(
+            problems,
+            `robuxTransfers amounts must satisfy {Config.ROBUX_TRANSFER_PLATFORM_MIN} <= minAmount <= maxAmount <= {Config.ROBUX_TRANSFER_PLATFORM_MAX}`
+        )
+    end
+    if transfers.minAmount % 1 ~= 0 or transfers.maxAmount % 1 ~= 0 then
+        table.insert(problems, "robuxTransfers amounts must be integers")
+    end
+end
 
 --- Returns one human-readable problem per invalid or missing value (empty when valid).
 function Config.validate(config: GameConfig): { string }
@@ -208,6 +469,11 @@ function Config.validate(config: GameConfig): { string }
     for _, problem in NotificationsConfig.validate(config.notifications, sfxNames) do
         table.insert(problems, problem)
     end
+    validateSubscriptions(config, problems)
+    validateRewardedAds(config, problems)
+    validatePrivateServers(config, problems)
+    validatePlusPrompt(config, problems)
+    validateRobuxTransfers(config, problems)
     return problems
 end
 
