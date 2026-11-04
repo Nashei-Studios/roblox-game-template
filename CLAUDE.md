@@ -26,11 +26,16 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - Errors are values (typed Result), never silently swallowed.
 - Ids (game passes, products) stay `nil` with `-- TODO(victor): set id` until real. Never invent ids.
 - New decision -> new ADR in `docs/adr/`, never edit an accepted one.
-- Conventional Commits in English. Everything enters `main` by PR.
+- Conventional Commits in English (`feat|fix|docs|style|refactor|perf|test|chore`); CI checks the PR title. Everything enters `main` by PR with `Closes #N`, "how it was verified" and the ai-log link (`.github/pull_request_template.md`). No AI attribution in commits or PRs.
+- Coverage gate 75 % (ADR 0017). Work leaves the machine at the first commit: push after every commit. Session with technical decisions -> `docs/ai-logs/YYYY-MM-DD-topic.md` (skill `ai-log`).
+- CI is budget: one trigger per change, no CI on drafts or docs-only changes, `timeout-minutes` on every job, `concurrency` cancel-in-progress. Reproduce failures locally before pushing. Details: skill `github-integrado`.
 
 ## Roblox knowledge (ADR 0021)
 - The `lihfolk` plugin is enabled at project scope from the pinned copy in `D:\Victor\Roblox\kits\lihfolk-vault-v2.5.0\`. Before writing player data, receipts, remotes, monetization or anything with a 2025-2026 limit, price or policy, look it up through the `lihfolk` router (or `python -I "<vault>/_tools/vault.py" "<question>"`) and cite the note titles in the PR.
 - The template's ports and features layout wins over LihFolk's drop-in systems; each game derives its own UI tokens. LihFolk's checker findings are hints; our CI is the gate.
+
+## Skill routing
+Luau/Roblox rules: `~/.claude/rules/luau.md`. Structure, tests, CI: `arquitectura-por-stack` -> `tdd` -> `github-integrado`. Decision: `grilling` -> `adr`. Before a PR: `/review-pr`, `/check-coverage`, `security-audit` (before merging to `main` when remotes, purchases or player data changed). Text people read (README, PR): `humanizer`.
 
 ## Multi-agent (docs/multi-agent.md)
 - One git worktree and branch per agent; own one `features/<name>/` folder; cross-feature, `ports/`, `Main.*`, `vendor/`, CI go through the orchestrator.

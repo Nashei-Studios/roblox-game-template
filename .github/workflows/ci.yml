@@ -1,9 +1,26 @@
 name: ci
 
+# One trigger per change: PRs run the gate, main re-runs it once after the squash merge.
+# Docs-only changes and draft PRs cost no minutes. Jobs are merged because every job is
+# billed as at least one minute and these steps take seconds (rules: github-integrado, minutos-actions).
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore: &ignore
+      - "**.md"
+      - "docs/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/CODEOWNERS"
+      - ".github/dependabot.yml"
+      - ".github/release.yml"
+      - ".vscode/**"
   push:
     branches: [main]
+    paths-ignore: *ignore
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -11,7 +28,9 @@ permissions:
 # Each job installs the pinned toolchain (rokit.toml) through the same community action,
 # checked 2026-11-02 (CompeyDev/setup-rokit v0.2.1) and pinned by commit SHA.
 jobs:
-  format:
+  check:
+    # format + lint + generated remotes + PR title: all static, seconds each.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -20,20 +39,21 @@ jobs:
         with:
           version: v1.2.0
           cache: "true"
+      - name: Conventional Commit PR title (squash merge uses it)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          printf '%s' "$PR_TITLE" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|chore)(\([a-z0-9/_-]+\))?!?: .+'             || { echo "PR title must follow Conventional Commits: $PR_TITLE"; exit 1; }
       - run: stylua --check .
-
-  lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
-        with:
-          version: v1.2.0
-          cache: "true"
       - run: selene .
+      - name: Regenerate the remote layer (ADR 0015)
+        run: pwsh scripts/generate-remotes.ps1
+      - name: Fail when the generated code is stale
+        run: git diff --exit-code -- src/shared/net/generated
 
   analyze:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -51,29 +71,16 @@ jobs:
           luau-lsp analyze --sourcemap sourcemap.json
           --definitions=@roblox=types/globalTypes.None.d.luau
           --base-luaurc .luaurc src tests scripts
-
-  analyze-new-solver:
-    # Non-blocking drift detector (ADR 0008): the new solver is not the Studio default yet.
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
-        with:
-          version: v1.2.0
-          cache: "true"
-      - name: Generate Lune types and sourcemap
-        run: |
-          lune setup
-          rojo sourcemap default.project.json -o sourcemap.json
-      - name: Analyze (new solver, informational)
+      - name: Analyze (new solver, informational drift detector, ADR 0008)
+        continue-on-error: true
         run: >
           luau-lsp analyze --flag:LuauSolverV2=true --sourcemap sourcemap.json
           --definitions=@roblox=types/globalTypes.None.d.luau
           --base-luaurc .luaurc src tests scripts
 
   test:
+    # Unit tests, performance budget, build smoke and the 75 % line-coverage gate (ADR 0017).
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -90,17 +97,6 @@ jobs:
         run: |
           mkdir -p places
           rojo build default.project.json -o places/ci.rbxl
-
-  coverage:
-    # Line coverage gate (ADR 0017): luau --coverage, 75 % of the total, no file left unmeasured.
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
-        with:
-          version: v1.2.0
-          cache: "true"
       - name: Run the suites with coverage
         run: |
           mkdir -p logs
@@ -108,18 +104,3 @@ jobs:
           mv coverage.out logs/coverage.lcov
       - name: Gate (75 % of the total, per-file report)
         run: lune run scripts/coverage_report logs/coverage.lcov 75 src
-
-  remotes:
-    # Generated remotes must match net/schema.zap with the pinned Zap (ADR 0015).
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
-        with:
-          version: v1.2.0
-          cache: "true"
-      - name: Regenerate the remote layer
-        run: pwsh scripts/generate-remotes.ps1
-      - name: Fail when the generated code is stale
-        run: git diff --exit-code -- src/shared/net/generated

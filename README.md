@@ -33,7 +33,7 @@ The MCP proxy built into Studio (`StudioMCP.exe`, signed by Roblox Corporation) 
 ├── .luaurc  selene.toml  stylua.toml   strict mode, lint std, format rules
 ├── .claude/                 Claude Code setup: settings.json (permissions, hook), hooks/studio-lock (Studio lock gate), agents/luau-reviewer
 ├── .vscode/                 luau-lsp settings and recommended extensions
-├── .github/workflows/ci.yml jobs: format, lint, analyze (+ non-blocking new solver), test (PR and push to main)
+├── .github/workflows/ci.yml jobs: check (format, lint, remotes, PR title), analyze (+ non-blocking new solver), test (tests, perf, build, coverage); skipped for drafts and docs-only changes
 ├── src/
 │   ├── shared/              -> ReplicatedStorage/Shared: pure logic, no engine services, Lune-testable
 │   │   ├── ports/           types only: what features need from outside (ProfileRepository, Flags, AnalyticsSink, LedgerProvider)
