@@ -135,7 +135,19 @@ if not RunService:IsRunning() then
 	local noop = function() end
 	return table.freeze({
 		sendEvents = noop,
+		RequestRobuxTransfer = table.freeze({
+			setCallback = noop
+		}),
+		RequestRewardedAd = table.freeze({
+			setCallback = noop
+		}),
 		RequestPurchase = table.freeze({
+			setCallback = noop
+		}),
+		RequestPrivateServerSetting = table.freeze({
+			setCallback = noop
+		}),
+		RequestPlusPrompt = table.freeze({
 			setCallback = noop
 		}),
 		CoinsChanged = table.freeze({
@@ -175,6 +187,9 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	player_map[player] = nil
 end)
+export type AdPlacementName = ("Default")
+export type PlusPlacementName = ("menu")
+export type PrivateServerSettingName = ("maxPlayers")
 export type ProductName = ("Coins100")
 
 local function sendEvents()
@@ -195,7 +210,7 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(1)
+local reliable_events = table.create(5)
 reliable.OnServerEvent:Connect(function(player, buff, inst)
 	incoming_buff = buff
 	incoming_inst = inst
@@ -204,11 +219,37 @@ reliable.OnServerEvent:Connect(function(player, buff, inst)
 	local len = buffer.len(buff)
 	while incoming_read < len do
 		local id = buffer.readu8(buff, read(1))
-		if id == 0 then -- RequestPurchase
+		if id == 3 then -- RequestRobuxTransfer
+			local value, value2
+			value = buffer.readf64(incoming_buff, read(8))
+			value2 = buffer.readu16(incoming_buff, read(2))
+			if reliable_events[3] then
+				reliable_events[3](player, value, value2)
+			end
+		elseif id == 1 then -- RequestRewardedAd
+			local value
+			value = "Default"
+			if reliable_events[1] then
+				reliable_events[1](player, value)
+			end
+		elseif id == 0 then -- RequestPurchase
 			local value
 			value = "Coins100"
 			if reliable_events[0] then
 				reliable_events[0](player, value)
+			end
+		elseif id == 4 then -- RequestPrivateServerSetting
+			local value, value2
+			value = "maxPlayers"
+			value2 = buffer.readu16(incoming_buff, read(2))
+			if reliable_events[4] then
+				reliable_events[4](player, value, value2)
+			end
+		elseif id == 2 then -- RequestPlusPrompt
+			local value
+			value = "menu"
+			if reliable_events[2] then
+				reliable_events[2](player, value)
 			end
 		else
 			error("Unknown event id")
@@ -220,11 +261,43 @@ table.freeze(polling_queues_unreliable)
 
 local returns = {
 	sendEvents = sendEvents,
+	RequestRobuxTransfer = {
+		setCallback = function(callback: (player: Player, receiverUserId: (number), amount: (number)) -> ()): () -> ()
+			reliable_events[3] = callback
+			return function()
+				reliable_events[3] = nil
+			end
+		end,
+	},
+	RequestRewardedAd = {
+		setCallback = function(callback: (player: Player, placement: ("Default")) -> ()): () -> ()
+			reliable_events[1] = callback
+			return function()
+				reliable_events[1] = nil
+			end
+		end,
+	},
 	RequestPurchase = {
 		setCallback = function(callback: (player: Player, product: ("Coins100")) -> ()): () -> ()
 			reliable_events[0] = callback
 			return function()
 				reliable_events[0] = nil
+			end
+		end,
+	},
+	RequestPrivateServerSetting = {
+		setCallback = function(callback: (player: Player, setting: ("maxPlayers"), value: (number)) -> ()): () -> ()
+			reliable_events[4] = callback
+			return function()
+				reliable_events[4] = nil
+			end
+		end,
+	},
+	RequestPlusPrompt = {
+		setCallback = function(callback: (player: Player, placement: ("menu")) -> ()): () -> ()
+			reliable_events[2] = callback
+			return function()
+				reliable_events[2] = nil
 			end
 		end,
 	},

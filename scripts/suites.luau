@@ -64,6 +64,58 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         name = "PurchaseRequests",
         register = require("../tests/features/monetization/PurchaseRequests.test"),
     },
+    {
+        name = "BenefitReconciler",
+        register = require("../tests/features/subscriptions/BenefitReconciler.test"),
+    },
+    {
+        name = "RobloxMarketplaceSubscriptions (adapter)",
+        register = require("../tests/adapters/RobloxMarketplaceSubscriptions.test"),
+    },
+    {
+        name = "ConfigMonetization",
+        register = require("../tests/ConfigMonetization.test"),
+    },
+    {
+        name = "RewardedAds",
+        register = require("../tests/features/rewardedads/RewardedAds.test"),
+    },
+    {
+        name = "PrivateServer",
+        register = require("../tests/features/privateserver/PrivateServer.test"),
+    },
+    {
+        name = "PlusPrompt",
+        register = require("../tests/features/plus/PlusPrompt.test"),
+    },
+    {
+        name = "RobuxTransfers",
+        register = require("../tests/features/robuxtransfers/RobuxTransfers.test"),
+    },
+    {
+        name = "PriceLabel",
+        register = require("../tests/features/pricing/PriceLabel.test"),
+    },
+    {
+        name = "RobloxAdService (adapter)",
+        register = require("../tests/adapters/RobloxAdService.test"),
+    },
+    {
+        name = "RobloxServerContext (adapter)",
+        register = require("../tests/adapters/RobloxServerContext.test"),
+    },
+    {
+        name = "RobloxPlusSubscription (adapter)",
+        register = require("../tests/adapters/RobloxPlusSubscription.test"),
+    },
+    {
+        name = "RobloxRobuxTransfers (adapter)",
+        register = require("../tests/adapters/RobloxRobuxTransfers.test"),
+    },
+    {
+        name = "RobloxPriceLookup (adapter)",
+        register = require("../tests/adapters/RobloxPriceLookup.test"),
+    },
     { name = "RemoteBudget", register = require("../tests/perf/RemoteBudget.test") },
     { name = "ProbeEvaluator", register = require("../tests/perf/ProbeEvaluator.test") },
     {
