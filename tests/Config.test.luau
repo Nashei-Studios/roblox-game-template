@@ -5,7 +5,7 @@ local harness = require("./harness")
 return function(suite: harness.Harness)
     suite:test("default config reports every unset id", function()
         local problems = Config.validate(Config.default)
-        harness.equal(#problems, 2, "problem count")
+        harness.equal(#problems, 5, "problem count (2 ids + 3 sound assets)")
     end)
 
     suite:test("a fully configured game has no problems", function()
@@ -16,6 +16,10 @@ return function(suite: harness.Harness)
             purchaseLedgerSize = 50,
             saveConfirmTimeoutSeconds = 30,
             gamePasses = { { name = "VIP", id = 111 } },
+            codes = Config.default.codes,
+            timeRewards = Config.default.timeRewards,
+            notifications = Config.default.notifications,
+            sound = Config.default.sound,
             developerProducts = {
                 { name = "Coins", id = 222, grant = { kind = "coins", amount = 100 } },
             },
@@ -31,6 +35,10 @@ return function(suite: harness.Harness)
             purchaseLedgerSize = 50,
             saveConfirmTimeoutSeconds = 30,
             gamePasses = {},
+            codes = Config.default.codes,
+            timeRewards = Config.default.timeRewards,
+            notifications = Config.default.notifications,
+            sound = Config.default.sound,
             developerProducts = {},
         }
         harness.equal(#Config.validate(config), 2, "problem count")
@@ -44,6 +52,10 @@ return function(suite: harness.Harness)
             purchaseLedgerSize = 50,
             saveConfirmTimeoutSeconds = 30,
             gamePasses = {},
+            codes = Config.default.codes,
+            timeRewards = Config.default.timeRewards,
+            notifications = Config.default.notifications,
+            sound = Config.default.sound,
             developerProducts = {
                 { name = "Coins", id = 222, grant = { kind = "coins", amount = 100 } },
             },
@@ -73,6 +85,10 @@ return function(suite: harness.Harness)
             purchaseLedgerSize = 50,
             saveConfirmTimeoutSeconds = 30,
             gamePasses = {},
+            codes = Config.default.codes,
+            timeRewards = Config.default.timeRewards,
+            notifications = Config.default.notifications,
+            sound = Config.default.sound,
             developerProducts = {
                 { name = "Zero", id = 1, grant = { kind = "coins", amount = 0 } },
                 { name = "Fraction", id = 2, grant = { kind = "coins", amount = 2.5 } },
@@ -91,6 +107,10 @@ return function(suite: harness.Harness)
             purchaseLedgerSize = 0,
             saveConfirmTimeoutSeconds = 30,
             gamePasses = {},
+            codes = Config.default.codes,
+            timeRewards = Config.default.timeRewards,
+            notifications = Config.default.notifications,
+            sound = Config.default.sound,
             developerProducts = {},
         }
         harness.equal(#Config.validate(config), 1, "zero")
@@ -106,6 +126,10 @@ return function(suite: harness.Harness)
             purchaseLedgerSize = 50,
             saveConfirmTimeoutSeconds = 0,
             gamePasses = {},
+            codes = Config.default.codes,
+            timeRewards = Config.default.timeRewards,
+            notifications = Config.default.notifications,
+            sound = Config.default.sound,
             developerProducts = {},
         }
         harness.equal(#Config.validate(config), 1, "problem count")

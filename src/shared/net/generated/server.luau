@@ -135,8 +135,28 @@ if not RunService:IsRunning() then
 	local noop = function() end
 	return table.freeze({
 		sendEvents = noop,
+		SoundSettings = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
+		SetVolume = table.freeze({
+			setCallback = noop
+		}),
 		RequestPurchase = table.freeze({
 			setCallback = noop
+		}),
+		RedeemCode = table.freeze({
+			setCallback = noop
+		}),
+		Notify = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
 		}),
 		CoinsChanged = table.freeze({
 			fire = noop,
@@ -144,6 +164,12 @@ if not RunService:IsRunning() then
 			fireExcept = noop,
 			fireList = noop,
 			fireSet = noop
+		}),
+		ClaimSessionGift = table.freeze({
+			setCallback = noop
+		}),
+		ClaimDailyReward = table.freeze({
+			setCallback = noop
 		}),
 	}) :: Events
 end
@@ -175,7 +201,9 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	player_map[player] = nil
 end)
+export type NotificationKind = ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable")
 export type ProductName = ("Coins100")
+export type VolumeGroup = ("music" | "sfx")
 
 local function sendEvents()
 	for player, outgoing in player_map do
@@ -195,7 +223,7 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(1)
+local reliable_events = table.create(5)
 reliable.OnServerEvent:Connect(function(player, buff, inst)
 	incoming_buff = buff
 	incoming_inst = inst
@@ -204,11 +232,46 @@ reliable.OnServerEvent:Connect(function(player, buff, inst)
 	local len = buffer.len(buff)
 	while incoming_read < len do
 		local id = buffer.readu8(buff, read(1))
-		if id == 0 then -- RequestPurchase
+		if id == 4 then -- SetVolume
+			local value, value2
+			local bool_1 = buffer.readu8(incoming_buff, read(1))
+			if bit32.btest(bool_1, 0b0000000000000001) then
+				value = "music"
+			else
+				value = "sfx"
+			end
+			value2 = buffer.readu8(incoming_buff, read(1))
+			if reliable_events[4] then
+				reliable_events[4](player, value, value2)
+			end
+		elseif id == 0 then -- RequestPurchase
 			local value
 			value = "Coins100"
 			if reliable_events[0] then
 				reliable_events[0](player, value)
+			end
+		elseif id == 1 then -- RedeemCode
+			local value
+			local len_1 = buffer.readu8(incoming_buff, read(1)) + 1
+			assert(len_1 >= 1, "value is less than 1!")
+			assert(len_1 <= 32, "value is more than 32!")
+			value = buffer.readstring(incoming_buff, read(len_1), len_1)
+			if reliable_events[1] then
+				reliable_events[1](player, value)
+			end
+		elseif id == 3 then -- ClaimSessionGift
+			local value
+			local len_2 = buffer.readu8(incoming_buff, read(1)) + 1
+			assert(len_2 >= 1, "value is less than 1!")
+			assert(len_2 <= 24, "value is more than 24!")
+			value = buffer.readstring(incoming_buff, read(len_2), len_2)
+			if reliable_events[3] then
+				reliable_events[3](player, value)
+			end
+		elseif id == 2 then -- ClaimDailyReward
+			local value
+			if reliable_events[2] then
+				reliable_events[2](player, value)
 			end
 		else
 			error("Unknown event id")
@@ -220,11 +283,301 @@ table.freeze(polling_queues_unreliable)
 
 local returns = {
 	sendEvents = sendEvents,
+	SoundSettings = {
+		fire = function(player: Player, music: (number), sfx: (number))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, music)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, sfx)
+			player_map[player] = save()
+		end,
+		fireAll = function(music: (number), sfx: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, music)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, sfx)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, music: (number), sfx: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, music)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, sfx)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, music: (number), sfx: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, music)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, sfx)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, music: (number), sfx: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, music)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, sfx)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+	},
+	SetVolume = {
+		setCallback = function(callback: (player: Player, group: ("music" | "sfx"), percent: (number)) -> ()): () -> ()
+			reliable_events[4] = callback
+			return function()
+				reliable_events[4] = nil
+			end
+		end,
+	},
 	RequestPurchase = {
 		setCallback = function(callback: (player: Player, product: ("Coins100")) -> ()): () -> ()
 			reliable_events[0] = callback
 			return function()
 				reliable_events[0] = nil
+			end
+		end,
+	},
+	RedeemCode = {
+		setCallback = function(callback: (player: Player, code: (string)) -> ()): () -> ()
+			reliable_events[1] = callback
+			return function()
+				reliable_events[1] = nil
+			end
+		end,
+	},
+	Notify = {
+		fire = function(player: Player, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local bool_2 = 0
+			local bool_2_pos_1 = alloc(2)
+			if kind == "code_redeemed" then
+				bool_2 = bit32.bor(bool_2, 0b0000000000000001)
+			elseif kind == "code_invalid" then
+				bool_2 = bit32.bor(bool_2, 0b0000000000000010)
+			elseif kind == "code_expired" then
+				bool_2 = bit32.bor(bool_2, 0b0000000000000100)
+			elseif kind == "code_used" then
+				bool_2 = bit32.bor(bool_2, 0b0000000000001000)
+			elseif kind == "code_cooldown" then
+				bool_2 = bit32.bor(bool_2, 0b0000000000010000)
+			elseif kind == "daily_claimed" then
+				bool_2 = bit32.bor(bool_2, 0b0000000000100000)
+			elseif kind == "daily_unavailable" then
+				bool_2 = bit32.bor(bool_2, 0b0000000001000000)
+			elseif kind == "session_gift_claimed" then
+				bool_2 = bit32.bor(bool_2, 0b0000000010000000)
+			elseif kind == "session_gift_unavailable" then
+				bool_2 = bit32.bor(bool_2, 0b0000000100000000)
+			else
+				error("Invalid enumerator")
+			end
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, amount)
+			buffer.writeu16(outgoing_buff, bool_2_pos_1, bool_2)
+			player_map[player] = save()
+		end,
+		fireAll = function(kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local bool_3 = 0
+			local bool_3_pos_1 = alloc(2)
+			if kind == "code_redeemed" then
+				bool_3 = bit32.bor(bool_3, 0b0000000000000001)
+			elseif kind == "code_invalid" then
+				bool_3 = bit32.bor(bool_3, 0b0000000000000010)
+			elseif kind == "code_expired" then
+				bool_3 = bit32.bor(bool_3, 0b0000000000000100)
+			elseif kind == "code_used" then
+				bool_3 = bit32.bor(bool_3, 0b0000000000001000)
+			elseif kind == "code_cooldown" then
+				bool_3 = bit32.bor(bool_3, 0b0000000000010000)
+			elseif kind == "daily_claimed" then
+				bool_3 = bit32.bor(bool_3, 0b0000000000100000)
+			elseif kind == "daily_unavailable" then
+				bool_3 = bit32.bor(bool_3, 0b0000000001000000)
+			elseif kind == "session_gift_claimed" then
+				bool_3 = bit32.bor(bool_3, 0b0000000010000000)
+			elseif kind == "session_gift_unavailable" then
+				bool_3 = bit32.bor(bool_3, 0b0000000100000000)
+			else
+				error("Invalid enumerator")
+			end
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, amount)
+			buffer.writeu16(outgoing_buff, bool_3_pos_1, bool_3)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local bool_4 = 0
+			local bool_4_pos_1 = alloc(2)
+			if kind == "code_redeemed" then
+				bool_4 = bit32.bor(bool_4, 0b0000000000000001)
+			elseif kind == "code_invalid" then
+				bool_4 = bit32.bor(bool_4, 0b0000000000000010)
+			elseif kind == "code_expired" then
+				bool_4 = bit32.bor(bool_4, 0b0000000000000100)
+			elseif kind == "code_used" then
+				bool_4 = bit32.bor(bool_4, 0b0000000000001000)
+			elseif kind == "code_cooldown" then
+				bool_4 = bit32.bor(bool_4, 0b0000000000010000)
+			elseif kind == "daily_claimed" then
+				bool_4 = bit32.bor(bool_4, 0b0000000000100000)
+			elseif kind == "daily_unavailable" then
+				bool_4 = bit32.bor(bool_4, 0b0000000001000000)
+			elseif kind == "session_gift_claimed" then
+				bool_4 = bit32.bor(bool_4, 0b0000000010000000)
+			elseif kind == "session_gift_unavailable" then
+				bool_4 = bit32.bor(bool_4, 0b0000000100000000)
+			else
+				error("Invalid enumerator")
+			end
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, amount)
+			buffer.writeu16(outgoing_buff, bool_4_pos_1, bool_4)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local bool_5 = 0
+			local bool_5_pos_1 = alloc(2)
+			if kind == "code_redeemed" then
+				bool_5 = bit32.bor(bool_5, 0b0000000000000001)
+			elseif kind == "code_invalid" then
+				bool_5 = bit32.bor(bool_5, 0b0000000000000010)
+			elseif kind == "code_expired" then
+				bool_5 = bit32.bor(bool_5, 0b0000000000000100)
+			elseif kind == "code_used" then
+				bool_5 = bit32.bor(bool_5, 0b0000000000001000)
+			elseif kind == "code_cooldown" then
+				bool_5 = bit32.bor(bool_5, 0b0000000000010000)
+			elseif kind == "daily_claimed" then
+				bool_5 = bit32.bor(bool_5, 0b0000000000100000)
+			elseif kind == "daily_unavailable" then
+				bool_5 = bit32.bor(bool_5, 0b0000000001000000)
+			elseif kind == "session_gift_claimed" then
+				bool_5 = bit32.bor(bool_5, 0b0000000010000000)
+			elseif kind == "session_gift_unavailable" then
+				bool_5 = bit32.bor(bool_5, 0b0000000100000000)
+			else
+				error("Invalid enumerator")
+			end
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, amount)
+			buffer.writeu16(outgoing_buff, bool_5_pos_1, bool_5)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local bool_6 = 0
+			local bool_6_pos_1 = alloc(2)
+			if kind == "code_redeemed" then
+				bool_6 = bit32.bor(bool_6, 0b0000000000000001)
+			elseif kind == "code_invalid" then
+				bool_6 = bit32.bor(bool_6, 0b0000000000000010)
+			elseif kind == "code_expired" then
+				bool_6 = bit32.bor(bool_6, 0b0000000000000100)
+			elseif kind == "code_used" then
+				bool_6 = bit32.bor(bool_6, 0b0000000000001000)
+			elseif kind == "code_cooldown" then
+				bool_6 = bit32.bor(bool_6, 0b0000000000010000)
+			elseif kind == "daily_claimed" then
+				bool_6 = bit32.bor(bool_6, 0b0000000000100000)
+			elseif kind == "daily_unavailable" then
+				bool_6 = bit32.bor(bool_6, 0b0000000001000000)
+			elseif kind == "session_gift_claimed" then
+				bool_6 = bit32.bor(bool_6, 0b0000000010000000)
+			elseif kind == "session_gift_unavailable" then
+				bool_6 = bit32.bor(bool_6, 0b0000000100000000)
+			else
+				error("Invalid enumerator")
+			end
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, amount)
+			buffer.writeu16(outgoing_buff, bool_6_pos_1, bool_6)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
 			end
 		end,
 	},
@@ -297,6 +650,22 @@ local returns = {
 				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
 				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
 				player_map[player] = save()
+			end
+		end,
+	},
+	ClaimSessionGift = {
+		setCallback = function(callback: (player: Player, giftId: (string)) -> ()): () -> ()
+			reliable_events[3] = callback
+			return function()
+				reliable_events[3] = nil
+			end
+		end,
+	},
+	ClaimDailyReward = {
+		setCallback = function(callback: (player: Player) -> ()): () -> ()
+			reliable_events[2] = callback
+			return function()
+				reliable_events[2] = nil
 			end
 		end,
 	},

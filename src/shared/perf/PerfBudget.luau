@@ -60,10 +60,18 @@ local PerfBudget: Budget = {
     clientRemotes = {
         -- The limit Main.server.luau builds the RequestPurchase RateLimiter from.
         RequestPurchase = { capacity = 3, refillPerSecond = 0.5 },
+        -- Engagement modules (ADR 0025); Main.server builds each limiter from these numbers.
+        RedeemCode = { capacity = 3, refillPerSecond = 0.5 }, -- chosen, not sourced
+        ClaimDailyReward = { capacity = 2, refillPerSecond = 0.2 }, -- chosen, not sourced
+        ClaimSessionGift = { capacity = 3, refillPerSecond = 0.5 }, -- chosen, not sourced
+        SetVolume = { capacity = 4, refillPerSecond = 2 }, -- chosen, not sourced
     },
     serverRemotes = {
         -- At most a couple of grants per second reach one player.
         CoinsChanged = { maxPerSecond = 2 },
+        -- Engagement modules (ADR 0025).
+        Notify = { maxPerSecond = 4 }, -- chosen, not sourced: a few toasts per second at most
+        SoundSettings = { maxPerSecond = 2 }, -- chosen, not sourced
     },
     runtime = {
         maxHeartbeatMs = 16, -- sourced: server CPU time below 16 ms to hit 60 (production/analytics/performance)

@@ -36,19 +36,29 @@ export type PlayerDataV3 = {
     sessionCount: number,
 }
 
+export type PlayerDataV4 = {
+    schemaVersion: number,
+    coins: number,
+    purchaseIds: { string },
+    sessionCount: number,
+    redeemedCodes: { [string]: number },
+    timeRewards: { lastDay: number, streak: number },
+    settings: { musicVolume: number?, sfxVolume: number? },
+}
+
 export type MigrationError =
     { kind: "future_version", found: number, supported: number }
     | { kind: "invalid_data", reason: string }
 
 export type MigrationResult =
-    { ok: true, value: PlayerDataV3 }
+    { ok: true, value: PlayerDataV4 }
     | { ok: false, error: MigrationError }
 
 type StepResult = { ok: true, value: unknown } | { ok: false, error: MigrationError }
 
 local PlayerDataMigrations = {}
 
-PlayerDataMigrations.CURRENT_SCHEMA_VERSION = 3
+PlayerDataMigrations.CURRENT_SCHEMA_VERSION = 4
 
 local function invalid(reason: string): { ok: false, error: MigrationError }
     return { ok = false, error = { kind = "invalid_data", reason = reason } }
@@ -143,7 +153,10 @@ local function readV2(raw: unknown): { ok: true, value: PlayerDataV2 } | {
     }
 end
 
-local function readV3(raw: unknown): MigrationResult
+local function readV3(raw: unknown): { ok: true, value: PlayerDataV3 } | {
+    ok: false,
+    error: MigrationError,
+}
     local record = asRecord(raw)
     if record == nil then
         return invalid("player data must be a table")
@@ -179,6 +192,71 @@ local function readV3(raw: unknown): MigrationResult
             purchaseIds = ids,
             sessionCount = record.sessionCount :: number,
         },
+    }
+end
+
+local function readPositiveRecord(raw: unknown, label: string): ({ [string]: number }?, string?)
+    local record = asRecord(raw)
+    if record == nil then
+        return nil, `{label} must be a table`
+    end
+    local clone: { [string]: number } = {}
+    for key, value in record do
+        if type(key) ~= "string" or not isFiniteNumber(value) or (value :: number) < 0 then
+            return nil, `{label} must map strings to non-negative numbers`
+        end
+        clone[key] = value :: number
+    end
+    return clone, nil
+end
+
+local function readV4(raw: unknown): MigrationResult
+    local v3 = readV3(raw)
+    if not v3.ok then
+        return v3
+    end
+    local record = raw :: { [string]: unknown }
+    local codes, codesProblem = readPositiveRecord(record.redeemedCodes, "redeemedCodes")
+    if codes == nil then
+        return invalid(codesProblem or "redeemedCodes is invalid")
+    end
+    local time, timeProblem = readPositiveRecord(record.timeRewards, "timeRewards")
+    if time == nil or time.lastDay == nil or time.streak == nil then
+        return invalid(timeProblem or "timeRewards needs lastDay and streak")
+    end
+    local settingsRecord, settingsProblem = readPositiveRecord(record.settings, "settings")
+    if settingsRecord == nil then
+        return invalid(settingsProblem or "settings is invalid")
+    end
+    for _, volume in settingsRecord do
+        if volume > 100 then
+            return invalid("settings volumes must be percentages from 0 to 100")
+        end
+    end
+    return {
+        ok = true,
+        value = {
+            schemaVersion = 4,
+            coins = v3.value.coins,
+            purchaseIds = v3.value.purchaseIds,
+            sessionCount = v3.value.sessionCount,
+            redeemedCodes = codes,
+            timeRewards = { lastDay = time.lastDay, streak = time.streak },
+            settings = { musicVolume = settingsRecord.musicVolume, sfxVolume = settingsRecord.sfxVolume },
+        },
+    }
+end
+
+-- v3 had no engagement state: nothing redeemed, no streak, no saved volume choice.
+local function v3ToV4(v3: PlayerDataV3): PlayerDataV4
+    return {
+        schemaVersion = 4,
+        coins = v3.coins,
+        purchaseIds = v3.purchaseIds,
+        sessionCount = v3.sessionCount,
+        redeemedCodes = {},
+        timeRewards = { lastDay = 0, streak = 0 },
+        settings = {},
     }
 end
 
@@ -225,6 +303,13 @@ local steps: { [number]: (raw: unknown) -> StepResult } = {
         end
         return { ok = true, value = v2ToV3(v2.value) }
     end,
+    [3] = function(raw: unknown): StepResult
+        local v3 = readV3(raw)
+        if not v3.ok then
+            return v3
+        end
+        return { ok = true, value = v3ToV4(v3.value) }
+    end,
 }
 
 --- Upgrades `raw` to the current schema. Never mutates `raw`; never throws.
@@ -245,9 +330,9 @@ function PlayerDataMigrations.migrate(raw: unknown): MigrationResult
         }
     end
     if version.value == current then
-        local validated = readV3(raw)
+        local validated = readV4(raw)
         if validated.ok then
-            return { ok = true, value = raw :: PlayerDataV3 } -- unchanged: same table
+            return { ok = true, value = raw :: PlayerDataV4 } -- unchanged: same table
         end
         return validated
     end
@@ -264,7 +349,7 @@ function PlayerDataMigrations.migrate(raw: unknown): MigrationResult
         end
         working = stepped.value
     end
-    return readV3(working)
+    return readV4(working)
 end
 
 --- Like `migrate`, but writes the result into `raw` (the live ProfileStore table, whose
@@ -282,7 +367,7 @@ function PlayerDataMigrations.migrateInPlace(raw: unknown): MigrationResult
             live[key] = value
         end
         local result: unknown = live
-        return { ok = true, value = result :: PlayerDataV3 }
+        return { ok = true, value = result :: PlayerDataV4 }
     end
     return migrated
 end
