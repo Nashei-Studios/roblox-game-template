@@ -95,6 +95,22 @@ Client wiring: the Studio-built UI calls `net.RedeemCode.fire(text)`, `net.Claim
 
 Forbidden here: a code, reward, text, duration, volume or asset id written in a script instead of `Config`; a client-supplied amount, time or reward (remotes carry intent only); the client clock for any reward; `ProfileStore` or DataStore calls outside `ProfileRepository`; engine services in `features/`; granting a reward without `ProductGrants`.
 
+## UI kit, leaderboards and community reward
+
+[ADR 0026](docs/adr/0026-ui-kit-leaderboards-community-reward.md), implementing ADR 0022. Each is a pure folder under `src/shared/features/` behind a port in `src/shared/ports/`; every value lives in `Config.default` and `Config.validate` reports each problem.
+
+| Module | Folder | Ports | Config key |
+|---|---|---|---|
+| UI kit (HUD, shop, rewards, settings, boards, toast host) | `features/ui` | `UiPresenter` | `ui` |
+| Leaderboards (leaderstats, global boards) | `features/leaderboards` | `Leaderboards`, `OrderedBoardStore`, `StatView`, `BoardPublisher` | `leaderboards` |
+| Community join reward | `features/community-reward` | `MembershipChecker` | `communityReward` |
+
+- **Restyle the UI**: change `ui.theme` (palette, radius, spacing, text sizes, font, scale limits, panel size) and `ui.strings`; the reasons for the defaults are in [docs/design/DESIGN.md](docs/design/DESIGN.md). Add or rename a menu in `ui.menus` (`hud`, `shop`, `rewards`, `settings`, `boards` are required). `theme.studs = true` gives the Studded variant by tokens only.
+- **Add a board**: add `leaderboards.boards.<Id> = { stat, refreshSeconds, size, resetCycle }` (`stat` is `coins` or `sessions`; a new stat goes in `LeaderboardsConfig.STATS` and `PlayerStats.read`). Validation enforces the OrderedDataStore read budget (sum of `60 / refreshSeconds` at most 5). Show a stat next to the name with `leaderboards.leaderstats`.
+- **Enable the community reward**: set `communityReward.communityId` and `communityReward.reward` (`{ kind = "coins", amount = n }`), then `enabled = true`. It ships `enabled = false` because rewarding a join is an open [GAP] in the vault research: Victor must confirm the Community Standards and Terms text first.
+- **Forbidden here**: a color, size, font, text or price written in a presenter instead of Config; a fixed pixel size (use scale and the root `UIScale`); a control under the 44 pt touch floor; hover as the only way to do something; a client write path to a board or a "I joined" message from the client; rewarding likes, favorites or anything in Robux; a client-supplied score; reading the ordered store per join.
+- **Tests**: `tests/features/ui`, `tests/features/leaderboards`, `tests/features/community-reward` and `tests/adapters`. The presenters in `src/client/presenters/ui` and the engine lambdas in `Main.server` need a Studio check (Device Emulator: small phone, tablet, 1080p).
+
 ## Start a new game from this template
 
 Preferred: `pwsh scripts/new-game.ps1 -Slug <kebab-case-slug> [-VaultPath <vault>] [-DryRun]`. It validates the slug, runs `gh repo create vruizz22/<slug> --private --template vruizz22/roblox-game-template`, clones into `D:\Victor\Repositorios

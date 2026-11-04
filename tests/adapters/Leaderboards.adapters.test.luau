@@ -1,4 +1,5 @@
 --!strict
+local BoardKey = require("../../src/shared/features/leaderboards/BoardKey")
 local OrderedDataStoreBoards = require("../../src/server/adapters/OrderedDataStoreBoards")
 local ReplicatedBoardPublisher = require("../../src/server/adapters/ReplicatedBoardPublisher")
 local RobloxLeaderstats = require("../../src/server/adapters/RobloxLeaderstats")
@@ -97,6 +98,7 @@ return function(suite: harness.Harness)
     suite:test("the publisher writes the encoded top and the update time", function()
         local seen: { string } = {}
         local publisher = ReplicatedBoardPublisher.new({
+            encode = BoardKey.encode,
             write = function(boardId: string, text: string)
                 table.insert(seen, `{boardId}={text}`)
             end,

@@ -7,16 +7,16 @@
     by "|" and the update time.
 ]]
 
-local BoardKey = require("../../shared/features/leaderboards/BoardKey")
-
 -- Structurally identical to ports/Leaderboards.luau BoardPublisher (local; see the port).
-type Entry = BoardKey.Entry
+type Entry = { userId: number, value: number }
 type BoardPublisher = {
     publish: (self: BoardPublisher, boardId: string, entries: { Entry }, updatedAt: number) -> (),
 }
 
 export type Deps = {
     write: (boardId: string, text: string) -> (),
+    -- BoardKey.encode (kept injected: server adapters cannot require the shared folder by path).
+    encode: (entries: { Entry }) -> string,
 }
 
 local ReplicatedBoardPublisher = {}
@@ -29,7 +29,7 @@ function ReplicatedBoardPublisher.new(deps: Deps): BoardPublisher
             entries: { Entry },
             updatedAt: number
         )
-            deps.write(boardId, `{BoardKey.encode(entries)}|{math.floor(updatedAt)}`)
+            deps.write(boardId, `{deps.encode(entries)}|{math.floor(updatedAt)}`)
         end,
     }
     return publisher

@@ -20,6 +20,8 @@ local function cloneUi(): UiConfig.UiConfig
         theme = table.clone(ui.theme),
         menus = table.clone(ui.menus),
         strings = table.clone(ui.strings),
+        input = table.clone(ui.input),
+        settings = table.clone(ui.settings),
     }
 end
 
@@ -93,10 +95,13 @@ return function(suite: harness.Harness)
         ui.theme.reference = { shortSide = 0, longSide = 0 }
         ui.theme.font = ""
         ui.theme.buttonHeight = 0
+        ui.theme.panel = { widthScale = 2, heightScale = 0, maxWidthPoints = 0 }
+        ui.input = { backKey = "", backPad = "ButtonY" }
+        ui.settings = { volumeStep = 0, sendDebounceSeconds = -1 }
         ui.theme.radius = -1
         ui.theme.strokeThickness = -1
         ui.theme.motionSeconds = -1
-        harness.isTrue(#UiConfig.validate(ui) >= 7, "each token reported")
+        harness.isTrue(#UiConfig.validate(ui) >= 11, "each token reported")
     end)
 
     suite:test("Studded and Plain differ only by tokens", function()
@@ -167,7 +172,7 @@ return function(suite: harness.Harness)
 
     suite:test("shop rows show runtime prices and block a purchase without one", function()
         local placeholders = { pending = "...", unavailable = "n/a" }
-        local products = {
+        local products: { ShopModel.Product } = {
             { name = "A", id = 1 },
             { name = "B", id = 2 },
             { name = "C", id = nil },

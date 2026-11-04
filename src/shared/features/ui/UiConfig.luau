@@ -49,6 +49,21 @@ export type Theme = {
     scale: { min: number, max: number },
     -- Open/close transition length in seconds.
     motionSeconds: number,
+    -- Modal panel: share of the screen it takes, and its widest size in points (tablets, 1080p).
+    panel: { widthScale: number, heightScale: number, maxWidthPoints: number },
+}
+
+export type Input = {
+    -- Closes the open menu (Enum.KeyCode member names).
+    backKey: string,
+    backPad: string,
+}
+
+export type Settings = {
+    -- Percent added or removed by one press of a volume stepper.
+    volumeStep: number,
+    -- The client sends the volume once the player stops pressing for this long (budgeted remote).
+    sendDebounceSeconds: number,
 }
 
 export type MenuConfig = {
@@ -80,6 +95,8 @@ export type UiConfig = {
     theme: Theme,
     menus: { MenuConfig },
     strings: Strings,
+    input: Input,
+    settings: Settings,
 }
 
 local UiConfigModule = {}
@@ -239,6 +256,17 @@ local function validateTheme(theme: Theme, problems: { string })
     if not RewardConfig.isFinite(theme.motionSeconds) or theme.motionSeconds < 0 then
         table.insert(problems, "ui.theme.motionSeconds must be zero or positive")
     end
+    local panel = theme.panel
+    local fractions = 0 < panel.widthScale
+        and panel.widthScale <= 1
+        and 0 < panel.heightScale
+        and panel.heightScale <= 1
+    if not fractions or panel.maxWidthPoints <= 0 then
+        table.insert(
+            problems,
+            "ui.theme.panel needs scales in (0, 1] and a positive maxWidthPoints"
+        )
+    end
 end
 
 --- One human-readable problem per invalid value (empty when valid).
@@ -272,6 +300,27 @@ function UiConfigModule.validate(config: UiConfig): { string }
                 end
             end
         end
+    end
+    if config.input.backKey == "" or config.input.backPad == "" then
+        table.insert(problems, "ui.input needs a backKey and a backPad")
+    end
+    for _, binding in { config.input.backKey, config.input.backPad } do
+        if keys[binding] ~= nil then
+            table.insert(
+                problems,
+                `ui.input back binding "{binding}" is also used by menu "{keys[binding]}"`
+            )
+        end
+    end
+    local step = config.settings.volumeStep
+    if not RewardConfig.isPositiveInteger(step) or step > 100 then
+        table.insert(problems, "ui.settings.volumeStep must be an integer from 1 to 100")
+    end
+    if
+        not RewardConfig.isFinite(config.settings.sendDebounceSeconds)
+        or config.settings.sendDebounceSeconds < 0
+    then
+        table.insert(problems, "ui.settings.sendDebounceSeconds must be zero or positive")
     end
     for _, required in UiConfigModule.REQUIRED_MENUS do
         if not seen[required] then

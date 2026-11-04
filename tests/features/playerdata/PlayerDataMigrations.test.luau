@@ -84,8 +84,16 @@ return function(suite: harness.Harness)
     end)
 
     suite:test("v5 with a non-boolean community flag is refused", function()
-        local data = table.clone(v5Fixture) :: { [string]: unknown }
-        data.communityRewardClaimed = "yes"
+        local data: { [string]: unknown } = {
+            schemaVersion = 5,
+            coins = 1,
+            purchaseIds = {},
+            sessionCount = 1,
+            redeemedCodes = {},
+            timeRewards = { lastDay = 0, streak = 0 },
+            settings = {},
+            communityRewardClaimed = "yes",
+        }
         harness.equal(migrateRaw(data), "invalid_data", "flag not a boolean")
     end)
 

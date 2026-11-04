@@ -306,7 +306,10 @@ Config.default = {
             reference = { shortSide = 360, longSide = 640 },
             scale = { min = 0.75, max = 2 },
             motionSeconds = 0.15,
+            panel = { widthScale = 0.92, heightScale = 0.84, maxWidthPoints = 520 },
         },
+        input = { backKey = "Backspace", backPad = "ButtonB" },
+        settings = { volumeStep = 10, sendDebounceSeconds = 0.4 },
         menus = {
             { id = "hud", title = "HUD", modal = false },
             { id = "shop", title = "Shop", modal = true, toggleKey = "B", togglePad = "ButtonY" },

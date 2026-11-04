@@ -278,9 +278,20 @@ Rules that hold for all five:
 
 A literal price or a price-like number in `Config` or a UI (the test fails); a grant from a remote or from a client "ad finished" signal; trusting saved subscription status; prompting Plus or opening an ad without a player request; a transfer reward that skips the ledger; an engine call outside `src/server/adapters/`; a remote that carries a price, a reward or a user id of the caller; a fake id in `Config`.
 
+## UI kit, leaderboards and community reward
+
+ADR 0026. Pure logic in `src/shared/features/{ui,leaderboards,community-reward}`; engine code in `src/server/adapters/` (`OrderedDataStoreBoards`, `RobloxLeaderstats`, `ReplicatedBoardPublisher`, `RobloxGroupMembership`) and `src/client/presenters/ui/` (`UiKit`, `UiToastRenderer`, `Widgets`). The class and sequence diagrams are in the ADR.
+
+- **Ports**: `UiPresenter`, `Leaderboards`, `OrderedBoardStore`, `StatView`, `BoardPublisher`, `MembershipChecker`. Callers depend on the port types only, so a pack adapter plugs in later.
+- **Config keys**: `ui` (theme tokens, menus, strings, input, settings), `leaderboards` (leaderstats, writeSeconds, boards), `communityReward` (enabled, communityId, reward, recheckCooldownSeconds, promptJoin).
+- **Remotes**: one new client to server, `RequestCommunityCheck` (no payload). Boards travel as replicated `StringValue`s under `ReplicatedStorage.Boards` and leaderstats as the engine folder, so there is no leaderboard remote. Two `Notify` kinds were added (`community_reward_claimed`, `community_not_member`).
+- **Data**: schema v5 adds `communityRewardClaimed` (`v4ToV5`). The grant is kept only after `confirmSaved`.
+- **Leaderboard schedule**: no store read on join; writes every `writeSeconds` and only for changed values; one read per board every `refreshSeconds`; a failed read keeps the cache and waits a full interval.
+- **Adding a menu item**: add a product to `developerProducts` (the shop lists it), a gift to `timeRewards.sessionGifts` (the rewards screen lists it) or a board to `leaderboards.boards`; no presenter edit.
+
 ## Performance budget
 
-One config (`PerfBudget`) feeds three consumers: the CI calculator, the client remote limiters in `Main.server` (RequestPurchase and the four monetization remotes), and the Studio probe. Flow and alternatives: [ADR 0019](adr/0019-performance-budget.md); manual procedure: [performance.md](performance.md). The calculator is static and sees only remote payloads, not replication or physics traffic.
+One config (`PerfBudget`) feeds three consumers: the CI calculator, the client remote limiters in `Main.server` (RequestPurchase, the monetization remotes and RequestCommunityCheck); the client to server total is 352.45 of 512 B/s after ADR 0026, and the Studio probe. Flow and alternatives: [ADR 0019](adr/0019-performance-budget.md); manual procedure: [performance.md](performance.md). The calculator is static and sees only remote payloads, not replication or physics traffic.
 
 ## Tradeoffs
 
