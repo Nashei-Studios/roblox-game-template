@@ -133,6 +133,12 @@ if not RunService:IsRunning() then
 	local noop = function() end
 	return table.freeze({
 		sendEvents = noop,
+		SoundSettings = table.freeze({
+			setCallback = noop
+		}),
+		SetVolume = table.freeze({
+			fire = noop
+		}),
 		RequestRobuxTransfer = table.freeze({
 			fire = noop
 		}),
@@ -148,8 +154,20 @@ if not RunService:IsRunning() then
 		RequestPlusPrompt = table.freeze({
 			fire = noop
 		}),
+		RedeemCode = table.freeze({
+			fire = noop
+		}),
+		Notify = table.freeze({
+			setCallback = noop
+		}),
 		CoinsChanged = table.freeze({
 			setCallback = noop
+		}),
+		ClaimSessionGift = table.freeze({
+			fire = noop
+		}),
+		ClaimDailyReward = table.freeze({
+			fire = noop
 		}),
 	}) :: Events
 end
@@ -159,9 +177,11 @@ local reliable = remotes:WaitForChild("ZAP_RELIABLE")
 assert(reliable:IsA("RemoteEvent"), "Expected ZAP_RELIABLE to be a RemoteEvent")
 
 export type AdPlacementName = ("Default")
+export type NotificationKind = ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable")
 export type PlusPlacementName = ("menu")
 export type PrivateServerSettingName = ("maxPlayers")
 export type ProductName = ("Coins100")
+export type VolumeGroup = ("music" | "sfx")
 
 local function sendEvents()
 	if outgoing_used ~= 0 then
@@ -179,8 +199,10 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(1)
-local reliable_event_queue: { [number]: { any } } = table.create(1)
+local reliable_events = table.create(3)
+local reliable_event_queue: { [number]: { any } } = table.create(3)
+reliable_event_queue[2] = {}
+reliable_event_queue[1] = {}
 reliable_event_queue[0] = {}
 reliable.OnClientEvent:Connect(function(buff, inst)
 	incoming_buff = buff
@@ -190,7 +212,50 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 	local len = buffer.len(buff)
 	while incoming_read < len do
 		local id = buffer.readu8(buff, read(1))
-		if id == 0 then -- CoinsChanged
+		if id == 2 then -- SoundSettings
+			local value, value2
+			value = buffer.readu8(incoming_buff, read(1))
+			value2 = buffer.readu8(incoming_buff, read(1))
+			if reliable_events[2] then
+				reliable_events[2](value, value2)
+			else
+				table.insert(reliable_event_queue[2], { value, value2 })
+				if #reliable_event_queue[2] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[2]} events in queue for SoundSettings. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 1 then -- Notify
+			local value, value2
+			local bool_1 = buffer.readu16(incoming_buff, read(2))
+			if bit32.btest(bool_1, 0b0000000000000001) then
+				value = "code_redeemed"
+			elseif bit32.btest(bool_1, 0b0000000000000010) then
+				value = "code_invalid"
+			elseif bit32.btest(bool_1, 0b0000000000000100) then
+				value = "code_expired"
+			elseif bit32.btest(bool_1, 0b0000000000001000) then
+				value = "code_used"
+			elseif bit32.btest(bool_1, 0b0000000000010000) then
+				value = "code_cooldown"
+			elseif bit32.btest(bool_1, 0b0000000000100000) then
+				value = "daily_claimed"
+			elseif bit32.btest(bool_1, 0b0000000001000000) then
+				value = "daily_unavailable"
+			elseif bit32.btest(bool_1, 0b0000000010000000) then
+				value = "session_gift_claimed"
+			elseif bit32.btest(bool_1, 0b0000000100000000) then
+				value = "session_gift_unavailable"
+			end
+			value2 = buffer.readu32(incoming_buff, read(4))
+			if reliable_events[1] then
+				reliable_events[1](value, value2)
+			else
+				table.insert(reliable_event_queue[1], { value, value2 })
+				if #reliable_event_queue[1] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[1]} events in queue for Notify. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 0 then -- CoinsChanged
 			local value
 			value = buffer.readu32(incoming_buff, read(4))
 			if reliable_events[0] then
@@ -211,10 +276,41 @@ table.freeze(polling_queues_unreliable)
 
 local returns = {
 	sendEvents = sendEvents,
+	SoundSettings = {
+		setCallback = function(callback: (music: (number), sfx: (number)) -> ()): () -> ()
+			reliable_events[2] = callback
+			for _, value in reliable_event_queue[2] do
+				callback(unpack(value)				)
+
+			end
+			reliable_event_queue[2] = {}
+			return function()
+				reliable_events[2] = nil
+			end
+		end,
+	},
+	SetVolume = {
+		fire = function(group: ("music" | "sfx"), percent: (number))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+			local bool_2 = 0
+			local bool_2_pos_1 = alloc(1)
+			if group == "music" then
+				bool_2 = bit32.bor(bool_2, 0b0000000000000001)
+			elseif group == "sfx" then
+				local _
+			else
+				error("Invalid enumerator")
+			end
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, percent)
+			buffer.writeu8(outgoing_buff, bool_2_pos_1, bool_2)
+		end,
+	},
 	RequestRobuxTransfer = {
 		fire = function(receiverUserId: (number), amount: (number))
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 7)
 			alloc(8)
 			buffer.writef64(outgoing_buff, outgoing_apos, receiverUserId)
 			alloc(2)
@@ -224,7 +320,7 @@ local returns = {
 	RequestRewardedAd = {
 		fire = function(placement: ("Default"))
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 5)
 			if placement == "Default" then
 			else
 				error("Invalid enumerator")
@@ -244,7 +340,7 @@ local returns = {
 	RequestPrivateServerSetting = {
 		fire = function(setting: ("maxPlayers"), value: (number))
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 8)
 			if setting == "maxPlayers" then
 			else
 				error("Invalid enumerator")
@@ -256,10 +352,36 @@ local returns = {
 	RequestPlusPrompt = {
 		fire = function(placement: ("menu"))
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 6)
 			if placement == "menu" then
 			else
 				error("Invalid enumerator")
+			end
+		end,
+	},
+	RedeemCode = {
+		fire = function(code: (string))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_1 = #code
+			assert(len_1 >= 1, "value is less than 1!")
+			assert(len_1 <= 32, "value is more than 32!")
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, len_1 - 1)
+			alloc(len_1)
+			buffer.writestring(outgoing_buff, outgoing_apos, code, len_1)
+		end,
+	},
+	Notify = {
+		setCallback = function(callback: (kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number)) -> ()): () -> ()
+			reliable_events[1] = callback
+			for _, value in reliable_event_queue[1] do
+				callback(unpack(value)				)
+
+			end
+			reliable_event_queue[1] = {}
+			return function()
+				reliable_events[1] = nil
 			end
 		end,
 	},
@@ -274,6 +396,25 @@ local returns = {
 			return function()
 				reliable_events[0] = nil
 			end
+		end,
+	},
+	ClaimSessionGift = {
+		fire = function(giftId: (string))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local len_2 = #giftId
+			assert(len_2 >= 1, "value is less than 1!")
+			assert(len_2 <= 24, "value is more than 24!")
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, len_2 - 1)
+			alloc(len_2)
+			buffer.writestring(outgoing_buff, outgoing_apos, giftId, len_2)
+		end,
+	},
+	ClaimDailyReward = {
+		fire = function()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
 		end,
 	},
 }

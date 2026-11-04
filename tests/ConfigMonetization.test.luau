@@ -9,6 +9,18 @@ local function baseConfig(): Config.GameConfig
         autosaveIntervalSeconds = 30,
         purchaseLedgerSize = 50,
         saveConfirmTimeoutSeconds = 30,
+        codes = Config.default.codes,
+        timeRewards = Config.default.timeRewards,
+        notifications = Config.default.notifications,
+        sound = {
+            sfx = {
+                { name = "reward", assetId = 1, volume = 1 },
+                { name = "click", assetId = 2, volume = 1 },
+            },
+            music = { { name = "lobby", assetId = 3, volume = 1 } },
+            defaultVolumes = Config.default.sound.defaultVolumes,
+            fadeSeconds = Config.default.sound.fadeSeconds,
+        },
         gamePasses = { { name = "VIP", id = 1 } },
         developerProducts = {
             { name = "Coins", id = 2, grant = { kind = "coins", amount = 100 } },
@@ -43,7 +55,11 @@ return function(suite: harness.Harness)
             Config.default.robuxTransfers ~= nil and Config.default.robuxTransfers.enabled,
             "transfers off"
         )
-        harness.equal(#Config.validate(Config.default), 2, "still only the two unset ids")
+        harness.equal(
+            #Config.validate(Config.default),
+            5,
+            "two unset ids plus three unset sound ids"
+        )
     end)
 
     suite:test(

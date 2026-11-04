@@ -29,5 +29,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0022](0022-game-systems-modules.md) | Game systems as config-driven feature modules behind ports |
 | [0023](0023-own-game-analytics-in-ci.md) | Own-game analytics through Open Cloud in CI, private artifact output |
 | [0024](0024-plus-prompt-robux-transfers-and-runtime-prices.md) | Roblox Plus sign-up prompt, Robux transfers and prices read at runtime |
+| [0025](0025-engagement-modules.md) | Engagement modules: promo codes, time rewards, notifications, sound (implements 0022) |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).

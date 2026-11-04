@@ -20,6 +20,9 @@ local function clone(data: PlayerData.PlayerData): PlayerData.PlayerData
         coins = data.coins,
         purchaseIds = table.clone(data.purchaseIds),
         sessionCount = data.sessionCount,
+        redeemedCodes = table.clone(data.redeemedCodes),
+        timeRewards = table.clone(data.timeRewards),
+        settings = table.clone(data.settings),
     }
 end
 

@@ -166,6 +166,48 @@ sequenceDiagram
 
 Keep the schema enum of product names equal to `Config.default.developerProducts`. The handler also checks the names against Config, so a product missing from the schema is unreachable, not unsafe.
 
+## Engagement modules
+
+Codes, time rewards, notifications and sound (ADR 0025, implementing ADR 0022). Pure logic in `src/shared/features/`, one port each, engine code only in `src/server/adapters/` (`RemoteNotifier`, `RemoteSoundPush`) and `src/client/presenters/` (`SetCoreToastRenderer`, `SoundEnginePresenter`). `Main.server` and `Main.client` are the only places that wire them.
+
+```mermaid
+classDiagram
+    class Config {
+        +codes
+        +timeRewards
+        +notifications
+        +sound
+        +validate() problems
+    }
+    class Codes { <<port>> +redeem(userId, text) }
+    class TimeRewards { <<port>> +claimDaily(userId) +claimSession(userId, giftId) }
+    class Notifier { <<port>> +notify(userId, kind, amount) }
+    class SoundSettings { <<port>> +setVolume(userId, group, percent) }
+    class ToastRenderer { <<port>> +show(toast) +hide(id) }
+    class SoundEngine { <<port>> +start(assetId, gain, looped) }
+    class ProductGrants
+    class PlayerData
+    Codes <|.. CodesService
+    TimeRewards <|.. TimeRewardsService
+    SoundSettings <|.. SoundSettingsService
+    Notifier <|.. RemoteNotifier
+    ToastRenderer <|.. SetCoreToastRenderer
+    SoundEngine <|.. SoundEnginePresenter
+    CodesService --> ProductGrants
+    TimeRewardsService --> ProductGrants
+    ProductGrants --> PlayerData
+    CodesService --> Config
+    TimeRewardsService --> Config
+    ToastController --> ToastRenderer
+    SoundManager --> SoundEngine
+    CodeRequests --> Codes
+    CodeRequests --> Notifier
+```
+
+Remotes (all in `net/schema.zap` and `PerfBudget`): client to server `RedeemCode`, `ClaimDailyReward`, `ClaimSessionGift`, `SetVolume` (intent only, each behind a `RateLimiter` and `Validation`); server to client `Notify`, `SoundSettings` (no client-callable handler). Player data v4 adds `redeemedCodes`, `timeRewards` and `settings` (migration `v3ToV4`).
+
+How to add a code, a reward, a toast or a sound: README, "Engagement modules". What is forbidden: same section. Two lists must change together when a toast kind is added: `NotificationKind` in `net/schema.zap` and `NotificationsConfig.REQUIRED_KINDS`.
+
 ## Monetization surfaces
 
 Five revenue modules sit on top of the receipt flow, each one a pure feature behind one port with an engine adapter (ADR 0022 on the `docs/game-systems-adr` branch, PR #22, and [ADR 0024](adr/0024-plus-prompt-robux-transfers-and-runtime-prices.md)). `Main.server` is the only place an adapter is chosen, so a paid pack becomes a second adapter of the same port and callers do not change.

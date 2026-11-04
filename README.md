@@ -73,6 +73,28 @@ Why this split: anything that needs only values lives in `shared` so Lune can te
 4. For a remote: validate every argument with `shared/net/Validation` and gate it with a `RateLimiter` (ADR 0012).
 5. `stylua .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `pwsh scripts/coverage.ps1`, then open a PR (CI runs the same). Several agents at once: read `docs/multi-agent.md`.
 
+## Engagement modules (codes, time rewards, toasts, sound)
+
+[ADR 0025](docs/adr/0025-engagement-modules.md), implementing ADR 0022. Each is a pure folder under `src/shared/features/` behind one port in `src/shared/ports/`, and every value lives in `Config.default` (`Config.validate` reports each problem).
+
+| Module | Folder | Port | Config key |
+|---|---|---|---|
+| Promo codes | `features/codes` | `Codes` | `codes` |
+| Time rewards | `features/timerewards` | `TimeRewards` | `timeRewards` |
+| Notifications | `features/notifications` | `Notifier` (server), `ToastRenderer` (client) | `notifications` |
+| Sound | `features/sound` | `SoundSettings` (server), `SoundEngine` (client) | `sound` |
+
+How to add things (all in `src/shared/Config.luau`, then `lune run scripts/test`):
+
+- **A code**: append to `codes.entries` `{ code = "SPRING", reward = { kind = "coins", amount = 100 }, expiresAt = <unix seconds>, maxRedemptions = 1 }`. Matching is case-insensitive; `expiresAt` and `maxRedemptions` (uses per player, default 1) are optional.
+- **A daily or session reward**: add a row to `timeRewards.daily` (`day` must be 1..N in order; the streak cycles) or to `timeRewards.sessionGifts` (`id`, `afterMinutes`, `reward`).
+- **A toast**: add a key to `notifications.kinds` with `text` (`{amount}` is replaced), `style`, `durationSeconds` and an optional `sound`. A kind the server sends must also be in `NotificationKind` in `net/schema.zap` and in `NotificationsConfig.REQUIRED_KINDS`; then `pwsh scripts/generate-remotes.ps1`.
+- **A sound**: add `{ name, assetId, volume }` to `sound.sfx` or `sound.music`. `assetId` stays `nil` with `TODO(victor): set id` until the asset is real; `validate` reports it.
+
+Client wiring: the Studio-built UI calls `net.RedeemCode.fire(text)`, `net.ClaimDailyReward.fire()`, `net.ClaimSessionGift.fire(giftId)` and `net.SetVolume.fire(group, percent)`. Answers come back as `Notify` toasts and `SoundSettings` volumes. The shipped toast renderer is a `SetCore` debug fallback; replace it with a presenter that implements `ToastRenderer` using `UIScale`, safe areas and 44 pt touch targets (`~/.claude/rules/luau.md`, "UI y dispositivos").
+
+Forbidden here: a code, reward, text, duration, volume or asset id written in a script instead of `Config`; a client-supplied amount, time or reward (remotes carry intent only); the client clock for any reward; `ProfileStore` or DataStore calls outside `ProfileRepository`; engine services in `features/`; granting a reward without `ProductGrants`.
+
 ## Start a new game from this template
 
 Preferred: `pwsh scripts/new-game.ps1 -Slug <kebab-case-slug> [-VaultPath <vault>] [-DryRun]`. It validates the slug, runs `gh repo create vruizz22/<slug> --private --template vruizz22/roblox-game-template`, clones into `D:\Victor\Repositorios

@@ -6,6 +6,11 @@
     `Config.validate` reports every missing id so a misconfigured game fails loudly.
 ]]
 
+local CodesConfig = require("./features/codes/CodesConfig")
+local NotificationsConfig = require("./features/notifications/NotificationsConfig")
+local SoundConfig = require("./features/sound/SoundConfig")
+local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
+
 export type ProductConfig = {
     name: string,
     id: number?,
@@ -100,6 +105,11 @@ export type GameConfig = {
     perfProbeEnabled: boolean?,
     gamePasses: { ProductConfig },
     developerProducts: { DeveloperProductConfig },
+    -- Engagement modules (ADR 0025). Every value lives here; validate reports each problem.
+    codes: CodesConfig.CodesConfig,
+    timeRewards: TimeRewardsConfig.TimeRewardsConfig,
+    notifications: NotificationsConfig.NotificationsConfig,
+    sound: SoundConfig.SoundConfig,
     -- Monetization surfaces (ADR 0022). Optional so a game can omit what it does not sell.
     subscriptions: { SubscriptionConfig }?,
     -- Seconds between live re-reads of subscription status (covers Store tab purchases).
@@ -128,6 +138,88 @@ Config.default = {
     },
     developerProducts = {
         { name = "Coins100", id = nil, grant = { kind = "coins", amount = 100 } }, -- TODO(victor): set id
+    },
+    -- Engagement modules. Add a code, a reward, a toast or a sound HERE (see docs/architecture.md).
+    codes = {
+        maxCodeLength = 32,
+        attemptCooldownSeconds = 1,
+        failureThreshold = 5,
+        entries = {}, -- { code = "WELCOME", reward = { kind = "coins", amount = 100 }, expiresAt = nil }
+    },
+    timeRewards = {
+        graceHours = 6,
+        daily = {
+            { day = 1, reward = { kind = "coins", amount = 50 } },
+            { day = 2, reward = { kind = "coins", amount = 75 } },
+            { day = 3, reward = { kind = "coins", amount = 100 } },
+        },
+        sessionGifts = {
+            { id = "gift5", afterMinutes = 5, reward = { kind = "coins", amount = 25 } },
+            { id = "gift15", afterMinutes = 15, reward = { kind = "coins", amount = 60 } },
+        },
+    },
+    notifications = {
+        maxQueue = 8,
+        maxVisible = 3,
+        dedupeSeconds = 2,
+        maxWaitSeconds = 20,
+        kinds = {
+            code_redeemed = {
+                text = "Code redeemed: +{amount} coins",
+                style = "success",
+                durationSeconds = 4,
+                sound = "reward",
+            },
+            code_invalid = { text = "That code is not valid", style = "error", durationSeconds = 3 },
+            code_expired = {
+                text = "That code has expired",
+                style = "warning",
+                durationSeconds = 3,
+            },
+            code_used = {
+                text = "You already used that code",
+                style = "warning",
+                durationSeconds = 3,
+            },
+            code_cooldown = {
+                text = "Wait a moment before trying another code",
+                style = "info",
+                durationSeconds = 3,
+            },
+            daily_claimed = {
+                text = "Daily reward: +{amount} coins",
+                style = "success",
+                durationSeconds = 4,
+                sound = "reward",
+            },
+            daily_unavailable = {
+                text = "Your daily reward is not ready",
+                style = "info",
+                durationSeconds = 3,
+            },
+            session_gift_claimed = {
+                text = "Gift: +{amount} coins",
+                style = "success",
+                durationSeconds = 4,
+                sound = "reward",
+            },
+            session_gift_unavailable = {
+                text = "That gift is not ready yet",
+                style = "info",
+                durationSeconds = 3,
+            },
+        },
+    },
+    sound = {
+        sfx = {
+            { name = "reward", assetId = nil, volume = 0.8 }, -- TODO(victor): set id
+            { name = "click", assetId = nil, volume = 0.6 }, -- TODO(victor): set id
+        },
+        music = {
+            { name = "lobby", assetId = nil, volume = 0.5 }, -- TODO(victor): set id
+        },
+        defaultVolumes = { music = 60, sfx = 80 },
+        fadeSeconds = 1.5,
     },
     -- Add { name, subscriptionId, benefits } entries once subscriptions exist in Creator Hub.
     subscriptions = {},
@@ -363,6 +455,19 @@ function Config.validate(config: GameConfig): { string }
                 `developer product "{product.name}" grants an invalid amount (must be a positive integer)`
             )
         end
+    end
+    for _, problem in CodesConfig.validate(config.codes) do
+        table.insert(problems, problem)
+    end
+    for _, problem in TimeRewardsConfig.validate(config.timeRewards) do
+        table.insert(problems, problem)
+    end
+    for _, problem in SoundConfig.validate(config.sound) do
+        table.insert(problems, problem)
+    end
+    local sfxNames = SoundConfig.sfxNames(config.sound)
+    for _, problem in NotificationsConfig.validate(config.notifications, sfxNames) do
+        table.insert(problems, problem)
     end
     validateSubscriptions(config, problems)
     validateRewardedAds(config, problems)

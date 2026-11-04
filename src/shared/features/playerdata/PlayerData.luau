@@ -14,11 +14,17 @@ export type PlayerData = {
     purchaseIds: { string },
     -- Sessions started by this player, counting the current one (see PlayerDataService.join).
     sessionCount: number,
+    -- Promo codes redeemed: normalized code -> times redeemed (features/codes).
+    redeemedCodes: { [string]: number },
+    -- Daily streak: last claimed UTC day (0 = never) and the streak length (features/timerewards).
+    timeRewards: { lastDay: number, streak: number },
+    -- Volume choices in percent; nil means "use Config.sound.defaultVolumes" (features/sound).
+    settings: { musicVolume: number?, sfxVolume: number? },
 }
 
 local PlayerDataModule = {}
 
-PlayerDataModule.CURRENT_SCHEMA_VERSION = 3
+PlayerDataModule.CURRENT_SCHEMA_VERSION = 4
 
 --- A fresh table on every call (profiles mutate their data in place).
 function PlayerDataModule.default(): PlayerData
@@ -27,6 +33,9 @@ function PlayerDataModule.default(): PlayerData
         coins = 0,
         purchaseIds = {},
         sessionCount = 0,
+        redeemedCodes = {},
+        timeRewards = { lastDay = 0, streak = 0 },
+        settings = {},
     }
 end
 

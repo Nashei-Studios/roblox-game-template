@@ -35,6 +35,15 @@ local RewardedAds = require(Shared.features.rewardedads.RewardedAds)
 local RobuxTransfers = require(Shared.features.robuxtransfers.RobuxTransfers)
 local net = require(Shared.net.generated.server)
 
+local NetTypes = require(Shared.net.generated.types)
+-- Engagement modules (ADR 0025): requires.
+local CodeRequests = require(Shared.features.codes.CodeRequests)
+local Codes = require(Shared.features.codes.Codes)
+local SoundRequests = require(Shared.features.sound.SoundRequests)
+local SoundSettings = require(Shared.features.sound.SoundSettings)
+local TimeRewardRequests = require(Shared.features.timerewards.TimeRewardRequests)
+local TimeRewards = require(Shared.features.timerewards.TimeRewards)
+
 local ProfileStore = require(ServerScriptService.Vendor.ProfileStore)
 
 local AnalyticsServiceSink = require(script.Parent.adapters.AnalyticsServiceSink)
@@ -42,6 +51,8 @@ local ConfigServiceFlags = require(script.Parent.adapters.ConfigServiceFlags)
 local MonetizationService = require(script.Parent.features.monetization.MonetizationService)
 local PerfProbe = require(script.Parent.dev.PerfProbe)
 local ProfileStoreRepository = require(script.Parent.adapters.ProfileStoreRepository)
+local RemoteNotifier = require(script.Parent.adapters.RemoteNotifier)
+local RemoteSoundPush = require(script.Parent.adapters.RemoteSoundPush)
 local RobloxAdService = require(script.Parent.adapters.RobloxAdService)
 local RobloxMarketplaceSubscriptions =
     require(script.Parent.adapters.RobloxMarketplaceSubscriptions)
@@ -595,6 +606,111 @@ net.RequestRobuxTransfer.setCallback(function(player: Player, receiverUserId, am
     end
 end)
 
+-- Engagement modules (ADR 0025): promo codes, time rewards, notifications, sound.
+-- Rewards use the existing ProductGrants path; every remote is rate-limited from PerfBudget.
+local engagementPlayers = {
+    GetPlayerByUserId = function(_self: unknown, userId: number): Player?
+        return Players:GetPlayerByUserId(userId)
+    end,
+}
+local function engagementLimiterFor(remote: string): RateLimiter.RateLimiter
+    local limit = PerfBudget.clientRemotes[remote]
+    return RateLimiter.new({
+        capacity = limit.capacity,
+        refillPerSecond = limit.refillPerSecond,
+        clock = os.clock,
+    })
+end
+local engagementLimiters: { [string]: RateLimiter.RateLimiter } = {
+    RedeemCode = engagementLimiterFor("RedeemCode"),
+    ClaimDailyReward = engagementLimiterFor("ClaimDailyReward"),
+    ClaimSessionGift = engagementLimiterFor("ClaimSessionGift"),
+    SetVolume = engagementLimiterFor("SetVolume"),
+}
+local notificationKinds: { [string]: boolean } = {}
+for kind in Config.default.notifications.kinds do
+    notificationKinds[kind] = true
+end
+local notifier = RemoteNotifier.new({
+    players = engagementPlayers,
+    kinds = notificationKinds,
+    fire = function(player: Player, kind: string, amount: number)
+        net.Notify.fire(player, kind :: NetTypes.NotificationKind, amount)
+    end,
+})
+local soundPush = RemoteSoundPush.new({
+    players = engagementPlayers,
+    fire = function(player: Player, music: number, sfx: number)
+        net.SoundSettings.fire(player, music, sfx)
+    end,
+})
+local codes = Codes.new({
+    config = Config.default.codes,
+    now = os.time,
+    profileFor = function(userId: number): PlayerData.PlayerData?
+        return playerData:get(tostring(userId))
+    end,
+    grants = ProductGrants.new(Codes.grantTable(Config.default.codes)),
+})
+local timeRewards = TimeRewards.new({
+    config = Config.default.timeRewards,
+    now = os.time,
+    profileFor = function(userId: number): PlayerData.PlayerData?
+        return playerData:get(tostring(userId))
+    end,
+    grants = ProductGrants.new(TimeRewards.grantTable(Config.default.timeRewards)),
+})
+local soundSettings = SoundSettings.new({
+    config = Config.default.sound,
+    profileFor = function(userId: number): PlayerData.PlayerData?
+        return playerData:get(tostring(userId))
+    end,
+    push = function(userId: number, volumes: { music: number, sfx: number })
+        soundPush:push(userId, volumes)
+    end,
+})
+local giftIds: { string } = {}
+for _, gift in Config.default.timeRewards.sessionGifts do
+    table.insert(giftIds, gift.id)
+end
+local codeRequests = CodeRequests.new({
+    codes = codes,
+    notifier = notifier,
+    allow = function(userId: number): boolean
+        return engagementLimiters.RedeemCode:allow(userId)
+    end,
+    maxCodeLength = Config.default.codes.maxCodeLength,
+})
+local timeRewardRequests = TimeRewardRequests.new({
+    timeRewards = timeRewards,
+    notifier = notifier,
+    allowDaily = function(userId: number): boolean
+        return engagementLimiters.ClaimDailyReward:allow(userId)
+    end,
+    allowSession = function(userId: number): boolean
+        return engagementLimiters.ClaimSessionGift:allow(userId)
+    end,
+    giftIds = giftIds,
+})
+local soundRequests = SoundRequests.new({
+    settings = soundSettings,
+    allow = function(userId: number): boolean
+        return engagementLimiters.SetVolume:allow(userId)
+    end,
+})
+net.RedeemCode.setCallback(function(player: Player, code)
+    codeRequests:handle(player.UserId, code)
+end)
+net.ClaimDailyReward.setCallback(function(player: Player)
+    timeRewardRequests:handleDaily(player.UserId)
+end)
+net.ClaimSessionGift.setCallback(function(player: Player, giftId)
+    timeRewardRequests:handleSession(player.UserId, giftId)
+end)
+net.SetVolume.setCallback(function(player: Player, group, percent)
+    soundRequests:handle(player.UserId, group, percent)
+end)
+
 -- Engine events.
 Players.PlayerAdded:Connect(function(player: Player)
     local joined = playerData:join(tostring(player.UserId))
@@ -609,6 +725,8 @@ Players.PlayerAdded:Connect(function(player: Player)
         return
     end
     tracker:track("session_start", player.UserId, joined.value.sessionIndex)
+    timeRewards:startSession(player.UserId)
+    soundSettings:sendCurrent(player.UserId)
     -- Benefits come from the live status, never from the saved profile.
     logReconcileFailures(player.UserId, reconciler:reconcile(player.UserId))
 end)
@@ -616,6 +734,11 @@ end)
 Players.PlayerRemoving:Connect(function(player: Player)
     playerData:leave(tostring(player.UserId))
     purchaseLimiter:forget(player.UserId)
+    codes:forget(player.UserId)
+    timeRewards:forget(player.UserId)
+    for _, limiter in engagementLimiters do
+        limiter:forget(player.UserId)
+    end
     for _, limiter in remoteLimiters do
         limiter:forget(player.UserId)
     end
