@@ -133,7 +133,19 @@ if not RunService:IsRunning() then
 	local noop = function() end
 	return table.freeze({
 		sendEvents = noop,
+		RequestRobuxTransfer = table.freeze({
+			fire = noop
+		}),
+		RequestRewardedAd = table.freeze({
+			fire = noop
+		}),
 		RequestPurchase = table.freeze({
+			fire = noop
+		}),
+		RequestPrivateServerSetting = table.freeze({
+			fire = noop
+		}),
+		RequestPlusPrompt = table.freeze({
 			fire = noop
 		}),
 		CoinsChanged = table.freeze({
@@ -146,6 +158,9 @@ local remotes = ReplicatedStorage:WaitForChild("ZAP")
 local reliable = remotes:WaitForChild("ZAP_RELIABLE")
 assert(reliable:IsA("RemoteEvent"), "Expected ZAP_RELIABLE to be a RemoteEvent")
 
+export type AdPlacementName = ("Default")
+export type PlusPlacementName = ("menu")
+export type PrivateServerSettingName = ("maxPlayers")
 export type ProductName = ("Coins100")
 
 local function sendEvents()
@@ -196,11 +211,53 @@ table.freeze(polling_queues_unreliable)
 
 local returns = {
 	sendEvents = sendEvents,
+	RequestRobuxTransfer = {
+		fire = function(receiverUserId: (number), amount: (number))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			alloc(8)
+			buffer.writef64(outgoing_buff, outgoing_apos, receiverUserId)
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, amount)
+		end,
+	},
+	RequestRewardedAd = {
+		fire = function(placement: ("Default"))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			if placement == "Default" then
+			else
+				error("Invalid enumerator")
+			end
+		end,
+	},
 	RequestPurchase = {
 		fire = function(product: ("Coins100"))
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 0)
 			if product == "Coins100" then
+			else
+				error("Invalid enumerator")
+			end
+		end,
+	},
+	RequestPrivateServerSetting = {
+		fire = function(setting: ("maxPlayers"), value: (number))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 4)
+			if setting == "maxPlayers" then
+			else
+				error("Invalid enumerator")
+			end
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, value)
+		end,
+	},
+	RequestPlusPrompt = {
+		fire = function(placement: ("menu"))
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			if placement == "menu" then
 			else
 				error("Invalid enumerator")
 			end
