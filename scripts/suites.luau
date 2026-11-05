@@ -152,6 +152,23 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         name = "RemoteNotifier and RemoteSoundPush (adapters)",
         register = require("../tests/adapters/RemoteNotifier.test"),
     },
+    { name = "Ui", register = require("../tests/features/ui/Ui.test") },
+    {
+        name = "Leaderboards",
+        register = require("../tests/features/leaderboards/Leaderboards.test"),
+    },
+    {
+        name = "CommunityReward",
+        register = require("../tests/features/community-reward/CommunityReward.test"),
+    },
+    {
+        name = "Leaderboards and Group adapters",
+        register = require("../tests/adapters/Leaderboards.adapters.test"),
+    },
+    {
+        name = "RobloxGroupMembership (adapter)",
+        register = require("../tests/adapters/RobloxGroupMembership.test"),
+    },
     {
         name = "StudioLockPolicy (hook)",
         register = require("../tests/claude/StudioLockPolicy.test"),

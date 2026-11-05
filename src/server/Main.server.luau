@@ -53,6 +53,15 @@ local PerfProbe = require(script.Parent.dev.PerfProbe)
 local ProfileStoreRepository = require(script.Parent.adapters.ProfileStoreRepository)
 local RemoteNotifier = require(script.Parent.adapters.RemoteNotifier)
 local RemoteSoundPush = require(script.Parent.adapters.RemoteSoundPush)
+local CommunityReward = require(Shared.features["community-reward"].CommunityReward)
+local CommunityRewardRequests = require(Shared.features["community-reward"].CommunityRewardRequests)
+local BoardKey = require(Shared.features.leaderboards.BoardKey)
+local Leaderboards = require(Shared.features.leaderboards.Leaderboards)
+local LeaderboardsPort = require(Shared.ports.Leaderboards)
+local OrderedDataStoreBoards = require(script.Parent.adapters.OrderedDataStoreBoards)
+local ReplicatedBoardPublisher = require(script.Parent.adapters.ReplicatedBoardPublisher)
+local RobloxGroupMembership = require(script.Parent.adapters.RobloxGroupMembership)
+local RobloxLeaderstats = require(script.Parent.adapters.RobloxLeaderstats)
 local RobloxAdService = require(script.Parent.adapters.RobloxAdService)
 local RobloxMarketplaceSubscriptions =
     require(script.Parent.adapters.RobloxMarketplaceSubscriptions)
@@ -626,6 +635,7 @@ local engagementLimiters: { [string]: RateLimiter.RateLimiter } = {
     ClaimDailyReward = engagementLimiterFor("ClaimDailyReward"),
     ClaimSessionGift = engagementLimiterFor("ClaimSessionGift"),
     SetVolume = engagementLimiterFor("SetVolume"),
+    RequestCommunityCheck = engagementLimiterFor("RequestCommunityCheck"),
 }
 local notificationKinds: { [string]: boolean } = {}
 for kind in Config.default.notifications.kinds do
@@ -711,6 +721,149 @@ net.SetVolume.setCallback(function(player: Player, group, percent)
     soundRequests:handle(player.UserId, group, percent)
 end)
 
+-- Community join reward (issue #36). Off by default; membership is checked here, never trusted
+-- from the client, and the grant is kept only after the profile is confirmed saved.
+local communityConfig = Config.default.communityReward
+local communityRequests: CommunityRewardRequests.CommunityRewardRequests? = nil
+local communityReward: CommunityReward.CommunityReward? = nil
+if communityConfig ~= nil and communityConfig.enabled then
+    local reward = CommunityReward.new({
+        config = communityConfig,
+        checker = RobloxGroupMembership.new({
+            players = engagementPlayers,
+            isInGroup = function(player: Player, communityId: number): boolean
+                return player:IsInGroupAsync(communityId)
+            end,
+        }),
+        now = os.clock,
+        profileFor = function(userId: number): PlayerData.PlayerData?
+            return playerData:get(tostring(userId))
+        end,
+        grants = ProductGrants.new(CommunityReward.grantTable(communityConfig)),
+        confirmSaved = function(userId: number): boolean
+            local confirmed = playerData:confirmSaved(
+                tostring(userId),
+                function(saved: PlayerData.PlayerData): boolean
+                    return saved.communityRewardClaimed
+                end,
+                Config.default.saveConfirmTimeoutSeconds
+            )
+            return confirmed.ok
+        end,
+    })
+    communityReward = reward
+    communityRequests = CommunityRewardRequests.new({
+        reward = reward,
+        notifier = notifier,
+        allow = function(userId: number): boolean
+            return engagementLimiters.RequestCommunityCheck:allow(userId)
+        end,
+    })
+end
+net.RequestCommunityCheck.setCallback(function(player: Player)
+    local requests = communityRequests
+    if requests == nil then
+        return
+    end
+    local handled = requests:handle(player.UserId)
+    if not handled.ok and handled.reason ~= "rate_limited" then
+        warn(`RequestCommunityCheck from {player.UserId} not granted: {handled.reason}`)
+    end
+end)
+
+local function ensureFolder(parent: Instance, name: string): Folder
+    local existing = parent:FindFirstChild(name)
+    if existing ~= nil and existing:IsA("Folder") then
+        return existing
+    end
+    local created = Instance.new("Folder")
+    created.Name = name
+    created.Parent = parent
+    return created
+end
+local function ensureInt(parent: Instance, name: string): IntValue
+    local existing = parent:FindFirstChild(name)
+    if existing ~= nil and existing:IsA("IntValue") then
+        return existing
+    end
+    local created = Instance.new("IntValue")
+    created.Name = name
+    created.Parent = parent
+    return created
+end
+local function ensureString(parent: Instance, name: string): StringValue
+    local existing = parent:FindFirstChild(name)
+    if existing ~= nil and existing:IsA("StringValue") then
+        return existing
+    end
+    local created = Instance.new("StringValue")
+    created.Name = name
+    created.Parent = parent
+    return created
+end
+
+-- Leaderboards (issue #25): leaderstats and global boards. Server to client only, through
+-- replicated instances; scores are written on a schedule and never read per join.
+local leaderboardsConfig = Config.default.leaderboards
+local leaderboards: LeaderboardsPort.Leaderboards? = nil
+if leaderboardsConfig ~= nil then
+    local boardsFolder = Instance.new("Folder")
+    boardsFolder.Name = "Boards"
+    boardsFolder.Parent = ReplicatedStorage
+    local dataStores = game:GetService("DataStoreService")
+    local board = Leaderboards.new({
+        config = leaderboardsConfig,
+        store = OrderedDataStoreBoards.new({
+            openStore = function(name: string): OrderedDataStoreBoards.StoreHandle
+                local ordered = dataStores:GetOrderedDataStore(name)
+                return {
+                    write = function(key: string, value: number)
+                        ordered:SetAsync(key, value)
+                    end,
+                    read = function(size: number): { { key: string, value: number } }
+                        local page = ordered:GetSortedAsync(false, size):GetCurrentPage()
+                        local rows: { { key: string, value: number } } = {}
+                        for _, item in page do
+                            local value: unknown = item.value
+                            if type(value) == "number" then
+                                table.insert(rows, { key = item.key, value = value })
+                            end
+                        end
+                        return rows
+                    end,
+                }
+            end,
+        }),
+        view = RobloxLeaderstats.new({
+            players = engagementPlayers,
+            setValue = function(player: Player, stat: string, value: number)
+                local folder = ensureFolder(player, "leaderstats")
+                ensureInt(folder, stat).Value = value
+            end,
+        }),
+        publisher = ReplicatedBoardPublisher.new({
+            write = function(boardId: string, text: string)
+                ensureString(boardsFolder, boardId).Value = text
+            end,
+            encode = BoardKey.encode,
+        }),
+        now = os.time,
+        profileFor = function(userId: number)
+            return playerData:get(tostring(userId))
+        end,
+        onError = function(message: string)
+            warn(`leaderboards: {message}`)
+        end,
+    })
+    leaderboards = board
+    task.spawn(function()
+        while true do
+            board:tick()
+            task.wait(1)
+        end
+    end)
+end
+
 -- Engine events.
 Players.PlayerAdded:Connect(function(player: Player)
     local joined = playerData:join(tostring(player.UserId))
@@ -727,11 +880,30 @@ Players.PlayerAdded:Connect(function(player: Player)
     tracker:track("session_start", player.UserId, joined.value.sessionIndex)
     timeRewards:startSession(player.UserId)
     soundSettings:sendCurrent(player.UserId)
+    if leaderboards ~= nil then
+        leaderboards:track(player.UserId)
+    end
+    local requests = communityRequests
+    if requests ~= nil then
+        task.spawn(function()
+            local checked = requests:onJoin(player.UserId)
+            if not checked.ok then
+                warn(`Community check on join for {player.UserId} not granted: {checked.reason}`)
+            end
+        end)
+    end
     -- Benefits come from the live status, never from the saved profile.
     logReconcileFailures(player.UserId, reconciler:reconcile(player.UserId))
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
+    -- Final score flush first: it reads the profile that `leave` releases.
+    if leaderboards ~= nil then
+        leaderboards:forget(player.UserId)
+    end
+    if communityReward ~= nil then
+        communityReward:forget(player.UserId)
+    end
     playerData:leave(tostring(player.UserId))
     purchaseLimiter:forget(player.UserId)
     codes:forget(player.UserId)

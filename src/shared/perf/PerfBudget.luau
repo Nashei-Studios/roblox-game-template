@@ -61,16 +61,18 @@ local PerfBudget: Budget = {
         -- The limit Main.server.luau builds the RequestPurchase RateLimiter from.
         RequestPurchase = { capacity = 3, refillPerSecond = 0.5 },
         -- Engagement modules (ADR 0025); Main.server builds each limiter from these numbers.
-        RedeemCode = { capacity = 3, refillPerSecond = 0.5 }, -- chosen, not sourced
+        RedeemCode = { capacity = 2, refillPerSecond = 0.2 }, -- chosen, not sourced
         ClaimDailyReward = { capacity = 2, refillPerSecond = 0.2 }, -- chosen, not sourced
-        ClaimSessionGift = { capacity = 3, refillPerSecond = 0.5 }, -- chosen, not sourced
-        SetVolume = { capacity = 4, refillPerSecond = 2 }, -- chosen, not sourced
+        ClaimSessionGift = { capacity = 2, refillPerSecond = 0.1 }, -- chosen, not sourced
+        SetVolume = { capacity = 2, refillPerSecond = 1 }, -- chosen, not sourced: the client sends on slider release
         -- The monetization surfaces (ADR 0022). Chosen, not sourced: a player presses a button,
         -- so a small burst and a slow refill are far above any real use.
         RequestRewardedAd = { capacity = 2, refillPerSecond = 0.1 }, -- chosen, not sourced
         RequestPlusPrompt = { capacity = 2, refillPerSecond = 0.05 }, -- chosen, not sourced
         RequestRobuxTransfer = { capacity = 2, refillPerSecond = 0.2 }, -- chosen, not sourced
-        RequestPrivateServerSetting = { capacity = 3, refillPerSecond = 0.5 }, -- chosen, not sourced
+        RequestPrivateServerSetting = { capacity = 2, refillPerSecond = 0.2 }, -- chosen, not sourced
+        -- Community join reward (issue #36): a "Check again" button; the service adds its own cooldown.
+        RequestCommunityCheck = { capacity = 1, refillPerSecond = 0.05 }, -- chosen, not sourced
     },
     serverRemotes = {
         -- At most a couple of grants per second reach one player.

@@ -154,6 +154,9 @@ if not RunService:IsRunning() then
 		RequestPlusPrompt = table.freeze({
 			fire = noop
 		}),
+		RequestCommunityCheck = table.freeze({
+			fire = noop
+		}),
 		RedeemCode = table.freeze({
 			fire = noop
 		}),
@@ -177,7 +180,7 @@ local reliable = remotes:WaitForChild("ZAP_RELIABLE")
 assert(reliable:IsA("RemoteEvent"), "Expected ZAP_RELIABLE to be a RemoteEvent")
 
 export type AdPlacementName = ("Default")
-export type NotificationKind = ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable")
+export type NotificationKind = ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member")
 export type PlusPlacementName = ("menu")
 export type PrivateServerSettingName = ("maxPlayers")
 export type ProductName = ("Coins100")
@@ -245,6 +248,10 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 				value = "session_gift_claimed"
 			elseif bit32.btest(bool_1, 0b0000000100000000) then
 				value = "session_gift_unavailable"
+			elseif bit32.btest(bool_1, 0b0000001000000000) then
+				value = "community_reward_claimed"
+			elseif bit32.btest(bool_1, 0b0000010000000000) then
+				value = "community_not_member"
 			end
 			value2 = buffer.readu32(incoming_buff, read(4))
 			if reliable_events[1] then
@@ -359,6 +366,12 @@ local returns = {
 			end
 		end,
 	},
+	RequestCommunityCheck = {
+		fire = function()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 9)
+		end,
+	},
 	RedeemCode = {
 		fire = function(code: (string))
 			alloc(1)
@@ -373,7 +386,7 @@ local returns = {
 		end,
 	},
 	Notify = {
-		setCallback = function(callback: (kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable"), amount: (number)) -> ()): () -> ()
+		setCallback = function(callback: (kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number)) -> ()): () -> ()
 			reliable_events[1] = callback
 			for _, value in reliable_event_queue[1] do
 				callback(unpack(value)				)

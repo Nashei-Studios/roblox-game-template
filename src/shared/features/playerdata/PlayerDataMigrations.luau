@@ -46,19 +46,33 @@ export type PlayerDataV4 = {
     settings: { musicVolume: number?, sfxVolume: number? },
 }
 
+export type PlayerDataV5 = {
+    schemaVersion: number,
+    coins: number,
+    purchaseIds: { string },
+    sessionCount: number,
+    redeemedCodes: { [string]: number },
+    timeRewards: { lastDay: number, streak: number },
+    settings: { musicVolume: number?, sfxVolume: number? },
+    -- True once the one-time community join reward was granted (features/community-reward).
+    communityRewardClaimed: boolean,
+}
+
 export type MigrationError =
     { kind: "future_version", found: number, supported: number }
     | { kind: "invalid_data", reason: string }
 
 export type MigrationResult =
-    { ok: true, value: PlayerDataV4 }
+    { ok: true, value: PlayerDataV5 }
     | { ok: false, error: MigrationError }
+
+type V4Result = { ok: true, value: PlayerDataV4 } | { ok: false, error: MigrationError }
 
 type StepResult = { ok: true, value: unknown } | { ok: false, error: MigrationError }
 
 local PlayerDataMigrations = {}
 
-PlayerDataMigrations.CURRENT_SCHEMA_VERSION = 4
+PlayerDataMigrations.CURRENT_SCHEMA_VERSION = 5
 
 local function invalid(reason: string): { ok: false, error: MigrationError }
     return { ok = false, error = { kind = "invalid_data", reason = reason } }
@@ -210,7 +224,7 @@ local function readPositiveRecord(raw: unknown, label: string): ({ [string]: num
     return clone, nil
 end
 
-local function readV4(raw: unknown): MigrationResult
+local function readV4(raw: unknown): V4Result
     local v3 = readV3(raw)
     if not v3.ok then
         return v3
@@ -247,6 +261,44 @@ local function readV4(raw: unknown): MigrationResult
                 sfxVolume = settingsRecord.sfxVolume,
             },
         },
+    }
+end
+
+local function readV5(raw: unknown): MigrationResult
+    local v4 = readV4(raw)
+    if not v4.ok then
+        return v4
+    end
+    local claimed = (raw :: { [string]: unknown }).communityRewardClaimed
+    if type(claimed) ~= "boolean" then
+        return invalid("communityRewardClaimed must be a boolean")
+    end
+    return {
+        ok = true,
+        value = {
+            schemaVersion = 5,
+            coins = v4.value.coins,
+            purchaseIds = v4.value.purchaseIds,
+            sessionCount = v4.value.sessionCount,
+            redeemedCodes = v4.value.redeemedCodes,
+            timeRewards = v4.value.timeRewards,
+            settings = v4.value.settings,
+            communityRewardClaimed = claimed,
+        },
+    }
+end
+
+-- v4 had no community reward: nobody has claimed it yet.
+local function v4ToV5(v4: PlayerDataV4): PlayerDataV5
+    return {
+        schemaVersion = 5,
+        coins = v4.coins,
+        purchaseIds = v4.purchaseIds,
+        sessionCount = v4.sessionCount,
+        redeemedCodes = v4.redeemedCodes,
+        timeRewards = v4.timeRewards,
+        settings = v4.settings,
+        communityRewardClaimed = false,
     }
 end
 
@@ -313,6 +365,13 @@ local steps: { [number]: (raw: unknown) -> StepResult } = {
         end
         return { ok = true, value = v3ToV4(v3.value) }
     end,
+    [4] = function(raw: unknown): StepResult
+        local v4 = readV4(raw)
+        if not v4.ok then
+            return v4
+        end
+        return { ok = true, value = v4ToV5(v4.value) }
+    end,
 }
 
 --- Upgrades `raw` to the current schema. Never mutates `raw`; never throws.
@@ -333,9 +392,9 @@ function PlayerDataMigrations.migrate(raw: unknown): MigrationResult
         }
     end
     if version.value == current then
-        local validated = readV4(raw)
+        local validated = readV5(raw)
         if validated.ok then
-            return { ok = true, value = raw :: PlayerDataV4 } -- unchanged: same table
+            return { ok = true, value = raw :: PlayerDataV5 } -- unchanged: same table
         end
         return validated
     end
@@ -352,7 +411,7 @@ function PlayerDataMigrations.migrate(raw: unknown): MigrationResult
         end
         working = stepped.value
     end
-    return readV4(working)
+    return readV5(working)
 end
 
 --- Like `migrate`, but writes the result into `raw` (the live ProfileStore table, whose
@@ -370,7 +429,7 @@ function PlayerDataMigrations.migrateInPlace(raw: unknown): MigrationResult
             live[key] = value
         end
         local result: unknown = live
-        return { ok = true, value = result :: PlayerDataV4 }
+        return { ok = true, value = result :: PlayerDataV5 }
     end
     return migrated
 end

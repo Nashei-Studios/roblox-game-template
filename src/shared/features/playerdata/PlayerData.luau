@@ -20,11 +20,13 @@ export type PlayerData = {
     timeRewards: { lastDay: number, streak: number },
     -- Volume choices in percent; nil means "use Config.sound.defaultVolumes" (features/sound).
     settings: { musicVolume: number?, sfxVolume: number? },
+    -- True once the one-time community join reward was granted (features/community-reward).
+    communityRewardClaimed: boolean,
 }
 
 local PlayerDataModule = {}
 
-PlayerDataModule.CURRENT_SCHEMA_VERSION = 4
+PlayerDataModule.CURRENT_SCHEMA_VERSION = 5
 
 --- A fresh table on every call (profiles mutate their data in place).
 function PlayerDataModule.default(): PlayerData
@@ -36,6 +38,7 @@ function PlayerDataModule.default(): PlayerData
         redeemedCodes = {},
         timeRewards = { lastDay = 0, streak = 0 },
         settings = {},
+        communityRewardClaimed = false,
     }
 end
 

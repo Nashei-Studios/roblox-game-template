@@ -6,6 +6,7 @@ local v1Fixture = require("../../fixtures/playerdata/v1")
 local v2Fixture = require("../../fixtures/playerdata/v2")
 local v3Fixture = require("../../fixtures/playerdata/v3")
 local v4Fixture = require("../../fixtures/playerdata/v4")
+local v5Fixture = require("../../fixtures/playerdata/v5")
 
 local function errorKind(result: PlayerDataMigrations.MigrationResult): string
     if result.ok then
@@ -19,16 +20,16 @@ local function migrateRaw(raw: unknown): string
 end
 
 return function(suite: harness.Harness)
-    suite:test("current schema version is 4 and PlayerData agrees", function()
-        harness.equal(PlayerDataMigrations.CURRENT_SCHEMA_VERSION, 4, "migrations")
-        harness.equal(PlayerData.CURRENT_SCHEMA_VERSION, 4, "PlayerData")
+    suite:test("current schema version is 5 and PlayerData agrees", function()
+        harness.equal(PlayerDataMigrations.CURRENT_SCHEMA_VERSION, 5, "migrations")
+        harness.equal(PlayerData.CURRENT_SCHEMA_VERSION, 5, "PlayerData")
     end)
 
     suite:test("step v2 -> v3 turns the ledger map into a sorted list", function()
         local result = PlayerDataMigrations.migrate(v2Fixture)
         harness.isTrue(result.ok, "migrates")
         if result.ok then
-            harness.equal(result.value.schemaVersion, 4, "schemaVersion")
+            harness.equal(result.value.schemaVersion, 5, "schemaVersion")
             harness.equal(#result.value.purchaseIds, 2, "ledger size")
             harness.equal(result.value.purchaseIds[1], "receipt-a", "first")
             harness.equal(result.value.purchaseIds[2], "receipt-b", "second")
@@ -55,7 +56,7 @@ return function(suite: harness.Harness)
         local result = PlayerDataMigrations.migrate(v1Fixture)
         harness.isTrue(result.ok, "ok")
         if result.ok then
-            harness.equal(result.value.schemaVersion, 4, "schemaVersion")
+            harness.equal(result.value.schemaVersion, 5, "schemaVersion")
             harness.equal(result.value.sessionCount, 0, "sessionCount")
             harness.equal(result.value.coins, 120, "coins")
             harness.equal(#result.value.purchaseIds, 2, "ledger size")
@@ -66,7 +67,7 @@ return function(suite: harness.Harness)
         local result = PlayerDataMigrations.migrate(v3Fixture)
         harness.isTrue(result.ok, "ok")
         if result.ok then
-            harness.equal(result.value.schemaVersion, 4, "schemaVersion")
+            harness.equal(result.value.schemaVersion, 5, "schemaVersion")
             harness.equal(result.value.coins, 120, "coins kept")
             harness.equal(#result.value.purchaseIds, 2, "ledger kept")
             harness.isTrue(next(result.value.redeemedCodes) == nil, "no codes redeemed")
@@ -76,8 +77,28 @@ return function(suite: harness.Harness)
         end
     end)
 
-    suite:test("v4 keeps its engagement state when it passes through", function()
+    suite:test("step v4 -> v5 marks the community reward as not claimed", function()
         local result = PlayerDataMigrations.migrate(v4Fixture)
+        harness.isTrue(result.ok and result.value.communityRewardClaimed == false, "not claimed")
+        harness.isTrue(result.ok and result.value.coins == 120, "coins kept")
+    end)
+
+    suite:test("v5 with a non-boolean community flag is refused", function()
+        local data: { [string]: unknown } = {
+            schemaVersion = 5,
+            coins = 1,
+            purchaseIds = {},
+            sessionCount = 1,
+            redeemedCodes = {},
+            timeRewards = { lastDay = 0, streak = 0 },
+            settings = {},
+            communityRewardClaimed = "yes",
+        }
+        harness.equal(migrateRaw(data), "invalid_data", "flag not a boolean")
+    end)
+
+    suite:test("v5 keeps its engagement state when it passes through", function()
+        local result = PlayerDataMigrations.migrate(v5Fixture)
         harness.isTrue(result.ok and result.value.redeemedCodes.WELCOME == 1, "codes")
         harness.isTrue(result.ok and result.value.timeRewards.streak == 3, "streak")
         harness.isTrue(result.ok and result.value.settings.musicVolume == 40, "volume")
@@ -112,11 +133,11 @@ return function(suite: harness.Harness)
     end)
 
     suite:test("current version passes through unchanged (idempotent)", function()
-        local result = PlayerDataMigrations.migrate(v4Fixture)
+        local result = PlayerDataMigrations.migrate(v5Fixture)
         harness.isTrue(result.ok, "ok")
         if result.ok then
             harness.equal(result.value.sessionCount, 5, "sessionCount")
-            harness.isTrue((result.value :: unknown) == (v4Fixture :: unknown), "same table")
+            harness.isTrue((result.value :: unknown) == (v5Fixture :: unknown), "same table")
             local again = PlayerDataMigrations.migrate(result.value)
             harness.isTrue(again.ok and again.value.sessionCount == 5, "second pass")
         end
@@ -126,7 +147,7 @@ return function(suite: harness.Harness)
         local result = PlayerDataMigrations.migrate({ coins = 3, purchases = {} })
         harness.isTrue(result.ok, "ok")
         if result.ok then
-            harness.equal(result.value.schemaVersion, 4, "schemaVersion")
+            harness.equal(result.value.schemaVersion, 5, "schemaVersion")
             harness.equal(result.value.sessionCount, 0, "sessionCount")
             harness.equal(result.value.coins, 3, "coins")
         end
@@ -134,15 +155,15 @@ return function(suite: harness.Harness)
 
     suite:test("future versions are refused with a typed error, never downgraded", function()
         local result = PlayerDataMigrations.migrate({
-            schemaVersion = 5,
+            schemaVersion = 6,
             coins = 1,
             purchaseIds = {},
             sessionCount = 1,
         })
         harness.equal(errorKind(result), "future_version")
         if not result.ok and result.error.kind == "future_version" then
-            harness.equal(result.error.found, 5, "found")
-            harness.equal(result.error.supported, 4, "supported")
+            harness.equal(result.error.found, 6, "found")
+            harness.equal(result.error.supported, 5, "supported")
         end
     end)
 
@@ -222,7 +243,7 @@ return function(suite: harness.Harness)
         harness.isTrue(result.ok, "ok")
         if result.ok then
             harness.isTrue((result.value :: unknown) == (live :: unknown), "same table")
-            harness.equal(live.schemaVersion, 4, "live schemaVersion")
+            harness.equal(live.schemaVersion, 5, "live schemaVersion")
             harness.equal(live.sessionCount, 0, "live sessionCount")
             harness.equal(live.extra, "kept", "unknown field kept")
         end

@@ -138,6 +138,7 @@ return function(suite: harness.Harness)
             { name = "RequestPlusPrompt", from = "Client", payloadBytes = 1 },
             { name = "RequestRobuxTransfer", from = "Client", payloadBytes = 10 },
             { name = "RequestPrivateServerSetting", from = "Client", payloadBytes = 3 },
+            { name = "RequestCommunityCheck", from = "Client", payloadBytes = 0 },
         }, PerfBudget)
         harness.equal(#report.failures, 0)
     end)

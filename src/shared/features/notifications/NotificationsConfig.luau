@@ -41,6 +41,8 @@ NotificationsConfigModule.REQUIRED_KINDS = {
     "daily_unavailable",
     "session_gift_claimed",
     "session_gift_unavailable",
+    "community_reward_claimed",
+    "community_not_member",
 } :: { string }
 
 local STYLES: { [string]: boolean } = { info = true, success = true, warning = true, error = true }
