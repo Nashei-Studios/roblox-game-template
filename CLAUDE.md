@@ -45,6 +45,10 @@ Luau/Roblox rules: `~/.claude/rules/luau.md`. Structure, tests, CI: `arquitectur
 - `.claude/` (settings, `hooks/studio-lock`, `agents/luau-reviewer`) enforces the lock for Claude Code: Studio MCP tools and `rojo serve` are blocked (exit 2) unless `.studio.lock` names this worktree. Run `luau-reviewer` on the diff before a PR.
 - Never merge `.rbxl` files. Monetization and player-data changes need human approval.
 
+## Assets and skills
+- Third-party kits: `assets/kits.manifest.luau` (ADR 0027). Binaries stay in `D:/Victor/Roblox/kits`; copy into the git-ignored `assets/kits/<slug>` and use `"$path": "assets/kits/<slug>"`. Respect each kit's `license` and `ships`.
+- Roblox skills live globally in `~/.claude/skills` (roblox-*, make-map, make-model, make-anim, quality-score, roblox-characters, roblox-physics and others) and load by description; nothing is copied into this repo.
+
 ## Forbidden
 - Community MCP servers; only the Studio built-in MCP (`Roblox_Studio`), and only on a dev/throwaway place.
 - Secrets, API keys or tokens in the repo (Open Cloud keys go in GitHub secrets).
