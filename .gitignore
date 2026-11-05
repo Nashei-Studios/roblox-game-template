@@ -21,3 +21,4 @@ node_modules/
 
 # Studio lock (docs/multi-agent.md)
 .studio.lock
+assets/kits/

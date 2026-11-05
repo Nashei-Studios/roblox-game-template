@@ -31,5 +31,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0024](0024-plus-prompt-robux-transfers-and-runtime-prices.md) | Roblox Plus sign-up prompt, Robux transfers and prices read at runtime |
 | [0025](0025-engagement-modules.md) | Engagement modules: promo codes, time rewards, notifications, sound (implements 0022) |
 | [0026](0026-ui-kit-leaderboards-community-reward.md) | UI kit, leaderboards and community join reward (implements 0022) |
+| [0027](0027-kit-asset-manifest.md) | Kit asset manifest, binaries stay in the kit library (refines 0006) |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).

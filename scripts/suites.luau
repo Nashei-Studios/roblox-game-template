@@ -11,6 +11,7 @@ local harness = require("../tests/harness")
 local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     { name = "Config", register = require("../tests/Config.test") },
     { name = "Result", register = require("../tests/Result.test") },
+    { name = "KitManifest", register = require("../tests/assets/KitManifest.test") },
     { name = "Analytics", register = require("../tests/features/analytics/Analytics.test") },
     {
         name = "AnalyticsTracker",
