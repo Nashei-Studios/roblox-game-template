@@ -33,5 +33,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0026](0026-ui-kit-leaderboards-community-reward.md) | UI kit, leaderboards and community join reward (implements 0022) |
 | [0027](0027-kit-asset-manifest.md) | Kit asset manifest, binaries stay in the kit library (refines 0006) |
 | [0028](0028-external-building-blocks-and-wally.md) | External building blocks first, Wally for registry packages, vendoring for the rest (supersedes 0003) |
+| [0029](0029-develop-and-main-with-one-ci-run-per-change.md) | develop and main, one CI run per change |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
