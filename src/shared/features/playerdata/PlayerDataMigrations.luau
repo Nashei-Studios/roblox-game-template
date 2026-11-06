@@ -234,16 +234,30 @@ local function readV4(raw: unknown): V4Result
     if codes == nil then
         return invalid(codesProblem or "redeemedCodes is invalid")
     end
-    local time, timeProblem = readPositiveRecord(record.timeRewards, "timeRewards")
-    if time == nil or time.lastDay == nil or time.streak == nil then
-        return invalid(timeProblem or "timeRewards needs lastDay and streak")
+    -- Only the keys this version knows: a record reconciled with newer template keys (or written by
+    -- a newer server) keeps them, and they are ignored here, never validated as old-shape values.
+    local timeRecord = asRecord(record.timeRewards)
+    if timeRecord == nil then
+        return invalid("timeRewards must be a table")
     end
-    local settingsRecord, settingsProblem = readPositiveRecord(record.settings, "settings")
+    local time: { lastDay: number, streak: number } = { lastDay = 0, streak = 0 }
+    for _, field in { "lastDay", "streak" } do
+        local value = timeRecord[field]
+        if not isFiniteNumber(value) or (value :: number) < 0 then
+            return invalid("timeRewards needs non-negative numbers for lastDay and streak")
+        end
+        (time :: { [string]: number })[field] = value :: number
+    end
+    local settingsRecord = asRecord(record.settings)
     if settingsRecord == nil then
-        return invalid(settingsProblem or "settings is invalid")
+        return invalid("settings must be a table")
     end
-    for _, volume in settingsRecord do
-        if volume > 100 then
+    for _, field in { "musicVolume", "sfxVolume" } do
+        local volume = settingsRecord[field]
+        if volume ~= nil and (not isFiniteNumber(volume) or (volume :: number) < 0) then
+            return invalid("settings volumes must be non-negative numbers")
+        end
+        if volume ~= nil and (volume :: number) > 100 then
             return invalid("settings volumes must be percentages from 0 to 100")
         end
     end
@@ -257,8 +271,8 @@ local function readV4(raw: unknown): V4Result
             redeemedCodes = codes,
             timeRewards = { lastDay = time.lastDay, streak = time.streak },
             settings = {
-                musicVolume = settingsRecord.musicVolume,
-                sfxVolume = settingsRecord.sfxVolume,
+                musicVolume = settingsRecord.musicVolume :: number?,
+                sfxVolume = settingsRecord.sfxVolume :: number?,
             },
         },
     }
