@@ -77,6 +77,15 @@ return function(suite: harness.Harness)
         harness.equal(EnumOrder.normalize(input), expected)
     end)
 
+    suite:test("struct aliases sort with the enums and keep their body together", function()
+        local struct = 'export type Ore = ({\n\t["id"]: (string),\n})'
+        local expected = table.concat({ CROP, struct, PASS, PRODUCT, "return nil" }, "\n")
+        local first = table.concat({ PRODUCT, struct, CROP, PASS, "return nil" }, "\n")
+        local second = table.concat({ PASS, CROP, PRODUCT, struct, "return nil" }, "\n")
+        harness.equal(EnumOrder.normalize(first), expected, "first order")
+        harness.equal(EnumOrder.normalize(second), expected, "second order")
+    end)
+
     suite:test("text without enum aliases is returned unchanged", function()
         local input = "--!strict\nreturn nil\n"
         harness.equal(EnumOrder.normalize(input), input)
