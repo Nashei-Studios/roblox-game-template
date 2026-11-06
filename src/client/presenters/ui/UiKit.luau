@@ -92,7 +92,10 @@ function UiKitModule.new(deps: Deps): UiKit
 
     local function rescale()
         local size = deps.camera.ViewportSize
-        uiScale.Scale = Layout.scaleFor(size.X, size.Y, theme)
+        local scale = Layout.scaleFor(size.X, size.Y, theme)
+        uiScale.Scale = scale
+        -- UIScale also scales the root itself: this keeps it exactly the size of the screen.
+        root.Size = UDim2.fromScale(1 / scale, 1 / scale)
     end
     rescale()
     deps.camera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
