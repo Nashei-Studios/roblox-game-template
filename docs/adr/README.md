@@ -7,7 +7,7 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 |---|---|
 | [0001](0001-strict-luau-not-roblox-ts.md) | Strict Luau, not roblox-ts |
 | [0002](0002-rojo-partially-managed.md) | Rojo partially managed |
-| [0003](0003-no-package-manager-yet.md) | No package manager until the first dependency |
+| [0003](0003-no-package-manager-yet.md) | No package manager until the first dependency (superseded by 0028) |
 | [0004](0004-studio-mcp-builtin-only.md) | Built-in Studio MCP only (registration superseded in part by 0018) |
 | [0005](0005-tests-lune-then-luau-execution.md) | Lune for pure logic, Luau Execution API later |
 | [0006](0006-assets-by-reference.md) | Assets by reference, no Git LFS |
@@ -32,5 +32,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0025](0025-engagement-modules.md) | Engagement modules: promo codes, time rewards, notifications, sound (implements 0022) |
 | [0026](0026-ui-kit-leaderboards-community-reward.md) | UI kit, leaderboards and community join reward (implements 0022) |
 | [0027](0027-kit-asset-manifest.md) | Kit asset manifest, binaries stay in the kit library (refines 0006) |
+| [0028](0028-external-building-blocks-and-wally.md) | External building blocks first, Wally for registry packages, vendoring for the rest (supersedes 0003) |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
