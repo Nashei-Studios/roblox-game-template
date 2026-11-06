@@ -74,7 +74,16 @@ local SAVE_RETRY_SECONDS = 5
 
 local ProfileStoreRepository = {}
 
-function ProfileStoreRepository.new<T>(store: StoreLike<T>, runtime: Runtime): ProfileRepository<T>
+-- Runs on the raw saved record, right after the session starts and BEFORE Reconcile. Production:
+-- PlayerDataMigrations.migrateInPlace. Reconcile fills nested keys from the newest template, which
+-- an old record's reader must never see; a failure is left for the service to report and release.
+export type Prepare<T> = (data: T) -> { ok: boolean }
+
+function ProfileStoreRepository.new<T>(
+    store: StoreLike<T>,
+    runtime: Runtime,
+    prepare: Prepare<T>?
+): ProfileRepository<T>
     local repository: ProfileRepository<T> = {
         load = function(
             _self: ProfileRepository<T>,
@@ -84,8 +93,12 @@ function ProfileStoreRepository.new<T>(store: StoreLike<T>, runtime: Runtime): P
             if profile == nil then
                 return { ok = false, error = "session_unavailable" }
             end
-            -- Fill fields added to the template since this profile was last saved.
-            profile:Reconcile()
+            local prepared = if prepare ~= nil then prepare(profile.Data).ok else true
+            -- Fill fields added to the template since this profile was last saved. Skipped when
+            -- the record could not be prepared: do not mix template keys into data we cannot read.
+            if prepared then
+                profile:Reconcile()
+            end
             -- Shared by every confirmSaved wait on this profile: ProfileStore does not coalesce
             -- Save() calls (each one is an UpdateAsync), so concurrent receipts must share them.
             local lastSaveRequestedAt = -math.huge

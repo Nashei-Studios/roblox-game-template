@@ -93,7 +93,12 @@ local repository = ProfileStoreRepository.new(store, {
     wait = function(seconds: number)
         task.wait(seconds)
     end,
-})
+}, function(data: PlayerData.PlayerData): { ok: boolean }
+    -- Migrate the raw record before Reconcile fills template keys into it.
+    local migrated = PlayerDataMigrations.migrateInPlace(data)
+    local ok: boolean = migrated.ok
+    return { ok = ok }
+end)
 local flags = Flags.new(
     ConfigServiceFlags.new({
         configService = {
