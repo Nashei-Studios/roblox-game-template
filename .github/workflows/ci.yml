@@ -1,12 +1,14 @@
 name: ci
 
-# One trigger per change: PRs run the gate, main re-runs it once after the squash merge.
+# One trigger per change (ADR 0029): every PR into develop or main runs the gate once and nothing
+# re-runs it on push. The release PR develop -> main tests the combination of merged features.
 # Docs-only changes and draft PRs cost no minutes. Jobs are merged because every job is
 # billed as at least one minute and these steps take seconds (rules: github-integrado, minutos-actions).
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore: &ignore
+    branches: [develop, main]
+    paths-ignore:
       - "**.md"
       - "docs/**"
       - ".github/ISSUE_TEMPLATE/**"
@@ -14,9 +16,6 @@ on:
       - ".github/dependabot.yml"
       - ".github/release.yml"
       - ".vscode/**"
-  push:
-    branches: [main]
-    paths-ignore: *ignore
 
 concurrency:
   group: ci-${{ github.head_ref || github.ref }}

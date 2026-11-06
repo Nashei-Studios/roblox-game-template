@@ -27,7 +27,8 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - Errors are values (typed Result), never silently swallowed.
 - Ids (game passes, products) stay `nil` with `-- TODO(victor): set id` until real. Never invent ids.
 - New decision -> new ADR in `docs/adr/`, never edit an accepted one.
-- Conventional Commits in English (`feat|fix|docs|style|refactor|perf|test|chore`); CI checks the PR title. Everything enters `main` by PR with `Closes #N`, "how it was verified" and the ai-log link (`.github/pull_request_template.md`). No AI attribution in commits or PRs.
+- Conventional Commits in English (`feat|fix|docs|style|refactor|perf|test|chore`); CI checks the PR title. Everything enters by PR with `Closes #N`, "how it was verified" and the ai-log link (`.github/pull_request_template.md`). No AI attribution in commits or PRs.
+- Branches (ADR 0029): features and fixes go to `develop` by squash PR, and the branch is deleted. PRs into `develop` do not close issues, so close them by hand after the merge. A release is a PR `develop -> main` titled `chore(release): vX.Y.Z - <title>`, squash-merged (one commit per release on `main`), then an annotated tag, `gh release create --generate-notes` and a back-merge `git merge -s ours origin/main` into `develop`. `main` stays the default branch.
 - Coverage gate 75 % (ADR 0017). Work leaves the machine at the first commit: push after every commit. Session with technical decisions -> `docs/ai-logs/YYYY-MM-DD-topic.md` (skill `ai-log`).
 - CI is budget: one trigger per change, no CI on drafts or docs-only changes, `timeout-minutes` on every job, `concurrency` cancel-in-progress. Reproduce failures locally before pushing. Details: skill `github-integrado`.
 
