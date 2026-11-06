@@ -26,3 +26,5 @@ No package manager. The first real dependency triggers a new ADR that picks one.
 ## What would change this decision
 
 A dependency is needed that is not worth rewriting (for example a UI or networking library).
+
+- Superseded by [0028](0028-external-building-blocks-and-wally.md) on 2026-11-06.
