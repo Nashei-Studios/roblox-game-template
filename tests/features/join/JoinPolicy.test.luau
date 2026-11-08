@@ -1,42 +1,6 @@
 --!strict
-local InMemoryProfileRepository =
-    require("../../../src/shared/features/playerdata/InMemoryProfileRepository")
-local JoinPolicy = require("../../../src/shared/features/playerdata/JoinPolicy")
-local PlayerData = require("../../../src/shared/features/playerdata/PlayerData")
-local PlayerDataMigrations = require("../../../src/shared/features/playerdata/PlayerDataMigrations")
-local PlayerDataService = require("../../../src/shared/features/playerdata/PlayerDataService")
+local JoinPolicy = require("../../../src/shared/features/join/JoinPolicy")
 local harness = require("../../harness")
-
-local function clone(data: PlayerData.PlayerData): PlayerData.PlayerData
-    return {
-        schemaVersion = data.schemaVersion,
-        coins = data.coins,
-        purchaseIds = table.clone(data.purchaseIds),
-        sessionCount = data.sessionCount,
-        redeemedCodes = table.clone(data.redeemedCodes),
-        timeRewards = table.clone(data.timeRewards),
-        settings = table.clone(data.settings),
-        communityRewardClaimed = data.communityRewardClaimed,
-        mining = table.clone(data.mining),
-    }
-end
-
-local function newService()
-    local repository = InMemoryProfileRepository.new({
-        default = PlayerData.default,
-        clone = clone,
-    })
-    local service = PlayerDataService.new({
-        repository = repository,
-        onSessionLost = function(_key: string) end,
-        migrate = PlayerDataMigrations.migrateInPlace,
-        startSession = function(data: PlayerData.PlayerData): number
-            data.sessionCount += 1
-            return data.sessionCount
-        end,
-    })
-    return service
-end
 
 return function(suite: harness.Harness)
     suite:test("the wait says stop when the player has left", function()
@@ -120,48 +84,6 @@ return function(suite: harness.Harness)
         harness.equal(JoinPolicy.kickMessage(true), JoinPolicy.KICK_TIMED_OUT, "timeout")
         harness.equal(JoinPolicy.kickMessage(false), JoinPolicy.KICK_FAILED, "failure")
         harness.isTrue(JoinPolicy.KICK_TIMED_OUT ~= JoinPolicy.KICK_FAILED, "distinct")
-    end)
-
-    suite:test("a join cancelled by the callback fails without taking the session", function()
-        local service = newService()
-        local joined = service:join("1", {
-            cancel = function(): boolean
-                return true
-            end,
-        })
-        harness.isFalse(joined.ok, "cancelled")
-        harness.isTrue(service:get("1") == nil, "no profile held")
-        harness.isTrue(service:join("1").ok, "the key is free for a later join")
-    end)
-
-    suite:test("the service hands the cancel callback to the repository", function()
-        local seen = 0
-        local repository = InMemoryProfileRepository.new({
-            default = PlayerData.default,
-            clone = clone,
-        })
-        local wrapped = {
-            load = function(_self: unknown, key: string, options: PlayerDataService.LoadOptions?)
-                if options ~= nil and options.cancel ~= nil then
-                    seen += 1
-                end
-                return repository:load(key, options)
-            end,
-        }
-        local service = PlayerDataService.new({
-            repository = wrapped,
-            onSessionLost = function(_key: string) end,
-            migrate = PlayerDataMigrations.migrateInPlace,
-            startSession = function(data: PlayerData.PlayerData): number
-                return data.sessionCount
-            end,
-        })
-        service:join("5", {
-            cancel = function(): boolean
-                return false
-            end,
-        })
-        harness.equal(seen, 1, "cancel reached the repository")
     end)
 
     suite:test("guard returns true and calls nothing when the join works", function()

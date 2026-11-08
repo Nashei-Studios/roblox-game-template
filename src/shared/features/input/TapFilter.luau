@@ -1,12 +1,12 @@
 --!strict
 --[[
-    Pure filter of "tap anywhere" (ADR 0038): which inputs count as a hand swing. Takes the name of
+    Pure filter of "tap anywhere" (ADR 0033): which inputs count as a tap. Takes the name of
     the UserInputType so it loads under Lune without the engine enum.
     - A press starts a tap only when no GUI took it, it is a touch or the left mouse button, and no
-      menu is open (nothing mines under a menu).
-    - A touch counts when it ENDS: short and without travel, so a camera drag never mines. The
-      mouse swings on press because it can be held.
-    Keyboard and gamepad swing through their own bound action, guarded by `allowsAction`.
+      menu is open (nothing is triggered under a menu).
+    - A touch counts when it ENDS: short and without travel, so a camera drag never taps. The
+      mouse taps on press because it can be held.
+    Keyboard and gamepad act through their own bound action, guarded by `allowsAction`.
 ]]
 
 local TapFilter = {}
@@ -21,7 +21,7 @@ local TAP_INPUTS: { [string]: boolean } = {
     MouseButton1 = true,
 }
 
---- True when a press may start a swing or a tap (GUI did not take it, no menu is open).
+--- True when a press may start a tap (GUI did not take it, no menu is open).
 function TapFilter.beginsTap(
     userInputTypeName: string,
     gameProcessed: boolean,
@@ -35,7 +35,7 @@ function TapFilter.completesTap(travelPixels: number, durationSeconds: number): 
     return travelPixels < TapFilter.MAX_TRAVEL and durationSeconds < TapFilter.MAX_DURATION
 end
 
---- The keyboard and gamepad bind swings unless a menu is open.
+--- The keyboard and gamepad bind actions unless a menu is open.
 function TapFilter.allowsAction(menuOpen: boolean): boolean
     return not menuOpen
 end

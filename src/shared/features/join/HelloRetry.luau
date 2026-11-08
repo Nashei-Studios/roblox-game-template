@@ -1,6 +1,6 @@
 --!strict
 --[[
-    When the client asks for MineHello again (ADR 0032). Pure: loads under Lune.
+    When the client asks for the hello again (ADR 0032). Pure: loads under Lune.
 
     The hello can be missed (it was sent before the client's listener existed, or the first request
     came before the profile did). The client asks at 2 s, 5 s and 10 s after it started, then slowly

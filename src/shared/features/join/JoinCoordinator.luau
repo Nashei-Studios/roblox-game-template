@@ -15,7 +15,7 @@
       credits for them any more (the race between a slow join and the profile release).
 ]]
 
-local ProvisionalCredit = require("../mining/ProvisionalCredit")
+local ProvisionalCredit = require("./ProvisionalCredit")
 
 export type Deps = {
     clock: () -> number,

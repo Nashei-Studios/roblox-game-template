@@ -171,6 +171,46 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/adapters/RobloxGroupMembership.test"),
     },
     {
+        name = "JoinCoordinator",
+        register = require("../tests/features/join/JoinCoordinator.test"),
+    },
+    {
+        name = "JoinPolicy",
+        register = require("../tests/features/join/JoinPolicy.test"),
+    },
+    {
+        name = "FriendBoost",
+        register = require("../tests/features/social/FriendBoost.test"),
+    },
+    {
+        name = "FriendBoostLabel",
+        register = require("../tests/features/social/FriendBoostLabel.test"),
+    },
+    {
+        name = "Invite (reward, referral, ledger)",
+        register = require("../tests/features/social/Invite.test"),
+    },
+    {
+        name = "SocialRuntime",
+        register = require("../tests/features/social/SocialRuntime.test"),
+    },
+    {
+        name = "JoinProbe",
+        register = require("../tests/features/joinprobe/JoinProbe.test"),
+    },
+    {
+        name = "JoinProbeSink",
+        register = require("../tests/features/joinprobe/JoinProbeSink.test"),
+    },
+    {
+        name = "ProfileStoreName",
+        register = require("../tests/features/playerdata/ProfileStoreName.test"),
+    },
+    {
+        name = "TapInput (router and filter)",
+        register = require("../tests/features/input/TapInput.test"),
+    },
+    {
         name = "StudioLockPolicy (hook)",
         register = require("../tests/claude/StudioLockPolicy.test"),
     },

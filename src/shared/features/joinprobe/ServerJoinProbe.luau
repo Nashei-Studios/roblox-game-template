@@ -1,22 +1,22 @@
 --!strict
 --[[
-    Server join timing collector (ficha F1a). Pure: loads under Lune. It only records elapsed
+    Server join timing collector. Pure: loads under Lune. It only records elapsed
     seconds between named stages of one join and builds the report fields; it never changes the
     join. The clock is injected (os.clock in Main.server). Switch it off with the `joinProbe` flag.
 
-    Stages, all measured from PlayerAdded: `join` (playerData:join returned), `passes` (owned
-    passes read), `hello` (MineHello sent), `post` (the rest of the join work done).
+    Stages, all measured from PlayerAdded: `join` (playerData:join returned), `entitlements` (owned
+    entitlements read), `hello` (the hello sent), `post` (the rest of the join work done).
 ]]
 
 local ProbeLine = require("./ProbeLine")
 
-export type Stage = "join" | "passes" | "hello" | "post"
+export type Stage = "join" | "entitlements" | "hello" | "post"
 
 export type PriorStatus = "found" | "none" | "error" | "pending"
 
 export type PriorHolder = { placeId: number, jobId: string }
 
--- Extra metadata of the prior holder's record (F1a.1); both parts optional.
+-- Extra metadata of the prior holder's record; both parts optional.
 export type PriorExtra = { ageS: number?, forceLoadPending: boolean? }
 
 export type Deps = {
@@ -28,7 +28,7 @@ export type Deps = {
 export type Report = {
     fields: ProbeLine.Fields,
     line: string,
-    -- Seconds from PlayerAdded to MineHello (or to the failed join), for the analytics value.
+    -- Seconds from PlayerAdded to the hello (or to the failed join), for the analytics value.
     headlineSeconds: number,
 }
 
@@ -48,9 +48,9 @@ export type ServerJoinProbe = {
     -- The join sequence number the first time a client report arrives, nil afterwards (1 per session).
     acceptClient: (self: ServerJoinProbe, userId: number) -> number?,
     forget: (self: ServerJoinProbe, userId: number) -> (),
-    -- Seconds the boot warm-up read took (ficha F1b); added to every server line. -1 = not measured.
+    -- Seconds the boot warm-up read took; added to every server line. -1 = not measured.
     setBootWarm: (self: ServerJoinProbe, seconds: number) -> (),
-    -- The provisional tap batch of this join (ficha F1b): what the client claimed and what was
+    -- The provisional tap batch of this join: what the client claimed and what was
     -- credited. Reported as its own line because it arrives after the join line.
     provisional: (
         self: ServerJoinProbe,
@@ -75,7 +75,7 @@ type Entry = {
 
 local STAGE_FIELDS: { [string]: string } = {
     join = "joinS",
-    passes = "passesS",
+    entitlements = "entitlementsS",
     hello = "helloS",
     post = "postS",
 }

@@ -1,12 +1,12 @@
 --!strict
 --[[
-    Pure routing of "tap anywhere" (ADR 0038): every input that may mine goes through here, so one
-    place decides whether it swings. Engine side only translates events into these calls.
+    Pure routing of "tap anywhere" (ADR 0033): every input that may act goes through here, so one
+    place decides whether it taps. Engine side only translates events into these calls.
 
     Input blockers: `addBlocker(fn)` registers a function that answers "is input blocked right now?"
-    (a modal menu is open, the welcome-back card is up). While any blocker answers true NO input
-    calls `tap`: mouse, touch, the keyboard bind and the gamepad trigger all consult it. The menus
-    of F5 register themselves here.
+    calls `tap`: mouse, touch, the keyboard bind and the gamepad trigger all consult it. A menu
+    registers itself here.
+    A menu registers itself here.
 ]]
 
 local TapFilter = require("./TapFilter")
@@ -14,7 +14,7 @@ local TapFilter = require("./TapFilter")
 export type Point = { x: number, y: number }
 
 export type Deps = {
-    -- One hand swing. `position` is where it landed (InputObject.Position space), nil for the
+    -- One tap. `position` is where it landed (InputObject.Position space), nil for the
     -- keyboard and the gamepad.
     tap: (position: Point?) -> (),
     -- The mouse (or a bound key) is held down or let go.

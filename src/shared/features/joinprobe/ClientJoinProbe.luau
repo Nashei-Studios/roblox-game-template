@@ -1,6 +1,6 @@
 --!strict
 --[[
-    Client join timing collector (ficha F1a). Pure: loads under Lune; the clock is injected
+    Client join timing collector. Pure: loads under Lune; the clock is injected
     (os.clock in Main.client). Marks are seconds since the client script started, -1 when never
     reached. Also validates the report on the server, because a remote carries data a client
     controls (ADR 0012): every field is bounded.
@@ -11,10 +11,10 @@ local Validation = require("../../net/Validation")
 
 export type Mark =
     "uiKit"
-    | "mining"
+    | "content"
     | "hello"
-    | "swing"
-    | "swingAck"
+    | "action"
+    | "actionAck"
     | "root"
     | "intro"
     | "firstTap"
@@ -31,18 +31,18 @@ export type Report = {
     -- time() when Main.client started: seconds the game had been running.
     gameTime: number,
     uiKit: number,
-    mining: number,
+    content: number,
     hello: number,
-    swing: number,
-    swingAck: number,
+    action: number,
+    actionAck: number,
     root: number,
     -- Seconds with Player.GameplayPaused == true in the first PAUSE_WINDOW_SECONDS.
     paused: number,
     -- Seconds from the loader start to the intro overlay showing (ReplicatedFirst), -1 if never.
     intro: number,
-    -- Seconds to the first tap, before or after the hello (ficha F1b), -1 if never.
+    -- Seconds to the first tap, before or after the hello, -1 if never.
     firstTap: number,
-    -- Taps made before MineHello arrived (the provisional batch).
+    -- Taps made before the hello arrived (the provisional batch).
     provisional: number,
     waits: { WaitEntry },
 }
@@ -70,12 +70,12 @@ ClientJoinProbeModule.NOT_REACHED = -1
 ClientJoinProbeModule.PAUSE_WINDOW_SECONDS = 60
 ClientJoinProbeModule.MAX_WAITS = 8
 ClientJoinProbeModule.WAIT_NAMES = {
-    "rig",
-    "rigFace",
-    "rigBoards",
-    "boardValue",
-    "mainBoards",
-    "miningRoot",
+    "world",
+    "character",
+    "ui",
+    "stats",
+    "hud",
+    "contentRoot",
 }
 
 local MAX_SECONDS = 3600
@@ -150,10 +150,10 @@ function ClientJoinProbeModule.new(deps: Deps): ClientJoinProbe
                 boot = startedAt,
                 gameTime = gameTimeAtStart,
                 uiKit = markOr("uiKit"),
-                mining = markOr("mining"),
+                content = markOr("content"),
                 hello = markOr("hello"),
-                swing = markOr("swing"),
-                swingAck = markOr("swingAck"),
+                action = markOr("action"),
+                actionAck = markOr("actionAck"),
                 root = markOr("root"),
                 paused = paused,
                 intro = markOr("intro"),
@@ -180,10 +180,10 @@ function ClientJoinProbeModule.fields(report: Report, extra: ProbeLine.Fields?):
         boot = report.boot,
         gameTime = report.gameTime,
         uiKitS = report.uiKit,
-        miningS = report.mining,
+        contentS = report.content,
         helloS = report.hello,
-        swingS = report.swing,
-        swingAckS = report.swingAck,
+        actionS = report.action,
+        actionAckS = report.actionAck,
         rootS = report.root,
         pausedS = report.paused,
         introShownS = report.intro,
@@ -219,10 +219,10 @@ local RANGES: { { name: string, min: number, max: number } } = {
     { name = "boot", min = 0, max = MAX_CLOCK },
     { name = "gameTime", min = 0, max = MAX_CLOCK },
     { name = "uiKit", min = -1, max = MAX_SECONDS },
-    { name = "mining", min = -1, max = MAX_SECONDS },
+    { name = "content", min = -1, max = MAX_SECONDS },
     { name = "hello", min = -1, max = MAX_SECONDS },
-    { name = "swing", min = -1, max = MAX_SECONDS },
-    { name = "swingAck", min = -1, max = MAX_SECONDS },
+    { name = "action", min = -1, max = MAX_SECONDS },
+    { name = "actionAck", min = -1, max = MAX_SECONDS },
     { name = "root", min = -1, max = MAX_SECONDS },
     { name = "paused", min = 0, max = ClientJoinProbeModule.PAUSE_WINDOW_SECONDS + 1 },
     { name = "intro", min = -1, max = MAX_SECONDS },
@@ -278,10 +278,10 @@ function ClientJoinProbeModule.validate(raw: unknown): ValidationResult
             boot = numbers.boot,
             gameTime = numbers.gameTime,
             uiKit = numbers.uiKit,
-            mining = numbers.mining,
+            content = numbers.content,
             hello = numbers.hello,
-            swing = numbers.swing,
-            swingAck = numbers.swingAck,
+            action = numbers.action,
+            actionAck = numbers.actionAck,
             root = numbers.root,
             paused = numbers.paused,
             intro = numbers.intro,

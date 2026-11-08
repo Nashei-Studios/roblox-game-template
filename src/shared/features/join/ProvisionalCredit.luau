@@ -2,7 +2,7 @@
 --[[
     Server side of the provisional tap batch (ADR 0032). Pure: loads under Lune.
 
-    A client may tap before MineHello arrives (the world is playable from frame 1). Those taps come
+    A client may act before the hello arrives (the world is playable from frame 1). Those actions come
     as ONE batch per session, and the rules keep a modified client from cashing in a long wait:
 
     - Both ends of the window are SERVER clock readings: PlayerAdded (`begin`) and the moment the
@@ -11,7 +11,7 @@
     - A batch before the hello, or after the batch was consumed, is refused.
     - claim / commit: `claim` reserves the batch, the caller credits it, `commit` consumes it with
       what was really credited; `abort` gives the reservation back if crediting failed outright.
-    The credit itself goes through the usual swing path, reach check included.
+    The credit itself goes through the usual action path, any validation included.
 ]]
 
 export type Deps = {

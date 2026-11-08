@@ -16,16 +16,16 @@ local function validWire(): { [string]: unknown }
         boot = 12,
         gameTime = 9,
         uiKit = 1.5,
-        mining = 2,
+        content = 2,
         hello = 4,
-        swing = -1,
-        swingAck = -1,
+        action = -1,
+        actionAck = -1,
         root = 0.5,
         paused = 3,
         intro = 0.4,
         firstTap = 1.2,
         provisional = 5,
-        waits = { { name = "rig", seconds = 0.2, timedOut = false } },
+        waits = { { name = "world", seconds = 0.2, timedOut = false } },
     }
 end
 
@@ -48,7 +48,7 @@ return function(suite: harness.Harness)
         probe:mark(7, "join")
         probe:setJoinResult(7, true, false)
         state.now += 1
-        probe:mark(7, "passes")
+        probe:mark(7, "entitlements")
         probe:mark(7, "hello")
         state.now += 0.5
         probe:mark(7, "post")
@@ -58,7 +58,7 @@ return function(suite: harness.Harness)
             error("report expected")
         end
         harness.equal(report.fields.joinS, 45, "joinS")
-        harness.equal(report.fields.passesS, 46, "passesS")
+        harness.equal(report.fields.entitlementsS, 46, "entitlementsS")
         harness.equal(report.fields.helloS, 46, "helloS")
         harness.equal(report.fields.postS, 46.5, "postS")
         harness.equal(report.fields.profileNil, false, "profileNil")
@@ -167,7 +167,7 @@ return function(suite: harness.Harness)
         local report = probe:report()
         harness.equal(report.uiKit, 2, "first mark wins")
         harness.equal(report.hello, 5, "hello")
-        harness.equal(report.swing, -1, "swing not reached")
+        harness.equal(report.action, -1, "action not reached")
         harness.equal(report.boot, 100, "boot clock")
         harness.equal(report.gameTime, 8, "game time")
     end)
@@ -200,9 +200,9 @@ return function(suite: harness.Harness)
                 return 0
             end,
         })
-        probe:recordWait("rig", 1, false)
-        probe:recordWait("rig", 9, true)
-        probe:recordWait("rigFace", 20, true)
+        probe:recordWait("world", 1, false)
+        probe:recordWait("world", 9, true)
+        probe:recordWait("character", 20, true)
         for index = 1, 20 do
             probe:recordWait("w" .. index, 1, false)
         end
@@ -230,20 +230,20 @@ return function(suite: harness.Harness)
             boot = 1,
             gameTime = 2,
             uiKit = 3,
-            mining = 4,
+            content = 4,
             hello = 5,
-            swing = -1,
-            swingAck = -1,
+            action = -1,
+            actionAck = -1,
             root = 6,
             paused = 7,
             intro = 0.5,
             firstTap = 2,
             provisional = 9,
-            waits = { { name = "rig", seconds = 0.5, timedOut = true } },
+            waits = { { name = "world", seconds = 0.5, timedOut = true } },
         }, extra)
         harness.equal(fields.kind, "client", "kind")
-        harness.equal(fields.wait_rig, 0.5, "wait seconds")
-        harness.equal(fields.timedOut_rig, true, "wait timeout")
+        harness.equal(fields.wait_world, 0.5, "wait seconds")
+        harness.equal(fields.timedOut_world, true, "wait timeout")
         harness.equal(fields.pausedS, 7, "paused")
         harness.equal(fields.introShownS, 0.5, "intro")
         harness.equal(fields.firstTapS, 2, "first tap")
@@ -330,7 +330,7 @@ return function(suite: harness.Harness)
         local checked = ClientJoinProbe.validate(validWire())
         harness.isTrue(checked.ok, "accepted")
         if checked.ok then
-            harness.equal(checked.value.waits[1].name, "rig", "wait name")
+            harness.equal(checked.value.waits[1].name, "world", "wait name")
             harness.equal(checked.value.hello, 4, "hello")
         end
     end)
@@ -359,7 +359,7 @@ return function(suite: harness.Harness)
             {
                 label = "below -1",
                 change = function(wire)
-                    wire.mining = -2
+                    wire.content = -2
                 end,
             },
             {
@@ -379,7 +379,7 @@ return function(suite: harness.Harness)
                 change = function(wire)
                     local many: { unknown } = {}
                     for _ = 1, 9 do
-                        table.insert(many, { name = "rig", seconds = 1, timedOut = false })
+                        table.insert(many, { name = "world", seconds = 1, timedOut = false })
                     end
                     wire.waits = many
                 end,
@@ -393,13 +393,13 @@ return function(suite: harness.Harness)
             {
                 label = "bad wait seconds",
                 change = function(wire)
-                    wire.waits = { { name = "rig", seconds = -5, timedOut = false } }
+                    wire.waits = { { name = "world", seconds = -5, timedOut = false } }
                 end,
             },
             {
                 label = "bad wait flag",
                 change = function(wire)
-                    wire.waits = { { name = "rig", seconds = 1, timedOut = "no" } }
+                    wire.waits = { { name = "world", seconds = 1, timedOut = "no" } }
                 end,
             },
             {

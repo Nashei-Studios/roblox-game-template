@@ -1,6 +1,6 @@
 --!strict
 --[[
-    Persists join probe lines to a DataStore so they can be read from Studio (ficha F1a.2).
+    Persists join probe lines to a DataStore so they can be read from Studio.
     Pure: the store is an injected `UpdateAsync`-like port (ADR 0009), so it loads under Lune.
 
     One key per player per UTC day (`<YYYY-MM-DD>:<userId>`) so concurrent joins never contend on

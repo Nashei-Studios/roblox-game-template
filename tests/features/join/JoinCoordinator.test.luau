@@ -1,8 +1,8 @@
 --!strict
-local HelloRetry = require("../../../src/shared/features/mining/HelloRetry")
+local HelloRetry = require("../../../src/shared/features/join/HelloRetry")
 local JoinCoordinator = require("../../../src/shared/features/join/JoinCoordinator")
-local PassOwnership = require("../../../src/shared/features/mining/PassOwnership")
-local ProvisionalCredit = require("../../../src/shared/features/mining/ProvisionalCredit")
+local EntitlementReads = require("../../../src/shared/features/join/EntitlementReads")
+local ProvisionalCredit = require("../../../src/shared/features/join/ProvisionalCredit")
 local harness = require("../../harness")
 
 local USER = 5
@@ -239,43 +239,46 @@ return function(suite: harness.Harness)
         harness.equal(env.log.topUps, 1, "and topped up")
     end)
 
-    suite:test("PassOwnership calls onLate for a read that finishes after the deadline", function()
-        local clock = 0
-        local reader: thread? = nil
-        local lateNames: { string } = {}
-        local outcome = PassOwnership.readAll(
-            { { name = "slow", id = 1 } },
-            function(_pass): boolean?
-                local answer: any = coroutine.yield()
-                return answer :: boolean?
-            end,
-            {
-                clock = function(): number
-                    return clock
+    suite:test(
+        "EntitlementReads calls onLate for a read that finishes after the deadline",
+        function()
+            local clock = 0
+            local reader: thread? = nil
+            local lateNames: { string } = {}
+            local outcome = EntitlementReads.readAll(
+                { { name = "slow", id = 1 } },
+                function(_pass): boolean?
+                    local answer: any = coroutine.yield()
+                    return answer :: boolean?
                 end,
-                wait = function(seconds: number)
-                    clock += seconds
-                end,
-                spawn = function(fn: () -> ())
-                    local co = coroutine.create(fn)
-                    reader = co
-                    coroutine.resume(co)
-                end,
-            },
-            5,
-            function(pass: PassOwnership.Pass)
-                table.insert(lateNames, pass.name)
+                {
+                    clock = function(): number
+                        return clock
+                    end,
+                    wait = function(seconds: number)
+                        clock += seconds
+                    end,
+                    spawn = function(fn: () -> ())
+                        local co = coroutine.create(fn)
+                        reader = co
+                        coroutine.resume(co)
+                    end,
+                },
+                5,
+                function(pass: EntitlementReads.Entitlement)
+                    table.insert(lateNames, pass.name)
+                end
+            )
+            harness.equal(#outcome.owned, 0, "nothing owned at the deadline")
+            harness.equal(outcome.unread[1], "slow", "reported as unread")
+            harness.equal(#lateNames, 0, "not late yet")
+            local waiting = reader
+            if waiting ~= nil then
+                coroutine.resume(waiting, true)
             end
-        )
-        harness.equal(#outcome.owned, 0, "nothing owned at the deadline")
-        harness.equal(outcome.unread[1], "slow", "reported as unread")
-        harness.equal(#lateNames, 0, "not late yet")
-        local waiting = reader
-        if waiting ~= nil then
-            coroutine.resume(waiting, true)
+            harness.equal(lateNames[1], "slow", "the late answer is delivered, not dropped")
         end
-        harness.equal(lateNames[1], "slow", "the late answer is delivered, not dropped")
-    end)
+    )
 
     suite:test("onLate after leaving applies nothing and tops nothing up", function()
         local env = newEnv()
