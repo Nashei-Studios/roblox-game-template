@@ -116,8 +116,8 @@ The common thread: players are visible to each other, the world has a place wher
 | ID | Social-presence feature (seen in) | Template module | Status | Open-source reference (licence) | Priority |
 |---|---|---|---|---|---|
 | S01 | Central lobby or hub where every system is reachable and other players are seen (Tower Defense Simulator and Anime Adventures lobbies, Steal An Egg base area) [inferred] | none | missing | none usable; a `hub` layout contract (spawn, portals, shop NPC anchors) is a template doc plus a place map, not code | P0 |
-| S02 | Character locomotion states: walk, run (Double Tap W in The Strongest Battlegrounds, W+W sprint in Jujutsu Shenanigans), dash, block | none | missing | platform: default Animate script and `Humanoid` states; NevermoreEngine (custom licence) has movement modules, read first | P1 |
-| S03 | Equip and unequip the tool or weapon with its animation (pickaxe, drill, shovel in the mining family; battleground moves) | none | missing | platform: `Tool`, `Humanoid:EquipTool`; animation via `animate-roblox-characters` skill | P1 |
+| S02 | Character locomotion states: walk, run (Double Tap W in The Strongest Battlegrounds, W+W sprint in Jujutsu Shenanigans), dash, block | `locomotion` (`LocomotionMachine`, `LocomotionServer`) | partial (sprint and speeds are code; dash and block are not) | platform: default Animate script and `Humanoid` states; NevermoreEngine (custom licence) has movement modules, read first | P1 |
+| S03 | Equip and unequip the tool or weapon with its animation (pickaxe, drill, shovel in the mining family; battleground moves) | `locomotion` (`LocomotionServer` equip, swing gate) | partial (the swing effect is the game; animations are config) | platform: `Tool`, `Humanoid:EquipTool`; animation via `animate-roblox-characters` skill | P1 |
 | S04 | Emote wheel and extra emote slots (The Strongest Battlegrounds "B - emote wheel", Extra Emote Slots 99) | none | missing | platform: Emotes API; slots tie to F27 | P2 |
 | S05 | Shared spaces that make more players better: shared base area, team objective, co-op bar (Rock In My Lawn, My Small Business, Steal An Egg shared server) | `social` (boost only) | partial | none usable; ties to F10 and F36 | P0 |
 | S06 | Server-wide visibility of progress: nameplates with rank or title above the head, Tab list stats | `progress` (titles), `leaderboards` (leaderstats) | partial | platform: BillboardGui, leaderstats | P1 |
@@ -138,4 +138,4 @@ The common thread: players are visible to each other, the world has a place wher
 
 1. ECO-1 modules are open as PRs #80, #83, #85, #92 (quests, pass ladder with offer rail, community perk, timed rotation). When each merges, set its rows to `have` or `partial` and name the module. Each lands with an ADR, a folder README, an ecosystem-map entry and Lune tests.
 2. Design ADR for the shared collection engine (pets, roulette, luck) before any code.
-3. Hub contract (S01), locomotion and tool equip (S02, S03), backpack (F35), shared objective (F10) and offline earnings (F06) are the next genre-agnostic moldes.
+3. Hub contract (S01), locomotion and tool equip (S02, S03, PR for #88 done), backpack (F35), shared objective (F10) and offline earnings (F06) are the next genre-agnostic moldes.
