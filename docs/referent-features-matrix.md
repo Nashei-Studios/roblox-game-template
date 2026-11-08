@@ -51,7 +51,7 @@ Status: `have` = a module covers it end to end; `partial` = a module covers a sl
 | F28 | Auto features as passes (Auto Collect, Auto Sell, Auto Arrange, Auto Tap) | none (game-level) | missing | none usable | P1 |
 | F29 | Skip-animation pass (Skip Forge Animation 29, Skip Card Animations 99) | none | missing | none usable | P2 |
 | F30 | Season pass (seasonal updates in Venom Evolution, Tower Defense Simulator limited-time towers) | none | missing (#63) | none usable | P1 |
-| F31 | Event calendar and timed rotation: new zone every hour (Mine a Mountain), hourly shop restock (Crypto Empire) | none | missing (PR #92 liveops, open) | none usable | P0 |
+| F31 | Event calendar and timed rotation: new zone every hour (Mine a Mountain), hourly shop restock (Crypto Empire) | `liveops` | have | none usable | P0 |
 | F32 | Server and global events over cross-server messaging (seasonal Halloween updates) | none | missing (#55) | platform: MessagingService | P1 |
 | F33 | Limited-time passes and units (Tower Defense Simulator "LIMITED TIME") | needs F20 and F31 | missing | none usable | P1 |
 | F34 | Market price board with a good-price selling window (Crypto Empire "Next prices in 0:14") | none | missing | none usable | P2 |
@@ -122,7 +122,7 @@ The common thread: players are visible to each other, the world has a place wher
 | S05 | Shared spaces that make more players better: shared base area, team objective, co-op bar (Rock In My Lawn, My Small Business, Steal An Egg shared server) | `social` (boost only) | partial | none usable; ties to F10 and F36 | P0 |
 | S06 | Server-wide visibility of progress: nameplates with rank or title above the head, Tab list stats | `progress` (titles), `leaderboards` (leaderstats) | partial | platform: BillboardGui, leaderstats | P1 |
 | S07 | Community hooks in the description: group join, like and favourite, Discord or socials, update version log (Tower Defense Simulator "Join the group for +$100", Mine a Mountain, VERY LUCKY "Join our Community Server") | `community-reward` + skills `roblox-naming` | partial | none needed | P0 |
-| S08 | In-game events with a visible countdown that gather everybody (Halloween updates, hourly mountain) | none | missing (PR #92 liveops, open) | none usable | P0 |
+| S08 | In-game events with a visible countdown that gather everybody (Halloween updates, hourly mountain) | `liveops` | partial (clock and windows; announcements per game) | none usable | P0 |
 | S09 | Friends joining each other, invite prompt, join-by-friend | `social` | have | platform: SocialService | P2 |
 | S10 | Chat presence: announcements of rare drops and joins in chat | none | missing | platform: TextChatService | P1 |
 | S11 | Spectate or follow a friend, party and group queue (battlegrounds, tower defense matches) | none | missing | none usable | P2 |
