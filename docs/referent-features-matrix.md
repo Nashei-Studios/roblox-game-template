@@ -126,6 +126,7 @@ The common thread: players are visible to each other, the world has a place wher
 | S09 | Friends joining each other, invite prompt, join-by-friend | `social` | have | platform: SocialService | P2 |
 | S10 | Chat presence: announcements of rare drops and joins in chat | none | missing | platform: TextChatService | P1 |
 | S11 | Spectate or follow a friend, party and group queue (battlegrounds, tower defense matches) | none | missing | none usable | P2 |
+| S12 | A clip-worthy moment with timed hype and a skippable share prompt (Roblox Moments clips, 30 s, captured by the player; win-condition criteria 2, 4, 8) | `clipmoment` (`MomentDirector`) | partial (plan, limits and opt-outs are code; hooks and the real capture are per game) | platform: CaptureService `PromptShareCapture`; ADR 0042 | P0 |
 
 ## How to read the gaps
 
