@@ -42,6 +42,7 @@ Maduraron en el juego y vuelven a la plantilla para que el siguiente los herede.
 | `features/hitfx` | Efecto de golpe con un solo emisor reutilizado y tipos de golpe como datos | `ParticleEmitter` (presentador) | 0034 | #76 |
 | `features/leaderboards` (`extraStats`) | Tablero diario de un contador del juego con una línea de config más una de tablero | `OrderedDataStore` (ya existente) | 0034 | #76 |
 | `features/ui` (`CardGrid`) | Grilla de tarjetas (guardarropa, colección) detrás de una interfaz de presentador | `UIGridLayout` (presentador) | 0034 | #76 |
+| `features/hub` | Contrato de hub social: anillos de aparición, estaciones como datos, registro por orden de llegada con tope por servidor, emotes con lista y enfriamiento | `Humanoid.DisplayDistanceType`, `Players` (presentador `HubSpawner`) | 0039 | #87 |
 
 ## Sistemas sin pieza externa
 
