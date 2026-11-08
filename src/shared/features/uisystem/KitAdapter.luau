@@ -17,14 +17,7 @@
     a deserialized .rbxm or a fake tree) and in the engine alike.
 ]]
 
-export type Slot =
-    "menu.shell"
-    | "menu.rowCard"
-    | "menu.rowToggle"
-    | "menu.rowUpgrade"
-    | "hud.button"
-    | "tooltip.button"
-    | "effects.strip"
+export type Slot = string -- one of KitAdapter.SLOTS; REQUIRED_PARTS rejects the rest
 
 export type Binding = {
     -- Slash separated path from the kit root to the piece.
@@ -41,11 +34,11 @@ export type KitAdapter = {
     -- Licence summary copied from the kit, so a reader sees what ships.
     license: string,
     -- Slots this kit covers. A slot not listed falls back to the plain piece.
-    slots: { [Slot]: Binding },
+    slots: { [string]: Binding },
 }
 
 -- The parts each slot MUST expose. Builders bind exactly these names.
-local REQUIRED_PARTS: { [Slot]: { string } } = {
+local REQUIRED_PARTS: { [string]: { string } } = {
     ["menu.shell"] = { "title", "close", "body" },
     ["menu.rowCard"] = { "name", "description", "action" },
     ["menu.rowToggle"] = { "name", "toggle" },
@@ -57,7 +50,7 @@ local REQUIRED_PARTS: { [Slot]: { string } } = {
 
 local KitAdapterModule = {}
 
-KitAdapterModule.SLOTS = {
+local SLOT_LIST: { string } = {
     "menu.shell",
     "menu.rowCard",
     "menu.rowToggle",
@@ -65,11 +58,16 @@ KitAdapterModule.SLOTS = {
     "hud.button",
     "tooltip.button",
     "effects.strip",
-} :: { Slot }
+}
+KitAdapterModule.SLOTS = SLOT_LIST
 
 --- The part names a slot must expose.
 function KitAdapterModule.requiredParts(slot: Slot): { string }
-    return REQUIRED_PARTS[slot]
+    local parts = REQUIRED_PARTS[slot]
+    if parts == nil then
+        error(`unknown UI slot "{slot}"`, 2)
+    end
+    return parts
 end
 
 --- Static check of the adapter itself (no tree needed).

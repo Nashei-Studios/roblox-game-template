@@ -77,7 +77,7 @@ function HudRails.plan(
     reserveBottomShare: number,
     tokens: Tokens.Tokens
 ): Plan
-    local gap = tokens.spacing[tokens.defaults.gap]
+    local gap = Tokens.space(tokens, tokens.defaults.gap)
     local edge = HudRails.edgeFor(usable, tokens)
     local tiles: { Tile } = {}
     local problems: { string } = {}

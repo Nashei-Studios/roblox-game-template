@@ -11,10 +11,14 @@
 
 local Contrast = require("../ui/Contrast")
 
-export type SpacingKey = "xs" | "sm" | "md" | "lg" | "xl"
-export type RadiusKey = "sm" | "md" | "lg"
-export type TypeKey = "caption" | "body" | "title" | "display"
-export type DeviceClass = "phone" | "tablet" | "desktop" | "console"
+-- Key types are plain strings: the stable solver widens singleton unions in loops and records.
+-- The accessors below raise on an unknown key, so a typo fails loudly at the first build.
+-- SpacingKey: xs sm md lg xl. RadiusKey: sm md lg. TypeKey: caption body title display.
+-- DeviceClass: phone tablet desktop console.
+export type SpacingKey = string
+export type RadiusKey = string
+export type TypeKey = string
+export type DeviceClass = string
 
 export type Palette = {
     background: string,
@@ -33,11 +37,11 @@ export type Palette = {
 
 export type Tokens = {
     -- Spacing scale in px. Strictly growing: 0 < xs < sm < md < lg < xl.
-    spacing: { [SpacingKey]: number },
+    spacing: { xs: number, sm: number, md: number, lg: number, xl: number },
     -- Corner radii in px (the Studded kit uses its own UICorner; these are for plain pieces).
-    radius: { [RadiusKey]: number },
+    radius: { sm: number, md: number, lg: number },
     -- Type scale in px. Growing, caption >= minText.
-    type: { [TypeKey]: number },
+    type: { caption: number, body: number, title: number, display: number },
     -- Text bounds for UITextSizeConstraint on every scaled text.
     text: { min: number, max: number },
     -- Smallest tappable edge in px.
@@ -61,8 +65,16 @@ local TokensModule = {}
 
 TokensModule.TOUCH_FLOOR = TOUCH_FLOOR
 TokensModule.MIN_TEXT_FLOOR = MIN_TEXT_FLOOR
-TokensModule.SPACING_KEYS = { "xs", "sm", "md", "lg", "xl" } :: { SpacingKey }
-TokensModule.TYPE_KEYS = { "caption", "body", "title", "display" } :: { TypeKey }
+local SPACING_KEYS: { SpacingKey } = { "xs", "sm", "md", "lg", "xl" }
+local TYPE_KEYS: { TypeKey } = { "caption", "body", "title", "display" }
+local RADIUS_KEYS: { RadiusKey } = { "sm", "md", "lg" }
+TokensModule.SPACING_KEYS = SPACING_KEYS
+
+--- The spacing keys, typed (a table field widens the key literals under the stable solver).
+function TokensModule.spacingKeys(): { SpacingKey }
+    return SPACING_KEYS
+end
+TokensModule.TYPE_KEYS = TYPE_KEYS
 
 --- The template defaults. Values are chosen for a 390 px tall landscape phone, then grow:
 --- 4 px grid for spacing, 44 px floor, 14 px body (the smallest readable text on a phone).
@@ -95,9 +107,78 @@ function TokensModule.default(): Tokens
     }
 end
 
+--- The palette as a string-keyed map, for lookups by key name.
+function TokensModule.paletteMap(palette: Palette): { [string]: string }
+    return {
+        background = palette.background,
+        surface = palette.surface,
+        surfaceRaised = palette.surfaceRaised,
+        textPrimary = palette.textPrimary,
+        textMuted = palette.textMuted,
+        accent = palette.accent,
+        onAccent = palette.onAccent,
+        success = palette.success,
+        warning = palette.warning,
+        danger = palette.danger,
+        focus = palette.focus,
+        scrim = palette.scrim,
+    }
+end
+
 --- Pixels of a spacing key.
 function TokensModule.space(tokens: Tokens, key: SpacingKey): number
-    return tokens.spacing[key]
+    local spacing = tokens.spacing
+    if key == "xs" then
+        return spacing.xs
+    elseif key == "sm" then
+        return spacing.sm
+    elseif key == "md" then
+        return spacing.md
+    elseif key == "lg" then
+        return spacing.lg
+    elseif key == "xl" then
+        return spacing.xl
+    end
+    error(`unknown spacing key "{key}"`, 2)
+end
+
+--- Pixels of a corner radius key.
+function TokensModule.radius(tokens: Tokens, key: RadiusKey): number
+    if key == "sm" then
+        return tokens.radius.sm
+    elseif key == "md" then
+        return tokens.radius.md
+    elseif key == "lg" then
+        return tokens.radius.lg
+    end
+    error(`unknown radius key "{key}"`, 2)
+end
+
+--- Pixels of a type scale key.
+function TokensModule.typeSize(tokens: Tokens, key: TypeKey): number
+    local scale = tokens.type
+    if key == "caption" then
+        return scale.caption
+    elseif key == "body" then
+        return scale.body
+    elseif key == "title" then
+        return scale.title
+    elseif key == "display" then
+        return scale.display
+    end
+    error(`unknown type key "{key}"`, 2)
+end
+
+--- Margin of a device class, in px (console is computed by Breakpoints).
+function TokensModule.margin(tokens: Tokens, deviceClass: DeviceClass): number
+    if deviceClass == "phone" then
+        return tokens.safeMargin.phone
+    elseif deviceClass == "tablet" then
+        return tokens.safeMargin.tablet
+    elseif deviceClass == "desktop" then
+        return tokens.safeMargin.desktop
+    end
+    error(`no fixed margin for device class "{deviceClass}"`, 2)
 end
 
 local function checkPair(
@@ -122,8 +203,9 @@ end
 function TokensModule.validate(tokens: Tokens): { string }
     local problems: { string } = {}
     local previous = 0
-    for _, key in TokensModule.SPACING_KEYS do
-        local value = tokens.spacing[key]
+    for index = 1, #SPACING_KEYS do
+        local key = SPACING_KEYS[index]
+        local value = TokensModule.space(tokens, key)
         if value == nil or value ~= value or value <= previous then
             table.insert(
                 problems,
@@ -134,8 +216,9 @@ function TokensModule.validate(tokens: Tokens): { string }
         previous = value
     end
     previous = 0
-    for _, key in TokensModule.TYPE_KEYS do
-        local value = tokens.type[key]
+    for index = 1, #TYPE_KEYS do
+        local key = TYPE_KEYS[index]
+        local value = TokensModule.typeSize(tokens, key)
         if value == nil or value < previous then
             table.insert(
                 problems,
@@ -154,26 +237,24 @@ function TokensModule.validate(tokens: Tokens): { string }
     if tokens.touchMin < TOUCH_FLOOR then
         table.insert(problems, `tokens.touchMin must be at least {TOUCH_FLOOR}`)
     end
-    for _, key in { "gap", "pad", "cardPad" } do
-        local ref = (tokens.defaults :: { [string]: SpacingKey })[key]
-        if tokens.spacing[ref] == nil then
-            table.insert(problems, `tokens.defaults.{key} names an unknown spacing key`)
-        end
-    end
-    for deviceClass, margin in tokens.safeMargin :: { [string]: number } do
+    local margins: { number } =
+        { tokens.safeMargin.phone, tokens.safeMargin.tablet, tokens.safeMargin.desktop }
+    for _, margin in margins do
         if margin <= 0 then
-            table.insert(problems, `tokens.safeMargin.{deviceClass} must be positive`)
+            table.insert(problems, "tokens.safeMargin values must be positive")
+            break
         end
     end
     if tokens.consoleSafeShare <= 0 or tokens.consoleSafeShare >= 0.2 then
         table.insert(problems, "tokens.consoleSafeShare must be in (0, 0.2)")
     end
-    for key, radius in tokens.radius :: { [string]: number } do
-        if radius < 0 then
+    for index = 1, #RADIUS_KEYS do
+        local key = RADIUS_KEYS[index]
+        if TokensModule.radius(tokens, key) < 0 then
             table.insert(problems, `tokens.radius.{key} must be zero or positive`)
         end
     end
-    local palette = tokens.palette :: { [string]: string }
+    local palette = TokensModule.paletteMap(tokens.palette)
     for _, pair in
         {
             { "textPrimary", "background" },

@@ -16,7 +16,7 @@ export type DeviceClass = Tokens.DeviceClass
 
 export type Viewport = { width: number, height: number }
 
-export type MenuKind = "standard" | "wide"
+export type MenuKind = string
 
 export type MenuBox = {
     widthScale: number,
@@ -80,11 +80,11 @@ function Breakpoints.safeMargin(
     if deviceClass == "console" then
         return math.ceil(math.min(viewport.width, viewport.height) * tokens.consoleSafeShare)
     end
-    return tokens.safeMargin[deviceClass]
+    return Tokens.margin(tokens, deviceClass)
 end
 
-local ASPECT_MIN: { [MenuKind]: number } = { standard = 1.1, wide = 1.0 }
-local ASPECT_MAX: { [MenuKind]: number } = { standard = 2.0, wide = 3.0 }
+local ASPECT_MIN: { [string]: number } = { standard = 1.1, wide = 1.0 }
+local ASPECT_MAX: { [string]: number } = { standard = 2.0, wide = 3.0 }
 
 --- The modal box: phones up to 90 x 80 %, everything else 45 x 75 % (wide menus 85 x 85 %),
 --- capped by an aspect ratio so a wide window never stretches it.

@@ -41,7 +41,7 @@ return function(suite: harness.Harness)
 
     suite:test("UIScale never shrinks and never grows on a phone", function()
         for _, viewport in Breakpoints.REVIEW_VIEWPORTS do
-            local deviceClass = Breakpoints.classify(viewport, false)
+            local deviceClass: Tokens.DeviceClass = Breakpoints.classify(viewport, false)
             local scale = Breakpoints.uiScale(deviceClass, viewport)
             harness.isTrue(scale >= 1, "never below 1")
             if deviceClass == "phone" then
@@ -53,8 +53,10 @@ return function(suite: harness.Harness)
 
     suite:test("a menu box fits the viewport", function()
         for _, viewport in Breakpoints.REVIEW_VIEWPORTS do
-            local deviceClass = Breakpoints.classify(viewport, false)
-            for _, kind in { "standard", "wide" } :: { Breakpoints.MenuKind } do
+            local deviceClass: Tokens.DeviceClass = Breakpoints.classify(viewport, false)
+            local kinds: { Breakpoints.MenuKind } = { "standard", "wide" }
+            for index = 1, #kinds do
+                local kind = kinds[index]
                 local box = Breakpoints.menuBox(kind, deviceClass, viewport)
                 harness.isTrue(box.widthPx <= viewport.width, "fits the width")
                 harness.isTrue(box.heightPx <= viewport.height, "fits the height")
@@ -107,7 +109,7 @@ return function(suite: harness.Harness)
     suite:test("HUD rails never overlap or leave the area on the four review viewports", function()
         local tokens = Tokens.default()
         for _, viewport in Breakpoints.REVIEW_VIEWPORTS do
-            local deviceClass = Breakpoints.classify(viewport, false)
+            local deviceClass: Tokens.DeviceClass = Breakpoints.classify(viewport, false)
             local scale = Breakpoints.uiScale(deviceClass, viewport)
             local margin = Breakpoints.safeMargin(deviceClass, viewport, tokens)
             local area =

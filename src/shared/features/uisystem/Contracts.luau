@@ -42,8 +42,10 @@ end
 
 --- A padding value taken from the scale (never a literal off the grid).
 function Contracts.onScale(valuePx: number, owner: string, tokens: Tokens.Tokens): string?
-    for _, key in Tokens.SPACING_KEYS do
-        if tokens.spacing[key] == valuePx then
+    local keys = Tokens.spacingKeys()
+    for index = 1, #keys do
+        local key = keys[index]
+        if Tokens.space(tokens, key) == valuePx then
             return nil
         end
     end
