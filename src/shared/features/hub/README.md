@@ -1,6 +1,6 @@
 # features/hub
 
-Central social hub scaffold: where players appear, where the stations live, how many fit. Decision: [ADR 0039](../../../../docs/adr/0039-social-hub-scaffold.md). Issue #87. Matrix rows S01 and S04 in [referent-features-matrix](../../../../docs/referent-features-matrix.md).
+Central social hub scaffold: where players appear, where the stations live, how many fit. Decision: [ADR 0040](../../../../docs/adr/0040-social-hub-scaffold.md). Issue #87. Matrix rows S01 and S04 in [referent-features-matrix](../../../../docs/referent-features-matrix.md).
 
 ## What it is / is not
 

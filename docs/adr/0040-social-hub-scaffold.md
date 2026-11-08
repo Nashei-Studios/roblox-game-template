@@ -1,4 +1,4 @@
-# 0039. Social hub scaffold: layout, slots and cap as data
+# 0040. Social hub scaffold: layout, slots and cap as data
 
 - Status: accepted
 - Date: 2026-11-08
