@@ -202,10 +202,17 @@ local monetization = MonetizationService.new({
             warn(`Could not grant "{product.name}": {applied.error.kind}`)
             return false
         end
-        local player = Players:GetPlayerByUserId(receipt.playerId)
-        if player ~= nil then
-            -- The wire type is u32: clamp instead of letting a large balance fail the send.
-            net.CoinsChanged.fire(player, math.min(data.coins, MAX_WIRE_COINS))
+        -- The grant is done. Anything that fails from here on must not abort the receipt before it
+        -- is recorded, or Roblox would retry it and deliver the product a second time.
+        local told, failure = pcall(function()
+            local player = Players:GetPlayerByUserId(receipt.playerId)
+            if player ~= nil then
+                -- The wire type is u32: clamp instead of letting a large balance fail the send.
+                net.CoinsChanged.fire(player, math.min(data.coins, MAX_WIRE_COINS))
+            end
+        end)
+        if not told then
+            warn(`Purchase of "{product.name}" delivered, but telling the client failed: {failure}`)
         end
         return true
     end,
