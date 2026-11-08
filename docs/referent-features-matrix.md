@@ -28,7 +28,7 @@ Status: `have` = a module covers it end to end; `partial` = a module covers a sl
 | F05 | Redeem codes (almost every top game) | `codes` | have | none needed | P2 |
 | F06 | Offline earnings with a visible estimate (Crypto Empire, My Small Business) | none (lives in one game) | missing | none usable | P1 |
 | F07 | Rewarded video ads (clickers) | `rewardedads` | have | none needed | P2 |
-| F08 | Daily and weekly quests with chains and generic counters (Rock In My Lawn "new job every few minutes") | `quests` | missing (PR #80 quests, open) | FarFromLittle/Questline (MIT, design read only), prooheckcp/RoQuest (Apache-2.0, not read) | P0 |
+| F08 | Daily and weekly quests with chains and generic counters (Rock In My Lawn "new job every few minutes") | `quests` | have | FarFromLittle/Questline (MIT, design read only), prooheckcp/RoQuest (Apache-2.0, not read) | P0 |
 | F09 | NPC job giver with dialogue portrait and floor arrows (Rock In My Lawn) | none (needs `quests` + UI) | missing | kit GUI trees from the kit manifest; no code piece | P2 |
 | F10 | Shared objective with a common progress bar and a reward for everyone (Rock In My Lawn, up to 6 friends) | none (one game has it as "Shared Vein") | missing | none usable | P0 |
 | F11 | Friend boost by friends in the server (Crypto Empire "Friends Bonus") | `social` | have | none needed | P2 |
@@ -40,9 +40,9 @@ Status: `have` = a module covers it end to end; `partial` = a module covers a sl
 | F17 | Mutations and size variants on collectibles (Steal An Egg "sizes, mutations", My Anime Mine "Mutation Luck") | none (part of pets) | missing | none usable | P1 |
 | F18 | Roulette or gacha with weighted slots, odds shown (Tap Simulator, Lift Rock; The Strongest Battlegrounds states equal odds) | none | missing (#26) | marchware/Roblox-Spin-Wheel has no licence: not reusable | P1 |
 | F19 | Luck multiplier as a stat or pass (Super Luck 799, Super Drop Luck 1,199, Mutation Luck 99) | none (a Luck stat read by pets and roulette) | missing | none usable | P1 |
-| F20 | Long ladder of multiplier passes x2 to x64 with a high ceiling (Lift Rock 17 passes from 9, Money Per Click 36 passes) | `monetization`, `pricing` | partial (PR #83 offers, open) | none usable | P0 |
-| F21 | Cheap entry pass or starter pack, 9 to 59 (Starter Pack 19 and 59, Mine a Mountain Starter 9) | `monetization` | partial (PR #83 offers, open) | none usable | P1 |
-| F22 | Offer rail: rotating offers with a price strip (Crypto Empire shop, Tower Defense Simulator limited-time units) | none | missing (PR #83 offers, open) | none usable | P1 |
+| F20 | Long ladder of multiplier passes x2 to x64 with a high ceiling (Lift Rock 17 passes from 9, Money Per Click 36 passes) | `monetization`, `pricing` | partial (ladder in `offers`; wiring per game) | none usable | P0 |
+| F21 | Cheap entry pass or starter pack, 9 to 59 (Starter Pack 19 and 59, Mine a Mountain Starter 9) | `monetization` | partial (rail timing in `offers`) | none usable | P1 |
+| F22 | Offer rail: rotating offers with a price strip (Crypto Empire shop, Tower Defense Simulator limited-time units) | `offers` | have | none usable | P1 |
 | F23 | Coin packs as developer products | `monetization`, `ProductGrants` | have | none needed | P2 |
 | F24 | Robux for restock, skip or boost (Crypto Empire "Restock Now") | `robuxtransfers`, `plus` | partial | none needed | P2 |
 | F25 | Subscriptions and VIP with benefits (VIP 199 to 375 in most games) | `subscriptions`, `monetization` | partial | none needed | P1 |
