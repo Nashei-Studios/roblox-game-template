@@ -73,6 +73,15 @@ event SetVolume = {
 	data: (group: VolumeGroup, percent: u8),
 }
 
+-- Server -> client. A milestone for the chat. Data only: the client builds the line and calls
+-- TextChannel:DisplaySystemMessage (server-side calls are refused by the engine).
+event AnnounceMilestone = {
+	from: Server,
+	type: Reliable,
+	call: SingleSync,
+	data: (name: string.binary(1..40), value: u32),
+}
+
 -- Server -> client. A toast: its kind (text and style come from Config) and a number for {amount}.
 event Notify = {
 	from: Server,
