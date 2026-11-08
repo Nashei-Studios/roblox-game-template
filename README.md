@@ -71,7 +71,7 @@ Why this split: anything that needs only values lives in `shared` so Lune can te
 2. If it needs an external service, add a port type in `src/shared/ports` and an adapter in `src/server/adapters`; wire it in `Main.server.luau` (the only place that builds adapters).
 3. Add `tests/features/<feature>/<Module>.test.luau` and register it in `scripts/suites.luau`.
 4. For a remote: validate every argument with `shared/net/Validation` and gate it with a `RateLimiter` (ADR 0012).
-5. `stylua .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `pwsh scripts/coverage.ps1`, then open a PR (CI runs the same). Several agents at once: read `docs/multi-agent.md`.
+5. `stylua .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `lune run scripts/ui-audit` ([docs/ui-audit.md](docs/ui-audit.md)), `pwsh scripts/coverage.ps1`, then open a PR (CI runs the same). Several agents at once: read `docs/multi-agent.md`.
 
 ## Engagement modules (codes, time rewards, toasts, sound)
 
