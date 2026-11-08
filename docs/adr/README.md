@@ -34,5 +34,9 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0027](0027-kit-asset-manifest.md) | Kit asset manifest, binaries stay in the kit library (refines 0006) |
 | [0028](0028-external-building-blocks-and-wally.md) | External building blocks first, Wally for registry packages, vendoring for the rest (supersedes 0003) |
 | [0029](0029-develop-and-main-with-one-ci-run-per-change.md) | develop and main, one CI run per change |
+| [0030](0030-social-layer-friend-boost-and-invite.md) | Social layer: friend boost and invite reward as a configurable perk |
+| [0031](0031-invite-ledger-memorystore-and-friend-checks.md) | Invite ledger on MemoryStore and parallel friend checks |
+| [0032](0032-join-architecture-data-as-background-state.md) | Join architecture: data is background state |
+| [0033](0033-tap-anywhere-input-router.md) | Tap anywhere: a pure input router with blockers |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).

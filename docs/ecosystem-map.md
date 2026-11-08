@@ -25,6 +25,17 @@ Fecha de verificación: 2026-11-06. Los repos se midieron con `gh repo view` (li
 | Localización | `LocalizationService:GetTranslatorForPlayerAsync`; ayuda candidata: flshmodels/flash-locale | nativo; MIT | flash-locale 2026-11-02 (0 estrellas, sin revisar) | Acceso a texto con respaldo al idioma fuente | #64 |
 | Menús extra (changelog, teleport, regalo) | Ninguna hoy; centau/vide cuando dos juegos dupliquen enlace de estado | MIT | 2026-10-26 | Menús sobre `UiKit` | #53 |
 
+## Módulos portados desde +1 Mining Power (2026-11-07)
+
+Maduraron en el juego y vuelven a la plantilla para que el siguiente los herede. Todos son Luau puro con README propio.
+
+| Módulo | Qué resuelve | Pieza de plataforma | ADR | Issue |
+|---|---|---|---|---|
+| `features/social` | Friend boost, invitación con recompensa, multiplicador de perk configurable | `Player:IsFriendsWith`, `SocialService`, `GetJoinData`, MemoryStore | 0030, 0031 | #52 |
+| `features/join` | Entrada sin espera: lecturas en paralelo, lote provisional, reintento de hello, política de cancelación | ProfileStore `Cancel` | 0032 | #47 |
+| `features/joinprobe` | Medir la entrada antes de cambiar constantes | DataStore (opcional) | 0032 | #47 |
+| `features/input` | "Toca en cualquier parte" con bloqueadores | `UserInputService` (adaptador por juego) | 0033 | #47 |
+
 ## Sistemas sin pieza externa
 
 No existe pieza abierta mantenida ni servicio nativo que los resuelva. Se escriben nosotros; se anota el repo del que se leen patrones.
