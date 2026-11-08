@@ -42,6 +42,7 @@ Maduraron en el juego y vuelven a la plantilla para que el siguiente los herede.
 | `features/hitfx` | Efecto de golpe con un solo emisor reutilizado y tipos de golpe como datos | `ParticleEmitter` (presentador) | 0034 | #76 |
 | `features/leaderboards` (`extraStats`) | Tablero diario de un contador del juego con una línea de config más una de tablero | `OrderedDataStore` (ya existente) | 0034 | #76 |
 | `features/ui` (`CardGrid`) | Grilla de tarjetas (guardarropa, colección) detrás de una interfaz de presentador | `UIGridLayout` (presentador) | 0034 | #76 |
+| `features/ui/audit` y `presenters/ui/audit` | Auditoría de UI: estática en el gate (Lune sobre las piezas `.rbxm`) y de runtime en un playtest (solape, recorte, `TextFits`, zona segura, ZIndex, contraste, 44 px); cada juego pone sus escenarios | `TextLabel.TextFits`, `GuiService` (Studio MCP `execute_luau`) | 0039 | #94 |
 
 ## Sistemas sin pieza externa
 
