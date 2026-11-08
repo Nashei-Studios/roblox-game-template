@@ -42,6 +42,7 @@ Maduraron en el juego y vuelven a la plantilla para que el siguiente los herede.
 | `features/hitfx` | Efecto de golpe con un solo emisor reutilizado y tipos de golpe como datos | `ParticleEmitter` (presentador) | 0034 | #76 |
 | `features/leaderboards` (`extraStats`) | Tablero diario de un contador del juego con una línea de config más una de tablero | `OrderedDataStore` (ya existente) | 0034 | #76 |
 | `features/ui` (`CardGrid`) | Grilla de tarjetas (guardarropa, colección) detrás de una interfaz de presentador | `UIGridLayout` (presentador) | 0034 | #76 |
+| `features/wincondition` | Declaración de la condición de victoria del juego (hipótesis, gancho, momentos compartibles, plan de medición) y su revisión con Lune; el checklist va en `docs/` | Ninguna (lógica propia; lee Config) | 0043 | #91 |
 
 ## Sistemas sin pieza externa
 

@@ -126,6 +126,7 @@ The common thread: players are visible to each other, the world has a place wher
 | S09 | Friends joining each other, invite prompt, join-by-friend | `social` | have | platform: SocialService | P2 |
 | S10 | Chat presence: announcements of rare drops and joins in chat | none | missing | platform: TextChatService | P1 |
 | S11 | Spectate or follow a friend, party and group queue (battlegrounds, tower defense matches) | none | missing | none usable | P2 |
+| S14 | A declared win condition per game: hypothesis, hook of under 10 words, shareable moment ids and a measurement plan, checked by a script (vault decision 0032) | `wincondition` (`WinCondition`, `scripts/win-condition`) | have (declaration and gate; the numbers are read by hand) | none usable; ADR 0043 | P0 |
 
 ## How to read the gaps
 
