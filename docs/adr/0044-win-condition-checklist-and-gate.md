@@ -1,4 +1,4 @@
-# 0043. Win-condition checklist and a pending-tolerant gate
+# 0044. Win-condition checklist and a pending-tolerant gate
 
 - Status: accepted
 - Date: 2026-11-08

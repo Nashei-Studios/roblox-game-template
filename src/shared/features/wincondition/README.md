@@ -1,6 +1,6 @@
 # features/wincondition
 
-The win-condition declaration of a game and its check. Decision: [ADR 0043](../../../../docs/adr/0043-win-condition-checklist-and-gate.md). Issue #91. The human checklist is [docs/win-condition-checklist.md](../../../../docs/win-condition-checklist.md).
+The win-condition declaration of a game and its check. Decision: [ADR 0044](../../../../docs/adr/0044-win-condition-checklist-and-gate.md). Issue #91. The human checklist is [docs/win-condition-checklist.md](../../../../docs/win-condition-checklist.md).
 
 ## What it is / is not
 

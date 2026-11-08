@@ -86,7 +86,7 @@ Source: the 13 products and the parity matrix of the vault. The paid packs are n
 | E06 | Top banner and coloured chat lines | none | missing | platform: TextChatService | P1 |
 | E07 | Triggers: friend joined, joins and leaves, rotating announcements, purchase announced in chat | none | missing | platform: TextChatService, Players | P1 |
 | E08 | Sound: mixer, separate music and SFX volume, toggles, levelled effects | `sound` | have | Kenney audio (CC0) | P2 |
-| E09 | Music player with named tracks, time, skip, mute, hide | none | missing (#62) | Kenney (CC0) for tracks | P1 |
+| E09 | Music player with named tracks, time, skip, mute, hide | `music` (`MusicDirector`: moods, stings, duck; no player UI) | partial (#62) | Kenney (CC0) for tracks | P1 |
 | E10 | World speakers with ProximityPrompt | none | missing (#62) | platform: ProximityPrompt | P2 |
 | E11 | UI: Shop, Settings menus | `ui` | have | none needed | P2 |
 | E12 | UI: Teleport, Changelogs menus | `ui` | missing (#53) | none usable | P2 |
@@ -115,10 +115,10 @@ The common thread: players are visible to each other, the world has a place wher
 
 | ID | Social-presence feature (seen in) | Template module | Status | Open-source reference (licence) | Priority |
 |---|---|---|---|---|---|
-| S01 | Central lobby or hub where every system is reachable and other players are seen (Tower Defense Simulator and Anime Adventures lobbies, Steal An Egg base area) [inferred] | none | missing | none usable; a `hub` layout contract (spawn, portals, shop NPC anchors) is a template doc plus a place map, not code | P0 |
-| S02 | Character locomotion states: walk, run (Double Tap W in The Strongest Battlegrounds, W+W sprint in Jujutsu Shenanigans), dash, block | none | missing | platform: default Animate script and `Humanoid` states; NevermoreEngine (custom licence) has movement modules, read first | P1 |
-| S03 | Equip and unequip the tool or weapon with its animation (pickaxe, drill, shovel in the mining family; battleground moves) | none | missing | platform: `Tool`, `Humanoid:EquipTool`; animation via `animate-roblox-characters` skill | P1 |
-| S04 | Emote wheel and extra emote slots (The Strongest Battlegrounds "B - emote wheel", Extra Emote Slots 99) | none | missing | platform: Emotes API; slots tie to F27 | P2 |
+| S01 | Central lobby or hub where every system is reachable and other players are seen (Tower Defense Simulator and Anime Adventures lobbies, Steal An Egg base area) [inferred] | `hub` (`HubLayout`, `HubRegistry`) | partial (layout, slots and cap are code; the place itself is built per game) | none usable; ADR 0039 | P0 |
+| S02 | Character locomotion states: walk, run (Double Tap W in The Strongest Battlegrounds, W+W sprint in Jujutsu Shenanigans), dash, block | `locomotion` (`LocomotionMachine`, `LocomotionServer`) | partial (sprint and speeds are code; dash and block are not) | platform: default Animate script and `Humanoid` states; NevermoreEngine (custom licence) has movement modules, read first | P1 |
+| S03 | Equip and unequip the tool or weapon with its animation (pickaxe, drill, shovel in the mining family; battleground moves) | `locomotion` (`LocomotionServer` equip, swing gate) | partial (the swing effect is the game; animations are config) | platform: `Tool`, `Humanoid:EquipTool`; animation via `animate-roblox-characters` skill | P1 |
+| S04 | Emote wheel and extra emote slots (The Strongest Battlegrounds "B - emote wheel", Extra Emote Slots 99) | `hub` (`HubEmotes`: allow-list and cooldown only) | partial (no wheel UI, no animation) | platform: Emotes API; slots tie to F27 | P2 |
 | S05 | Shared spaces that make more players better: shared base area, team objective, co-op bar (Rock In My Lawn, My Small Business, Steal An Egg shared server) | `social` (boost only) | partial | none usable; ties to F10 and F36 | P0 |
 | S06 | Server-wide visibility of progress: nameplates with rank or title above the head, Tab list stats | `progress` (titles), `leaderboards` (leaderstats) | partial | platform: BillboardGui, leaderstats | P1 |
 | S07 | Community hooks in the description: group join, like and favourite, Discord or socials, update version log (Tower Defense Simulator "Join the group for +$100", Mine a Mountain, VERY LUCKY "Join our Community Server") | `community-reward` + skills `roblox-naming` | partial | none needed | P0 |
@@ -126,7 +126,9 @@ The common thread: players are visible to each other, the world has a place wher
 | S09 | Friends joining each other, invite prompt, join-by-friend | `social` | have | platform: SocialService | P2 |
 | S10 | Chat presence: announcements of rare drops and joins in chat | none | missing | platform: TextChatService | P1 |
 | S11 | Spectate or follow a friend, party and group queue (battlegrounds, tower defense matches) | none | missing | none usable | P2 |
-| S14 | A declared win condition per game: hypothesis, hook of under 10 words, shareable moment ids and a measurement plan, checked by a script (vault decision 0032) | `wincondition` (`WinCondition`, `scripts/win-condition`) | have (declaration and gate; the numbers are read by hand) | none usable; ADR 0043 | P0 |
+| S12 | A clip-worthy moment with timed hype and a skippable share prompt (Roblox Moments clips, 30 s, captured by the player; win-condition criteria 2, 4, 8) | `clipmoment` (`MomentDirector`) | partial (plan, limits and opt-outs are code; hooks and the real capture are per game) | platform: CaptureService `PromptShareCapture`; ADR 0042 | P0 |
+| S13 | Music that fits the clip: a mood playlist, a sting at the moment, ducking, and a licence per audio id (win-condition criterion 4; referent style is a GAP) | `music` (`MusicConfig`, `MusicDirector`) | have for the director and the licence check; the tracks and their ids are per game | CC0 (Kenney) and DistroKid are the bases; ADR 0043 | P0 |
+| S14 | A declared win condition per game: hypothesis, hook of under 10 words, shareable moment ids and a measurement plan, checked by a script (vault decision 0032) | `wincondition` (`WinCondition`, `scripts/win-condition`) | have (declaration and gate; the numbers are read by hand) | none usable; ADR 0044 | P0 |
 
 ## How to read the gaps
 
@@ -139,4 +141,4 @@ The common thread: players are visible to each other, the world has a place wher
 
 1. ECO-1 modules are open as PRs #80, #83, #85, #92 (quests, pass ladder with offer rail, community perk, timed rotation). When each merges, set its rows to `have` or `partial` and name the module. Each lands with an ADR, a folder README, an ecosystem-map entry and Lune tests.
 2. Design ADR for the shared collection engine (pets, roulette, luck) before any code.
-3. Hub contract (S01), locomotion and tool equip (S02, S03), backpack (F35), shared objective (F10) and offline earnings (F06) are the next genre-agnostic moldes.
+3. Hub contract (S01, PR for #87 done), locomotion and tool equip (S02, S03, PR for #88 done), backpack (F35), shared objective (F10) and offline earnings (F06) are the next genre-agnostic moldes.
