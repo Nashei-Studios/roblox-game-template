@@ -11,7 +11,9 @@ on:
   workflow_call:
 
 concurrency:
-  group: ci-${{ github.head_ref || github.ref }}
+  # The draft flag is part of the group: a push while draft must not cancel the run that marking
+  # the PR ready starts (it would leave every job skipped and the automerge never fires).
+  group: ci-${{ github.head_ref || github.ref }}-${{ github.event.pull_request.draft }}
   cancel-in-progress: true
 
 permissions:
