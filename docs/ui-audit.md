@@ -1,7 +1,7 @@
 # UI audit
 
 The UI quality bar (skill `roblox-barra-visual`, criteria C2 to C14 and the tells list) as two
-automated audits. Decision and alternatives: `docs/adr/0050-automated-ui-audit.md`.
+automated audits. Decision and alternatives: `docs/adr/0039-automated-ui-audit.md`.
 
 | Audit | Runs | Needs | Fails |
 |---|---|---|---|
@@ -59,6 +59,7 @@ resized to each viewport, the presenter lays itself out, and the original size i
 | `UI-COVERED` | the center of a button or text is under a painting element, or a button sits under its own sibling layer (ZIndex inversion) |
 | `UI-LIST-GAP` | siblings of a list or grid are closer than 4 px (two layers on one box are not neighbours) |
 | `UI-CONTRAST` | WCAG AA, 4.5 (3 for large text), best of the fill (a gradient multiplies the fill) and the text outline |
+| `UI-TEXT-UNDER-CONTROL` | the glyphs (TextBounds plus alignment) of a visible text run under a visible button of the same container; image buttons that carry captions and transparent hit zones are excluded |
 | `UI-TOUCH-44` | measured size under 44 px |
 | `UI-TEXT-SMALL` | rendered text under 11 px (warning) |
 
