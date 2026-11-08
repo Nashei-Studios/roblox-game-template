@@ -882,6 +882,12 @@ Players.PlayerAdded:Connect(function(player: Player)
         player:Kick("Could not load your data. Please rejoin.")
         return
     end
+    -- The join yields: if the player left meanwhile, PlayerRemoving found no session to close and
+    -- nobody else would release this one.
+    if player.Parent == nil then
+        playerData:leave(tostring(player.UserId))
+        return
+    end
     tracker:track("session_start", player.UserId, joined.value.sessionIndex)
     timeRewards:startSession(player.UserId)
     soundSettings:sendCurrent(player.UserId)
