@@ -42,5 +42,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0035](0035-ui-system-imperative-builders-over-kit-trees.md) | UI system: imperative builders over kit Instance trees, rules in pure modules |
 | [0039](0039-global-gitflow-automation.md) | Adopt the global gitflow: develop default, automatic merges, automated releases |
 | [0040](0040-social-hub-scaffold.md) | Social hub scaffold: layout, slots and cap as data |
+| [0041](0041-locomotion-and-tool-controller.md) | Locomotion and tool controller: the server owns the state |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
