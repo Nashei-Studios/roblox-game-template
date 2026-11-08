@@ -1,4 +1,4 @@
-# 0042. Music director with moment stings and a licence manifest
+# 0043. Music director with moment stings and a licence manifest
 
 - Status: accepted
 - Date: 2026-11-08

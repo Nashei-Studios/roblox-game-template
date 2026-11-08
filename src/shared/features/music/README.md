@@ -1,6 +1,6 @@
 # features/music
 
-Playlists by mood, stings on moments, ducking under UI, and a licence manifest, on top of the sound manager. Decision: [ADR 0042](../../../../docs/adr/0042-music-director-and-licence-manifest.md). Issues #90 and #62. Matrix rows E09 and S13.
+Playlists by mood, stings on moments, ducking under UI, and a licence manifest, on top of the sound manager. Decision: [ADR 0043](../../../../docs/adr/0043-music-director-and-licence-manifest.md). Issues #90 and #62. Matrix rows E09 and S13.
 
 ## What it is / is not
 
