@@ -25,6 +25,13 @@ export type Skin = {
     cloneSlot: (self: Skin, slot: KitAdapter.Slot) -> Instance?,
     -- The named part of a cloned piece, by the adapter's part map.
     part: (self: Skin, piece: Instance, slot: KitAdapter.Slot, partName: string) -> Instance,
+    -- Like `part`, but nil when the adapter does not map that optional part.
+    optionalPart: (
+        self: Skin,
+        piece: Instance,
+        slot: KitAdapter.Slot,
+        partName: string
+    ) -> Instance?,
 }
 
 local SkinModule = {}
@@ -48,6 +55,17 @@ local function fixups(piece: Instance, tokens: Tokens.Tokens)
     for _, instance in all do
         if instance:IsA("GuiButton") then
             Atoms.touchFloor(instance, tokens)
+        end
+        -- Spacing the kit left at 0 is a bug on a phone (rule UI-LIST-PADDING / UI-GRID-PADDING).
+        if instance:IsA("UIListLayout") and instance.Padding == UDim.new(0, 0) then
+            instance.Padding = UDim.new(0, tokens.spacing.sm)
+        elseif instance:IsA("UIGridLayout") then
+            local cell = instance.CellPadding
+            local gap = tokens.spacing.sm
+            instance.CellPadding = UDim2.fromOffset(
+                if cell.X.Offset <= 0 and cell.X.Scale <= 0 then gap else cell.X.Offset,
+                if cell.Y.Offset <= 0 and cell.Y.Scale <= 0 then gap else cell.Y.Offset
+            )
         end
         if instance:IsA("TextLabel") or instance:IsA("TextButton") then
             if instance.Text ~= "" then
@@ -104,6 +122,15 @@ function SkinModule.new(
             source = source:FindFirstChild(part) :: Instance
         end
         local clone = source:Clone()
+        local clearPaths: { string } = binding.clear or {}
+        for _, dotPath in clearPaths do
+            local container = Atoms.find(clone, dotPath)
+            for _, child in container:GetChildren() do
+                if child:IsA("GuiObject") then
+                    child:Destroy()
+                end
+            end
+        end
         fixups(clone, tokens)
         return clone
     end
@@ -119,6 +146,19 @@ function SkinModule.new(
         local dotPath = binding.parts[partName]
         assert(dotPath ~= nil, `slot {slot} has no part "{partName}"`)
         return Atoms.find(piece, dotPath)
+    end
+
+    function self.optionalPart(
+        _self: Skin,
+        piece: Instance,
+        slot: KitAdapter.Slot,
+        partName: string
+    ): Instance?
+        local binding = adapter.slots[slot]
+        if binding == nil or binding.parts[partName] == nil then
+            return nil
+        end
+        return Atoms.find(piece, binding.parts[partName])
     end
 
     return self

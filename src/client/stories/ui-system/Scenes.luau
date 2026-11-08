@@ -51,16 +51,22 @@ function Scenes.menu(env: UiEnv.UiEnv, root: SafeAreaRoot.Root)
         kind = "standard",
         onClose = noop,
     })
-    local body = shell.body
-    local column = Stack.vertical(env, body, { name = "Column", pad = "sm" })
-    column.Size = UDim2.fromScale(1, 1)
-    column.AutomaticSize = Enum.AutomaticSize.None
-    Parts.tabs(env, column, {
-        { id = "items", label = "Items" },
-        { id = "boosts", label = "Boosts" },
-    }, noop)
-    local list = ScrollList.new(env, column, { name = "Rows" })
-    list.Size = UDim2.new(1, 0, 1, -env.tokens.touchMin)
+    -- A kit shell brings its own scrolling list; the plain shell gets tabs and a ScrollList.
+    local list: GuiObject
+    if shell.list ~= nil then
+        list = shell.list
+    else
+        local column = Stack.vertical(env, shell.body, { name = "Column", pad = "sm" })
+        column.Size = UDim2.fromScale(1, 1)
+        column.AutomaticSize = Enum.AutomaticSize.None
+        Parts.tabs(env, column, {
+            { id = "items", label = "Items" },
+            { id = "boosts", label = "Boosts" },
+        }, noop)
+        local rows = ScrollList.new(env, column, { name = "Rows" })
+        rows.Size = UDim2.new(1, 0, 1, -env.tokens.touchMin)
+        list = rows
+    end
     for index = 1, 4 do
         Card.new(env, list, {
             name = `Row{index}`,

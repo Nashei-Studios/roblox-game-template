@@ -160,6 +160,32 @@ return function(suite: harness.Harness)
         harness.isTrue(string.find(joined, "no piece at", 1, true) ~= nil, "piece named")
     end)
 
+    suite:test("verify reports a clear target that the kit lacks", function()
+        local adapter: KitAdapter.KitAdapter = {
+            id = "demo",
+            kitSlug = nil,
+            license = "test",
+            slots = {
+                ["menu.shell"] = {
+                    path = "Menu",
+                    parts = { title = "Top.Title", close = "Top.Close", body = "Body" },
+                    clear = { "Body.List" },
+                },
+            },
+        }
+        local present: { [string]: boolean } = {
+            ["Menu"] = true,
+            ["Menu/Top/Title"] = true,
+            ["Menu/Top/Close"] = true,
+            ["Menu/Body"] = true,
+        }
+        local problems = KitAdapter.verify(adapter, function(path: string): boolean
+            return present[path] == true
+        end)
+        harness.equal(#problems, 1)
+        harness.isTrue(string.find(problems[1], "clear target", 1, true) ~= nil)
+    end)
+
     suite:test("validate reports a bad id, a missing licence and an unmapped part", function()
         local bad: KitAdapter.KitAdapter = {
             id = "Bad Id",

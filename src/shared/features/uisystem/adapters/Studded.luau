@@ -21,7 +21,14 @@ local adapter: KitAdapter.KitAdapter = {
     slots = {
         ["menu.shell"] = {
             path = "Templates/MenuTemplate",
-            parts = { title = "Top.Title", close = "Top.CloseButton", body = "Container" },
+            parts = {
+                title = "Top.Title",
+                close = "Top.CloseButton",
+                body = "Container",
+                -- Optional: the kit scrolling list, where menu rows go.
+                rows = "Container.ScrollingContainer",
+            },
+            clear = { "Container.ScrollingContainer" },
         },
         ["menu.rowCard"] = {
             path = "Templates/MenuTemplate/Container/ScrollingContainer/Card",

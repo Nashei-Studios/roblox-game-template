@@ -24,6 +24,9 @@ export type Binding = {
     path: string,
     -- Part name -> dot path from the piece to the descendant to bind.
     parts: { [string]: string },
+    -- Dot paths (from the piece) of containers whose GuiObject children are demo content to drop
+    -- after cloning (the kit ships sample rows inside its menu template). Layouts are kept.
+    clear: { string }?,
 }
 
 export type KitAdapter = {
@@ -117,6 +120,16 @@ function KitAdapterModule.verify(adapter: KitAdapter, exists: (path: string) -> 
                 table.insert(
                     problems,
                     `kit {adapter.id}: slot {slot} part "{part}" missing at "{full}"`
+                )
+            end
+        end
+        local clearPaths: { string } = binding.clear or {}
+        for _, dotPath in clearPaths do
+            local full = binding.path .. "/" .. string.gsub(dotPath, "%.", "/")
+            if not exists(full) then
+                table.insert(
+                    problems,
+                    `kit {adapter.id}: slot {slot} clear target missing at "{full}"`
                 )
             end
         end

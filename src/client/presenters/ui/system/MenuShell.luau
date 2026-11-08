@@ -38,8 +38,10 @@ export type Shell = {
     window: GuiObject,
     title: TextLabel,
     close: TextButton,
-    -- Where the menu puts its rows.
+    -- Free content area under the header.
     body: GuiObject,
+    -- The kit scrolling list for rows (nil on the plain shell: build a ScrollList in `body`).
+    list: ScrollingFrame?,
     setVisible: (self: Shell, visible: boolean) -> (),
     -- Re-sizes the window for a new environment.
     resize: (self: Shell, env: UiEnv.UiEnv) -> (),
@@ -136,12 +138,17 @@ function MenuShell.new(env: UiEnv.UiEnv, parent: Instance, options: Options): Sh
     local title: TextLabel
     local close: TextButton
     local body: GuiObject
+    local list: ScrollingFrame? = nil
     local piece = env.skin:cloneSlot("menu.shell")
     if piece ~= nil and piece:IsA("GuiObject") then
         window = piece
         title = env.skin:part(piece, "menu.shell", "title") :: TextLabel
         close = env.skin:part(piece, "menu.shell", "close") :: TextButton
         body = env.skin:part(piece, "menu.shell", "body") :: GuiObject
+        local rows = env.skin:optionalPart(piece, "menu.shell", "rows")
+        if rows ~= nil and rows:IsA("ScrollingFrame") then
+            list = rows
+        end
         title.Text = options.title
         piece.Visible = true
         piece.Parent = root
@@ -166,6 +173,7 @@ function MenuShell.new(env: UiEnv.UiEnv, parent: Instance, options: Options): Sh
     self.title = title
     self.close = close
     self.body = body
+    self.list = list
 
     local previousSelection: GuiObject? = nil
 
