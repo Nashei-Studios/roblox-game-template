@@ -142,6 +142,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     steps:
       - name: Squash-merge unless held
         env:
@@ -153,3 +154,7 @@ jobs:
             echo "PR held by label, not merging"; exit 0
           fi
           gh pr merge "$PR" --repo "$REPO" --squash
+          # A merge made with GITHUB_TOKEN does not fire the closing keywords: close the linked issues here.
+          for issue in $(gh pr view "$PR" --repo "$REPO" --json closingIssuesReferences --jq '.closingIssuesReferences[].number'); do
+            gh issue close "$issue" --repo "$REPO" --comment "Closed by #$PR (automerge)."
+          done
