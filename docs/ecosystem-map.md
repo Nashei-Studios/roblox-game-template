@@ -51,6 +51,7 @@ No existe pieza abierta mantenida ni servicio nativo que los resuelva. Se escrib
 | Mascotas y huevos | Búsqueda en GitHub: solo repos de 0 estrellas, casi todos sin licencia | `roblox-gameplay-toolkit` (MIT, según el vault) | #24 (ya existe) |
 | Ruleta | `marchware/Roblox-Spin-Wheel` no tiene licencia | Ninguno con licencia | #26 (ya existe) |
 | Regalos entre jugadores | Sin módulo abierto | `MessagingService` nativo solo para avisar | #54 |
+| Perk de comunidad (porcentaje por pertenecer al grupo) | Ninguno: usa `Player:IsInGroupAsync` tras el puerto `MembershipChecker`; `CommunityPerk` hecho (ADR 0037, 2026-11-08) | Ninguno | #84 |
 | Misiones | `FarFromLittle/Questline` (MIT) y `prooheckcp/RoQuest` (Apache-2.0): no encajan con el puerto de guardado; módulo propio `features/quests` hecho (ADR 0035, 2026-11-08) | Diseño de Questline | #56 |
 | Pase de temporada | Sin módulo abierto | Ninguno | #63 |
 | Escalera de pases y riel de ofertas | Ninguno: es lógica de producto sobre `MarketplaceService`; módulo propio `features/offers` hecho (ADR 0036, 2026-11-08) | Ninguno | #82 |

@@ -163,6 +163,10 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/features/community-reward/CommunityReward.test"),
     },
     {
+        name = "CommunityPerk",
+        register = require("../tests/features/community-reward/CommunityPerk.test"),
+    },
+    {
         name = "Leaderboards and Group adapters",
         register = require("../tests/adapters/Leaderboards.adapters.test"),
     },

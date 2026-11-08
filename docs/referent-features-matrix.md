@@ -33,7 +33,7 @@ Status: `have` = a module covers it end to end; `partial` = a module covers a sl
 | F10 | Shared objective with a common progress bar and a reward for everyone (Rock In My Lawn, up to 6 friends) | none (one game has it as "Shared Vein") | missing | none usable | P0 |
 | F11 | Friend boost by friends in the server (Crypto Empire "Friends Bonus") | `social` | have | none needed | P2 |
 | F12 | Invite a friend with a reward | `social` | have | platform: SocialService | P2 |
-| F13 | Group or community reward with a real perk, not only coins (Mine a Mountain "+1 Digging Luck", Tower Defense Simulator "+$100 starting cash") | `community-reward` (coins), `social` (perk percentage) | partial (PR #85 perk, open) | none usable | P0 |
+| F13 | Group or community reward with a real perk, not only coins (Mine a Mountain "+1 Digging Luck", Tower Defense Simulator "+$100 starting cash") | `community-reward` (`CommunityReward`, `CommunityPerk`), `social` | have | none usable | P0 |
 | F14 | Free private servers announced in the description (VERY LUCKY games) | `privateserver` | have | none needed | P1 |
 | F15 | Daily boards and avatar podium | `leaderboards` | partial (#50, #51) | platform: OrderedDataStore | P1 |
 | F16 | Pets and eggs with weighted hatching (Tap Simulator REBORN, Steal An Egg, Loot To Forge, Dig For Eggs) | none | missing (#24) | none usable (candidates have 0 to 14 stars, mostly unlicensed) | P0 |
