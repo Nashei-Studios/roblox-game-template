@@ -79,6 +79,7 @@ local PerfBudget: Budget = {
         CoinsChanged = { maxPerSecond = 2 },
         -- Engagement modules (ADR 0025).
         Notify = { maxPerSecond = 4 }, -- chosen, not sourced: a few toasts per second at most
+        AnnounceMilestone = { maxPerSecond = 1 }, -- chosen, not sourced: milestones are rare
         SoundSettings = { maxPerSecond = 2 }, -- chosen, not sourced
     },
     runtime = {
