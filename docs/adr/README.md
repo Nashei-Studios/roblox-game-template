@@ -39,5 +39,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0032](0032-join-architecture-data-as-background-state.md) | Join architecture: data is background state |
 | [0033](0033-tap-anywhere-input-router.md) | Tap anywhere: a pure input router with blockers |
 | [0034](0034-visible-progression-modules.md) | Visible progression modules: rules, announcer, hit effects, extra board stats, card grid |
+| [0039](0039-automated-ui-audit.md) | Automated UI audit: static Lune audit over kit pieces in the gate, runtime audit in a playtest |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
