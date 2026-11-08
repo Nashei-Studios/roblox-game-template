@@ -19,7 +19,7 @@ Vault decision 0032 makes a win condition a gate of pipeline stages 1, 7, 8 and 
 
 ## Decision
 
-Option B. `docs/win-condition-checklist.md` ships in the template (vault wikilinks resolved to plain references). `features/wincondition/WinCondition` types the declaration (`hypothesis`, `hookSentence` of at most 9 words, `shareableMomentIds`, `borrowedChannel`, `solo`, `funnyElement`, `measurementPlan`, `targetOwner`, `targetDate`) and separates `missing` fields from `problems`. `scripts/win-condition.luau` prints both and exits 1 on any problem; with `--strict` it also fails on missing fields. Template CI runs it in pending mode. `scripts/new-game.ps1` names the checklist and the strict command in its output. The cross-check of moment ids against the clip-moment config is available through the optional `knownMomentIds` argument and is wired by the game, because the clip-moment module is a separate feature.
+Option B. `docs/win-condition-checklist.md` ships in the template (vault wikilinks resolved to plain references). `features/wincondition/WinCondition` types the declaration (`hypothesis`, `hookSentence` of at most 9 words, `shareableMomentIds`, `borrowedChannel`, `solo`, `funnyElement`, `measurementPlan`, `targetOwner`, `targetDate`) and separates `missing` fields from `problems`. `scripts/win-condition.luau` prints both and exits 1 on any problem; with `--strict` it also fails on missing fields.  `scripts/new-game.ps1` names the checklist and the strict command in its output. The cross-check of moment ids against the clip-moment config is available through the optional `knownMomentIds` argument and is wired by the game, because the clip-moment module is a separate feature.
 
 ```mermaid
 flowchart TD

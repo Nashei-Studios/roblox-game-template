@@ -25,7 +25,7 @@ docs/win-condition-checklist.md  the checklist with its test per criterion
 
 ## Forbidden here
 
-A game name, a threshold presented as Roblox official, a plausible value in the measurement table, making the template CI strict.
+A game name, a threshold presented as Roblox official, a plausible value in the measurement table, making a CI gate strict in the template.
 
 ## Tests
 
