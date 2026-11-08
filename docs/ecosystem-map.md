@@ -2,6 +2,8 @@
 
 Política en [ADR 0028](adr/0028-external-building-blocks-and-wally.md): primero lo externo (servicio nativo de Roblox, librería abierta mantenida, plugin del Creator Store), después el pegamento que escribimos nosotros. Seguimiento general: #48.
 
+Backlog vivo de funciones atractivas de los referentes, de Essentials y de presencia social, con su módulo y estado: [referent-features-matrix.md](referent-features-matrix.md).
+
 Fecha de verificación: 2026-11-06. Los repos se midieron con `gh repo view` (licencia, último push); las APIs de Roblox se leyeron en `roblox/creator-docs` con context7. Lo que no se pudo leer ese día se marca como **no verificado**.
 
 ## Sistemas con pieza externa
@@ -50,7 +52,7 @@ No existe pieza abierta mantenida ni servicio nativo que los resuelva. Se escrib
 | Ruleta | `marchware/Roblox-Spin-Wheel` no tiene licencia | Ninguno con licencia | #26 (ya existe) |
 | Regalos entre jugadores | Sin módulo abierto | `MessagingService` nativo solo para avisar | #54 |
 | Perk de comunidad (porcentaje por pertenecer al grupo) | Ninguno: usa `Player:IsInGroupAsync` tras el puerto `MembershipChecker`; `CommunityPerk` hecho (ADR 0037, 2026-11-08) | Ninguno | #84 |
-| Misiones | `FarFromLittle/Questline` (MIT, 9 estrellas, 2026-10-07), código no leído | Leerlo antes de tomar nada | #56 |
+| Misiones | `FarFromLittle/Questline` (MIT) y `prooheckcp/RoQuest` (Apache-2.0): no encajan con el puerto de guardado; módulo propio `features/quests` hecho (ADR 0035, 2026-11-08) | Diseño de Questline | #56 |
 | Pase de temporada | Sin módulo abierto | Ninguno | #63 |
 | Intercambio (trade) | Sin módulo abierto; riesgo de duplicado | Ninguno; diferido hasta que un juego lo pida | #65 |
 
