@@ -1,0 +1,120 @@
+name: release
+
+# Release train (ADR gitflow): develop -> main by PR with a MERGE commit (never squash between permanent
+# branches), annotated SemVer tag, CHANGELOG and GitHub Release, with zero human steps.
+# When it runs:
+#   - on demand: `gh workflow run release.yml` (closing a verified cycle, one command);
+#   - weekly floor: Monday, only when develop holds a feat/fix/perf/tune commit since the last tag.
+# A skipped run costs about one minute. For Roblox games "production" is main plus its tag; publishing the
+# place stays in Studio and the public switch stays with Victor, so nothing here touches Roblox.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 13 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  GIT_CLIFF_VERSION: "2.14.2"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: develop
+          fetch-depth: 0
+      - name: Install git-cliff (pinned, checksum verified)
+        run: |
+          base="https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}"
+          asset="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          curl -fsSL -O "$base/$asset" -O "$base/$asset.sha512"
+          sha512sum -c "$asset.sha512"
+          tar -xzf "$asset" --strip-components=1 "git-cliff-${GIT_CLIFF_VERSION}/git-cliff"
+          mkdir -p "$HOME/.local/bin" && mv git-cliff "$HOME/.local/bin/"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Decide whether there is something to release
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)
+          range=${last:+$last..}HEAD
+          if [ "$EVENT" = "schedule" ]; then
+            pattern='^(feat|fix|perf|tune)(\(.+\))?!?:'
+          else
+            pattern='^[a-z]+(\(.+\))?!?:'
+          fi
+          if git log "$range" --format=%s | grep -Ev '^chore\(release\)' | grep -Eq "$pattern"; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$(git-cliff --bumped-version)" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing to release since ${last:-the start}"
+          fi
+
+  gate:
+    # The tree that ships was tested per PR, but two PRs merged one after the other were each tested against
+    # an older develop. One more run on the combination; PRs and pushes made with GITHUB_TOKEN start no CI.
+    needs: plan
+    if: needs.plan.outputs.release == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: [plan, gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: develop
+          fetch-depth: 0
+      - name: Install git-cliff (pinned, checksum verified)
+        run: |
+          base="https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}"
+          asset="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          curl -fsSL -O "$base/$asset" -O "$base/$asset.sha512"
+          sha512sum -c "$asset.sha512"
+          tar -xzf "$asset" --strip-components=1 "git-cliff-${GIT_CLIFF_VERSION}/git-cliff"
+          mkdir -p "$HOME/.local/bin" && mv git-cliff "$HOME/.local/bin/"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Changelog and release notes
+        run: |
+          git-cliff --tag "$VERSION" --output CHANGELOG.md
+          git-cliff --unreleased --tag "$VERSION" --strip header --output "$RUNNER_TEMP/notes.md"
+      - name: Commit the changelog on develop
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "chore(release): $VERSION"
+          git push origin develop
+      - name: Promote develop to main with a merge commit
+        run: |
+          url=$(gh pr create --base main --head develop --title "chore(release): $VERSION" --body-file "$RUNNER_TEMP/notes.md")
+          gh pr merge "$url" --merge --subject "chore(release): $VERSION" --body ""
+      - name: Tag main and publish the GitHub Release
+        run: |
+          git fetch origin main
+          git tag -a "$VERSION" -m "$VERSION" origin/main
+          git push origin "$VERSION"
+          gh release create "$VERSION" --verify-tag --title "$VERSION" --notes-file "$RUNNER_TEMP/notes.md"

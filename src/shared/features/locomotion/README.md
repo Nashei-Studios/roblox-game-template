@@ -1,6 +1,6 @@
 # features/locomotion
 
-Walk, run and tool equip/unequip with a server-owned state. Decision: [ADR 0040](../../../../docs/adr/0040-locomotion-and-tool-controller.md). Issue #88. Matrix rows S02 and S03 in [referent-features-matrix](../../../../docs/referent-features-matrix.md).
+Walk, run and tool equip/unequip with a server-owned state. Decision: [ADR 0041](../../../../docs/adr/0041-locomotion-and-tool-controller.md). Issue #88. Matrix rows S02 and S03 in [referent-features-matrix](../../../../docs/referent-features-matrix.md).
 
 ## What it is / is not
 

@@ -1,4 +1,4 @@
-# 0040. Locomotion and tool controller: the server owns the state
+# 0041. Locomotion and tool controller: the server owns the state
 
 - Status: accepted
 - Date: 2026-11-08
