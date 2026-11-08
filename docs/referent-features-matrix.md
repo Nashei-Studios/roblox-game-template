@@ -86,7 +86,7 @@ Source: the 13 products and the parity matrix of the vault. The paid packs are n
 | E06 | Top banner and coloured chat lines | none | missing | platform: TextChatService | P1 |
 | E07 | Triggers: friend joined, joins and leaves, rotating announcements, purchase announced in chat | none | missing | platform: TextChatService, Players | P1 |
 | E08 | Sound: mixer, separate music and SFX volume, toggles, levelled effects | `sound` | have | Kenney audio (CC0) | P2 |
-| E09 | Music player with named tracks, time, skip, mute, hide | none | missing (#62) | Kenney (CC0) for tracks | P1 |
+| E09 | Music player with named tracks, time, skip, mute, hide | `music` (`MusicDirector`: moods, stings, duck; no player UI) | partial (#62) | Kenney (CC0) for tracks | P1 |
 | E10 | World speakers with ProximityPrompt | none | missing (#62) | platform: ProximityPrompt | P2 |
 | E11 | UI: Shop, Settings menus | `ui` | have | none needed | P2 |
 | E12 | UI: Teleport, Changelogs menus | `ui` | missing (#53) | none usable | P2 |
@@ -126,6 +126,7 @@ The common thread: players are visible to each other, the world has a place wher
 | S09 | Friends joining each other, invite prompt, join-by-friend | `social` | have | platform: SocialService | P2 |
 | S10 | Chat presence: announcements of rare drops and joins in chat | none | missing | platform: TextChatService | P1 |
 | S11 | Spectate or follow a friend, party and group queue (battlegrounds, tower defense matches) | none | missing | none usable | P2 |
+| S13 | Music that fits the clip: a mood playlist, a sting at the moment, ducking, and a licence per audio id (win-condition criterion 4; referent style is a GAP) | `music` (`MusicConfig`, `MusicDirector`) | have for the director and the licence check; the tracks and their ids are per game | CC0 (Kenney) and DistroKid are the bases; ADR 0042 | P0 |
 
 ## How to read the gaps
 
