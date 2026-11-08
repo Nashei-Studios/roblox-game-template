@@ -29,6 +29,8 @@ export type Deps = {
     -- Server clock, Unix seconds (os.time in production).
     now: () -> number,
     profileFor: (userId: number) -> PlayerStats.StatProfile?,
+    -- Values of LeaderboardsConfig.extraStats for a player (a count per day, for example).
+    extraFor: ((userId: number) -> PlayerStats.ExtraStats?)?,
     onError: (message: string) -> (),
 }
 
@@ -48,13 +50,21 @@ function LeaderboardsModule.new(deps: Deps): Ports.Leaderboards
     local lastWrite: number? = nil
     local ids = LeaderboardsConfig.sortedIds(deps.config)
 
+    local function extraOf(userId: number): PlayerStats.ExtraStats?
+        local extraFor = deps.extraFor
+        if extraFor == nil then
+            return nil
+        end
+        return extraFor(userId)
+    end
+
     local function refreshView(userId: number, state: Tracked)
         local profile = deps.profileFor(userId)
         if profile == nil then
             return
         end
         for _, stat in deps.config.leaderstats do
-            local value = PlayerStats.read(profile, stat)
+            local value = PlayerStats.read(profile, stat, extraOf(userId))
             if value ~= nil and state.shown[stat] ~= value then
                 state.shown[stat] = value
                 deps.view:set(userId, stat, value)
@@ -69,7 +79,7 @@ function LeaderboardsModule.new(deps: Deps): Ports.Leaderboards
         end
         for _, id in ids do
             local board = deps.config.boards[id]
-            local value = PlayerStats.read(profile, board.stat)
+            local value = PlayerStats.read(profile, board.stat, extraOf(userId))
             local key = BoardKey.storeKey(id, board.resetCycle, now)
             if value ~= nil and state.written[key] ~= value then
                 local stored = deps.store:setScore(key, userId, value)

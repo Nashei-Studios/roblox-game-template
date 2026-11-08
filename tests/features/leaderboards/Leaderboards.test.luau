@@ -30,7 +30,10 @@ local function validConfig(): LeaderboardsConfig.LeaderboardsConfig
     }
 end
 
-local function newFixture(): Fixture
+local function newFixture(
+    config: LeaderboardsConfig.LeaderboardsConfig?,
+    extraFor: ((userId: number) -> PlayerStats.ExtraStats?)?
+): Fixture
     local clock = { now = 1_000_000 }
     local profile: PlayerStats.StatProfile = { coins = 5, sessionCount = 2 }
     local writes: { string } = {}
@@ -80,13 +83,14 @@ local function newFixture(): Fixture
         end,
     }
     local service = Leaderboards.new({
-        config = validConfig(),
+        config = config or validConfig(),
         store = store,
         view = view,
         publisher = publisher,
         now = function(): number
             return clock.now
         end,
+        extraFor = extraFor,
         profileFor = function(userId: number): PlayerStats.StatProfile?
             if userId == 1 then
                 return profile
@@ -112,9 +116,37 @@ end
 
 return function(suite: harness.Harness)
     suite:test(
+        "a daily board of an extra stat writes the injected value under the day key",
+        function()
+            local config = validConfig()
+            config.extraStats = { "actionsToday" }
+            config.boards.ActionsToday =
+                { stat = "actionsToday", refreshSeconds = 300, size = 5, resetCycle = "daily" }
+            local fixture = newFixture(config, function(_userId: number): PlayerStats.ExtraStats?
+                return { actionsToday = 17 }
+            end)
+            fixture.service:track(1)
+            fixture.service:tick()
+            local found = false
+            for _, write in fixture.writes do
+                if
+                    string.find(write, "ActionsToday", 1, true) ~= nil
+                    and string.find(write, "=17", 1, true) ~= nil
+                then
+                    found = true
+                end
+            end
+            harness.isTrue(
+                found,
+                "the extra stat is written: " .. table.concat(fixture.writes, ",")
+            )
+        end
+    )
+
+    suite:test(
         "joining fills leaderstats from the profile and reads nothing from the store",
         function()
-            local fixture = newFixture()
+            local fixture = newFixture(nil, nil)
             fixture.service:track(1)
             harness.equal(fixture.shown[1], "1:coins=5", "leaderstats shown")
             harness.equal(#fixture.reads, 0, "no read on join")
@@ -123,7 +155,7 @@ return function(suite: harness.Harness)
     )
 
     suite:test("writes run on the schedule and only for changed values", function()
-        local fixture = newFixture()
+        local fixture = newFixture(nil, nil)
         fixture.service:track(1)
         fixture.service:tick()
         harness.equal(#fixture.writes, 2, "first round writes both boards")
@@ -141,7 +173,7 @@ return function(suite: harness.Harness)
     end)
 
     suite:test("reads follow each board's refresh interval and are cached and published", function()
-        local fixture = newFixture()
+        local fixture = newFixture(nil, nil)
         fixture.store.top = { { userId = 1, value = 9 } }
         fixture.service:tick()
         harness.equal(#fixture.reads, 2, "both boards read once")
@@ -157,7 +189,7 @@ return function(suite: harness.Harness)
     end)
 
     suite:test("a failed read keeps the cache and waits a full interval", function()
-        local fixture = newFixture()
+        local fixture = newFixture(nil, nil)
         fixture.store.top = { { userId = 1, value = 9 } }
         fixture.service:tick()
         fixture.store.failReads = true
@@ -172,7 +204,7 @@ return function(suite: harness.Harness)
     end)
 
     suite:test("a failed write is reported and retried at the next round", function()
-        local fixture = newFixture()
+        local fixture = newFixture(nil, nil)
         fixture.service:track(1)
         fixture.store.failWrites = true
         fixture.service:tick()
@@ -185,7 +217,7 @@ return function(suite: harness.Harness)
     end)
 
     suite:test("forgetting a player flushes once and drops the view", function()
-        local fixture = newFixture()
+        local fixture = newFixture(nil, nil)
         fixture.service:track(1)
         fixture.profile.coins = 50
         fixture.service:forget(1)
@@ -199,7 +231,7 @@ return function(suite: harness.Harness)
     end)
 
     suite:test("a new reset period writes under a new key", function()
-        local fixture = newFixture()
+        local fixture = newFixture(nil, nil)
         fixture.service:track(1)
         fixture.service:tick()
         fixture.clock.now += 86400
@@ -213,7 +245,7 @@ return function(suite: harness.Harness)
     end)
 
     suite:test("a player with no loaded data is skipped", function()
-        local fixture = newFixture()
+        local fixture = newFixture(nil, nil)
         fixture.service:track(2)
         fixture.service:tick()
         harness.equal(#fixture.shown, 0, "nothing to show")
