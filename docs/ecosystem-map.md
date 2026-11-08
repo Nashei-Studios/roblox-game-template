@@ -49,6 +49,7 @@ No existe pieza abierta mantenida ni servicio nativo que los resuelva. Se escrib
 | Mascotas y huevos | Búsqueda en GitHub: solo repos de 0 estrellas, casi todos sin licencia | `roblox-gameplay-toolkit` (MIT, según el vault) | #24 (ya existe) |
 | Ruleta | `marchware/Roblox-Spin-Wheel` no tiene licencia | Ninguno con licencia | #26 (ya existe) |
 | Regalos entre jugadores | Sin módulo abierto | `MessagingService` nativo solo para avisar | #54 |
+| Perk de comunidad (porcentaje por pertenecer al grupo) | Ninguno: usa `Player:IsInGroupAsync` tras el puerto `MembershipChecker`; `CommunityPerk` hecho (ADR 0037, 2026-11-08) | Ninguno | #84 |
 | Misiones | `FarFromLittle/Questline` (MIT, 9 estrellas, 2026-10-07), código no leído | Leerlo antes de tomar nada | #56 |
 | Pase de temporada | Sin módulo abierto | Ninguno | #63 |
 | Intercambio (trade) | Sin módulo abierto; riesgo de duplicado | Ninguno; diferido hasta que un juego lo pida | #65 |
