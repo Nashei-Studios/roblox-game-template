@@ -45,5 +45,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0041](0041-locomotion-and-tool-controller.md) | Locomotion and tool controller: the server owns the state |
 | [0042](0042-clip-moment-over-capture-service.md) | Clip moment: a timed plan over CaptureService |
 | [0043](0043-music-director-and-licence-manifest.md) | Music director with moment stings and a licence manifest |
+| [0044](0044-win-condition-checklist-and-gate.md) | Win-condition checklist and a pending-tolerant gate |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).

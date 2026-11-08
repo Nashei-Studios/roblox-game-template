@@ -11,6 +11,7 @@ local CommunityRewardConfig = require("./features/community-reward/CommunityRewa
 local LeaderboardsConfig = require("./features/leaderboards/LeaderboardsConfig")
 local NotificationsConfig = require("./features/notifications/NotificationsConfig")
 local SoundConfig = require("./features/sound/SoundConfig")
+local WinCondition = require("./features/wincondition/WinCondition")
 local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
 local UiConfig = require("./features/ui/UiConfig")
 
@@ -126,6 +127,8 @@ export type GameConfig = {
     ui: UiConfig.UiConfig?,
     leaderboards: LeaderboardsConfig.LeaderboardsConfig?,
     communityReward: CommunityRewardConfig.CommunityRewardConfig?,
+    -- Win condition (vault ADR 0032): empty in the template, filled at stage 1 of a game.
+    winCondition: WinCondition.WinConditionConfig?,
 }
 
 local Config = {}
@@ -136,6 +139,8 @@ Config.ROBUX_TRANSFER_PLATFORM_MAX = 500
 
 Config.default = {
     gameName = "My Game", -- TODO(victor): set the game name
+    -- Stage 1 of a game fills this (docs/win-condition-checklist.md); `lune run scripts/win-condition --strict`.
+    winCondition = WinCondition.empty(),
     sessionLockTimeoutSeconds = 1800,
     autosaveIntervalSeconds = 120,
     purchaseLedgerSize = 50,

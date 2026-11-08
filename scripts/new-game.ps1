@@ -61,6 +61,7 @@ if ($DryRun) {
     Write-Output "[dry-run] gh $($createArgs -join ' ')"
     Write-Output "[dry-run] gh $($cloneArgs -join ' ')"
     Write-Output "[dry-run] set name '$Slug' in default.project.json and gameName '$title' in src/shared/Config.luau"
+    Write-Output "[dry-run] the stamped repo carries docs/win-condition-checklist.md and src/shared/features/wincondition; stage 1 fills Config.winCondition and runs: lune run scripts/win-condition --strict"
     if ($VaultPath) {
         $dryNote = Get-GameNotePath $VaultPath (Get-Date -Format 'yyyy-MM') $Slug
         if (Test-Path -LiteralPath $dryNote) { Write-Output "[dry-run] game note already exists, would leave unchanged: $dryNote" }
@@ -93,6 +94,11 @@ else {
     Set-Content -LiteralPath $readmeFile -Value $readme -NoNewline
 
     Write-Output "Stamped $repo at $target (not committed: review the diff, then commit and push)."
+    $checklist = Join-Path $target 'docs/win-condition-checklist.md'
+    if (Test-Path -LiteralPath $checklist) {
+        Write-Output "Win condition: fill Config.winCondition and the checklist ($checklist) at stage 1; gate: lune run scripts/win-condition --strict"
+    }
+    else { Write-Warning "docs/win-condition-checklist.md is missing in the stamped repo." }
 
     if ($VaultPath) {
         $month = Get-Date -Format 'yyyy-MM'

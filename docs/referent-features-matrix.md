@@ -128,6 +128,7 @@ The common thread: players are visible to each other, the world has a place wher
 | S11 | Spectate or follow a friend, party and group queue (battlegrounds, tower defense matches) | none | missing | none usable | P2 |
 | S12 | A clip-worthy moment with timed hype and a skippable share prompt (Roblox Moments clips, 30 s, captured by the player; win-condition criteria 2, 4, 8) | `clipmoment` (`MomentDirector`) | partial (plan, limits and opt-outs are code; hooks and the real capture are per game) | platform: CaptureService `PromptShareCapture`; ADR 0042 | P0 |
 | S13 | Music that fits the clip: a mood playlist, a sting at the moment, ducking, and a licence per audio id (win-condition criterion 4; referent style is a GAP) | `music` (`MusicConfig`, `MusicDirector`) | have for the director and the licence check; the tracks and their ids are per game | CC0 (Kenney) and DistroKid are the bases; ADR 0043 | P0 |
+| S14 | A declared win condition per game: hypothesis, hook of under 10 words, shareable moment ids and a measurement plan, checked by a script (vault decision 0032) | `wincondition` (`WinCondition`, `scripts/win-condition`) | have (declaration and gate; the numbers are read by hand) | none usable; ADR 0044 | P0 |
 
 ## How to read the gaps
 
