@@ -2,6 +2,8 @@
 
 Política en [ADR 0028](adr/0028-external-building-blocks-and-wally.md): primero lo externo (servicio nativo de Roblox, librería abierta mantenida, plugin del Creator Store), después el pegamento que escribimos nosotros. Seguimiento general: #48.
 
+Backlog vivo de funciones atractivas de los referentes, de Essentials y de presencia social, con su módulo y estado: [referent-features-matrix.md](referent-features-matrix.md).
+
 Fecha de verificación: 2026-11-06. Los repos se midieron con `gh repo view` (licencia, último push); las APIs de Roblox se leyeron en `roblox/creator-docs` con context7. Lo que no se pudo leer ese día se marca como **no verificado**.
 
 ## Sistemas con pieza externa
