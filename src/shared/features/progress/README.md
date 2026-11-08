@@ -1,11 +1,11 @@
 # features/progress
 
-Visible progression: `ProgressRules`, `MilestoneTracker`, plus the server adapter `server/adapters/Announcer`. [ADR 0034](../../../../docs/adr/0034-visible-progression-modules.md). Origin: plus-one-mining F8 (PR #71). Refs #47, #76.
+Visible progression: `ProgressRules`, `MilestoneTracker`, plus the server adapter `server/adapters/Announcer` and the client `presenters/AnnouncementPresenter`. [ADR 0034](../../../../docs/adr/0034-visible-progression-modules.md). Origin: plus-one-mining F8 (PR #71). Refs #47, #76.
 
 ## What it is / is not
 
 - Is: pure rules that load under Lune. Tiers (a title and color by a counter such as rebirths), a milestone every N units, a message template, and a per-UTC-day count derived from a lifetime counter.
-- Is not: the chat. `Announcer.say` (TextChatService) is the only engine piece and lives in `server/adapters`. It does not know when to speak.
+- Is not: the chat. The server `Announcer` only fires the `AnnounceMilestone` remote; `DisplaySystemMessage` is client-only, so the chat call lives in `Main.client`. It does not know when to speak.
 
 ## Rules
 
@@ -23,7 +23,7 @@ local daily = ProgressRules.newDailyCounter()
 -- when the counter changes:
 local reached = tracker:observe(player.UserId, value)
 if reached ~= nil then
-    Announcer.say(ProgressRules.format(config.announceText, player.DisplayName, reached))
+    announcer:announce(player.DisplayName, reached) -- client formats config.announceText
 end
 -- daily board: set LeaderboardsConfig.extraStats = { "actionsToday" }, add a board
 -- { stat = "actionsToday", resetCycle = "daily", ... } and return actionsToday from

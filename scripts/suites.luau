@@ -103,6 +103,10 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/adapters/RobloxAdService.test"),
     },
     {
+        name = "Announcer (adapter and presenter)",
+        register = require("../tests/adapters/Announcer.test"),
+    },
+    {
         name = "RobloxServerContext (adapter)",
         register = require("../tests/adapters/RobloxServerContext.test"),
     },
@@ -219,6 +223,7 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     { name = "Quests", register = require("../tests/features/quests/Quests.test") },
     { name = "HitFx", register = require("../tests/features/hitfx/HitFx.test") },
     { name = "CardGrid", register = require("../tests/features/ui/CardGrid.test") },
+    { name = "UiAudit", register = require("../tests/features/ui/UiAudit.test") },
     {
         name = "TapInput (router and filter)",
         register = require("../tests/features/input/TapInput.test"),

@@ -24,7 +24,7 @@ For the daily leaderboard there was a second choice. The template boards already
 Option B, with these shapes:
 
 - `progress/ProgressRules`: `tierFor` over data tiers (`min`, `name`, `colorHex`), `validateTiers`, `milestoneCrossed`, `format` (`{name}` and `{value}` template), `newDailyCounter` (per-UTC-day count from a lifetime counter, in memory).
-- `progress/MilestoneTracker`: the first sight of a player is the baseline, so joining high never announces. `server/adapters/Announcer` only delivers a system line through TextChatService; a failure is a `warn`.
+- `progress/MilestoneTracker`: the first sight of a player is the baseline, so joining high never announces. `server/adapters/Announcer` only sends the name and value over the `AnnounceMilestone` remote; the client (`AnnouncementPresenter`) builds the line and shows it with `TextChannel:DisplaySystemMessage`, which the engine refuses on the server; a client-side failure is a `warn`. Amended by the fix in PR for issue below (same decision, delivery moved to the client).
 - `hitfx/HitFx`: hit kinds are a data table validated for count (cap 40), speed, size, lifetime and glow; `client/presenters/HitFxEmitter` reuses one anchor and one emitter.
 - `leaderboards`: `LeaderboardsConfig.extraStats` and an optional `Leaderboards.Deps.extraFor`. A daily board of a game stat is one `extraStats` entry and one `boards` entry; the server returns the value from `extraFor` (for example from `newDailyCounter`).
 - `ui/CardGrid` (status, validation, column math, `CardGridPresenter` interface) and `client/presenters/ui/CardGridPanel` built on `Widgets`.

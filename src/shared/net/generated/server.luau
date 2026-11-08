@@ -186,6 +186,13 @@ if not RunService:IsRunning() then
 		ClaimDailyReward = table.freeze({
 			setCallback = noop
 		}),
+		AnnounceMilestone = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
 	}) :: Events
 end
 
@@ -336,7 +343,7 @@ local returns = {
 		fire = function(player: Player, music: (number), sfx: (number))
 			load_player(player)
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, music)
 			alloc(1)
@@ -346,7 +353,7 @@ local returns = {
 		fireAll = function(music: (number), sfx: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, music)
 			alloc(1)
@@ -363,7 +370,7 @@ local returns = {
 		fireExcept = function(except: Player, music: (number), sfx: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, music)
 			alloc(1)
@@ -382,7 +389,7 @@ local returns = {
 		fireList = function(list: { [unknown]: Player }, music: (number), sfx: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, music)
 			alloc(1)
@@ -399,7 +406,7 @@ local returns = {
 		fireSet = function(set: { [Player]: any }, music: (number), sfx: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, music)
 			alloc(1)
@@ -482,7 +489,7 @@ local returns = {
 		fire = function(player: Player, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number))
 			load_player(player)
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
 			local bool_2 = 0
 			local bool_2_pos_1 = alloc(2)
 			if kind == "code_redeemed" then
@@ -518,7 +525,7 @@ local returns = {
 		fireAll = function(kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
 			local bool_3 = 0
 			local bool_3_pos_1 = alloc(2)
 			if kind == "code_redeemed" then
@@ -561,7 +568,7 @@ local returns = {
 		fireExcept = function(except: Player, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
 			local bool_4 = 0
 			local bool_4_pos_1 = alloc(2)
 			if kind == "code_redeemed" then
@@ -606,7 +613,7 @@ local returns = {
 		fireList = function(list: { [unknown]: Player }, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
 			local bool_5 = 0
 			local bool_5_pos_1 = alloc(2)
 			if kind == "code_redeemed" then
@@ -649,7 +656,7 @@ local returns = {
 		fireSet = function(set: { [Player]: any }, kind: ("code_redeemed" | "code_invalid" | "code_expired" | "code_used" | "code_cooldown" | "daily_claimed" | "daily_unavailable" | "session_gift_claimed" | "session_gift_unavailable" | "community_reward_claimed" | "community_not_member"), amount: (number))
 			load_empty()
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
 			local bool_6 = 0
 			local bool_6_pos_1 = alloc(2)
 			if kind == "code_redeemed" then
@@ -775,6 +782,113 @@ local returns = {
 			reliable_events[2] = callback
 			return function()
 				reliable_events[2] = nil
+			end
+		end,
+	},
+	AnnounceMilestone = {
+		fire = function(player: Player, name: (string), value: (number))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_3 = #name
+			assert(len_3 >= 1, "value is less than 1!")
+			assert(len_3 <= 40, "value is more than 40!")
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, len_3 - 1)
+			alloc(len_3)
+			buffer.writestring(outgoing_buff, outgoing_apos, name, len_3)
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, value)
+			player_map[player] = save()
+		end,
+		fireAll = function(name: (string), value: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_4 = #name
+			assert(len_4 >= 1, "value is less than 1!")
+			assert(len_4 <= 40, "value is more than 40!")
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, len_4 - 1)
+			alloc(len_4)
+			buffer.writestring(outgoing_buff, outgoing_apos, name, len_4)
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, value)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, name: (string), value: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_5 = #name
+			assert(len_5 >= 1, "value is less than 1!")
+			assert(len_5 <= 40, "value is more than 40!")
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, len_5 - 1)
+			alloc(len_5)
+			buffer.writestring(outgoing_buff, outgoing_apos, name, len_5)
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, value)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, name: (string), value: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_6 = #name
+			assert(len_6 >= 1, "value is less than 1!")
+			assert(len_6 <= 40, "value is more than 40!")
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, len_6 - 1)
+			alloc(len_6)
+			buffer.writestring(outgoing_buff, outgoing_apos, name, len_6)
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, value)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, name: (string), value: (number))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
+			local len_7 = #name
+			assert(len_7 >= 1, "value is less than 1!")
+			assert(len_7 <= 40, "value is more than 40!")
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, len_7 - 1)
+			alloc(len_7)
+			buffer.writestring(outgoing_buff, outgoing_apos, name, len_7)
+			alloc(4)
+			buffer.writeu32(outgoing_buff, outgoing_apos, value)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
 			end
 		end,
 	},

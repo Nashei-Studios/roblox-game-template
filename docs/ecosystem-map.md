@@ -38,11 +38,12 @@ Maduraron en el juego y vuelven a la plantilla para que el siguiente los herede.
 | `features/join` | Entrada sin espera: lecturas en paralelo, lote provisional, reintento de hello, política de cancelación | ProfileStore `Cancel` | 0032 | #47 |
 | `features/joinprobe` | Medir la entrada antes de cambiar constantes | DataStore (opcional) | 0032 | #47 |
 | `features/input` | "Toca en cualquier parte" con bloqueadores | `UserInputService` (adaptador por juego) | 0033 | #47 |
-| `features/progress` | Títulos por contador, hito cada N unidades sin spam al entrar, conteo diario desde un contador de vida | `TextChatService` (`Announcer`, adaptador) | 0034 | #76 |
+| `features/progress` | Títulos por contador, hito cada N unidades sin spam al entrar, conteo diario desde un contador de vida | `TextChatService` (`Announcer`, adaptador, y cliente) | 0034 | #76 |
 | `features/hitfx` | Efecto de golpe con un solo emisor reutilizado y tipos de golpe como datos | `ParticleEmitter` (presentador) | 0034 | #76 |
 | `features/leaderboards` (`extraStats`) | Tablero diario de un contador del juego con una línea de config más una de tablero | `OrderedDataStore` (ya existente) | 0034 | #76 |
 | `features/ui` (`CardGrid`) | Grilla de tarjetas (guardarropa, colección) detrás de una interfaz de presentador | `UIGridLayout` (presentador) | 0034 | #76 |
 | `features/locomotion` | Caminar, correr (mantener o alternar) y equipar o guardar la herramienta con estado del servidor; el golpe lo implementa el juego | `Humanoid.WalkSpeed`, `ContextActionService`, `Humanoid:EquipTool` (presentadores) | 0040 | #88 |
+| `features/ui/audit` y `presenters/ui/audit` | Auditoría de UI: estática en el gate (Lune sobre las piezas `.rbxm`) y de runtime en un playtest (solape, recorte, `TextFits`, zona segura, ZIndex, contraste, 44 px); cada juego pone sus escenarios | `TextLabel.TextFits`, `GuiService` (Studio MCP `execute_luau`) | 0039 | #94 |
 
 ## Sistemas sin pieza externa
 
