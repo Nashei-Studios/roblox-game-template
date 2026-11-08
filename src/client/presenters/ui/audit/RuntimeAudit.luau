@@ -32,27 +32,13 @@ export type Scenario = {
     prepare: ((clone: GuiObject) -> ())?,
     -- Called once per viewport after parenting (recompute a UIScale that depends on the viewport).
     onViewport: ((root: Frame, size: Vector2) -> ())?,
-    -- Measure the live ScreenGuis in place at the real viewport instead of cloning. For UI whose
-    -- pixel sizes are computed in code from the camera viewport (the HUD): a clone in a Frame of
-    -- another size would keep the live pixels and report false findings.
-    live: boolean?,
-    -- With `live`: resize the live UI to this viewport (and its safe rectangle) before measuring.
-    setViewport: ((size: Vector2, safe: Geometry.Rect) -> ())?,
-    -- Undo `setViewport` after the last viewport.
-    restore: (() -> ())?,
 }
-
-export type Insets = { left: number, right: number, bottom: number }
 
 export type Options = {
     viewports: { Vector2 },
     scenarios: { Scenario },
     -- Pixels of the top bar on a ScreenGui with CoreUISafeInsets.
     topInset: number?,
-    -- Notch insets of a phone in landscape (left/right/bottom), applied to guis with safe insets.
-    insets: Insets?,
-    -- Suffix added to the viewport name of the report ("notch").
-    label: string?,
 }
 
 export type Report = {
@@ -69,7 +55,6 @@ local RuntimeAudit = {}
 RuntimeAudit.VIEWPORTS = {
     Vector2.new(844, 390),
     Vector2.new(667, 375),
-    Vector2.new(568, 320),
     Vector2.new(1327, 496),
     Vector2.new(1920, 1080),
 }
@@ -132,14 +117,11 @@ local function unclippedFraction(item: GuiObject, stop: Instance): number
     local own = rectOf(item)
     local fraction = 1
     local current = item.Parent
-    local crossedScroller = false
-    while current ~= nil and current ~= stop and not crossedScroller do
+    while current ~= nil and current ~= stop do
         if current:IsA("GuiObject") then
             local clips = current:IsA("CanvasGroup")
                 or current:IsA("ScrollingFrame")
                 or current.ClipsDescendants
-            -- Above a scroller the windows only repeat the scroller's own cut, which is by design.
-            crossedScroller = current:IsA("ScrollingFrame")
             if clips then
                 local window = rectOf(current)
                 local xOk = Geometry.contains(
@@ -190,36 +172,6 @@ local function visibleFractionInWindows(item: GuiObject, stop: Instance): number
         current = current.Parent
     end
     return fraction
-end
-
---- The part of the item that is actually drawn: its rectangle cut by every clipping ancestor.
-local function shownRectOf(item: GuiObject, stop: Instance): Geometry.Rect
-    local rect = rectOf(item)
-    local current = item.Parent
-    while current ~= nil and current ~= stop do
-        if
-            current:IsA("GuiObject")
-            and (
-                current:IsA("CanvasGroup")
-                or current:IsA("ScrollingFrame")
-                or current.ClipsDescendants
-            )
-        then
-            local window = rectOf(current)
-            local left = math.max(rect.x, window.x)
-            local top = math.max(rect.y, window.y)
-            local right = math.min(rect.x + rect.width, window.x + window.width)
-            local bottom = math.min(rect.y + rect.height, window.y + window.height)
-            rect = {
-                x = left,
-                y = top,
-                width = math.max(0, right - left),
-                height = math.max(0, bottom - top),
-            }
-        end
-        current = current.Parent
-    end
-    return rect
 end
 
 local function isAncestorOf(first: Instance, second: Instance): boolean
@@ -282,23 +234,6 @@ local function isHitZone(item: GuiObject): boolean
     return true
 end
 
---- True when a sibling button covers `item` completely (a visual button under its hit zone).
-local function hasHitOverlay(item: GuiObject): boolean
-    local parent = item.Parent
-    if parent == nil then
-        return false
-    end
-    local own = rectOf(item)
-    for _, sibling in parent:GetChildren() do
-        if sibling ~= item and sibling:IsA("GuiButton") then
-            if Geometry.contains(rectOf(sibling), own, 8) then
-                return true
-            end
-        end
-    end
-    return false
-end
-
 --- A visual button and its transparent hit zone overlap on purpose.
 local function isHitZonePair(first: GuiObject, second: GuiObject): boolean
     return isHitZone(first) or isHitZone(second)
@@ -321,10 +256,7 @@ local function backdropFor(item: GuiObject, stop: Instance): (GuiObject?, { Colo
             if gradient ~= nil and gradient.Enabled then
                 colors = {}
                 for _, keypoint in gradient.Color.Keypoints do
-                    -- A UIGradient multiplies the fill color, it does not replace it.
-                    local base = current.BackgroundColor3
-                    local mix = keypoint.Value
-                    table.insert(colors, Color3.new(base.R * mix.R, base.G * mix.G, base.B * mix.B))
+                    table.insert(colors, keypoint.Value)
                 end
             end
             return current, colors
@@ -401,7 +333,6 @@ local function auditItem(context: Context, item: GuiObject, screen: Geometry.Rec
         end
         if
             item:IsA("GuiButton")
-            and not isHitZone(item)
             and not item.AutoButtonColor
             and item:FindFirstChild("PressScale") == nil
             and item:GetAttribute("StateLess") ~= true
@@ -414,12 +345,7 @@ local function auditItem(context: Context, item: GuiObject, screen: Geometry.Rec
                 "no AutoButtonColor and no PressScale: no visible hover or press state"
             )
         end
-        if
-            item:IsA("GuiButton")
-            and not item.Active
-            and item.Interactable
-            and not hasHitOverlay(item)
-        then
+        if item:IsA("GuiButton") and not item.Active and item.Interactable then
             add(context, "UI-BUTTON-INERT", "error", item, "Active is false: the tap is ignored")
         end
     end
@@ -442,8 +368,7 @@ local function auditItem(context: Context, item: GuiObject, screen: Geometry.Rec
             )
         end
         local onScreen = Geometry.visibleFraction(screen, rect)
-        -- A row scrolled partly out of its window is cut by the scroller, not by the screen.
-        if onScreen < CLIP_MIN_FRACTION and not (inScroller(item) and visibleShare < 1) then
+        if onScreen < CLIP_MIN_FRACTION then
             add(
                 context,
                 "UI-OFFSCREEN",
@@ -506,25 +431,10 @@ local function auditItem(context: Context, item: GuiObject, screen: Geometry.Rec
     end
 end
 
---- A clipped fill that carries a copy of the text (a progress bar with its text twice, once under the
---- fill and once inside it) hides the text under it on purpose.
-local function mirrorsText(cover: GuiObject, item: GuiObject): boolean
-    if not isText(item) then
-        return false
-    end
-    local text = (item :: TextLabel).Text
-    for _, descendant in cover:GetDescendants() do
-        if isText(descendant) and (descendant :: TextLabel).Text == text then
-            return true
-        end
-    end
-    return false
-end
-
 local function auditCovered(context: Context, items: { GuiObject })
     for _, button in items do
         if
-            (isInteractive(button) or (isText(button) and (button :: TextLabel).Text ~= ""))
+            isInteractive(button)
             and not ignored(button)
             and visibleFractionInWindows(button, context.stop) > 0.5
         then
@@ -541,9 +451,8 @@ local function auditCovered(context: Context, items: { GuiObject })
                         other ~= button
                         and not isAncestorOf(button, other)
                         and paints(other)
-                        and not mirrorsText(other, button)
                         and not ignored(other)
-                        and Geometry.overlapArea(shownRectOf(other, context.stop), center) > 0
+                        and Geometry.overlapArea(rectOf(other), center) > 0
                         and drawnAbove(other, button)
                         and visibleFractionInWindows(other, context.stop) > 0.5
                     then
@@ -567,38 +476,6 @@ local function auditCovered(context: Context, items: { GuiObject })
     end
 end
 
---- A button whose own sibling layer (a background image or fill) is drawn above and contains it:
---- the button exists but sits behind the panel art, even when the art is mostly transparent.
-local function auditBehindLayer(context: Context, items: { GuiObject })
-    for _, button in items do
-        local parent = button.Parent
-        if isInteractive(button) and not ignored(button) and parent ~= nil then
-            local own = rectOf(button)
-            for _, sibling in parent:GetChildren() do
-                if
-                    sibling ~= button
-                    and sibling:IsA("GuiObject")
-                    and sibling.Visible
-                    and not isInteractive(sibling)
-                    and not isText(sibling)
-                    and (sibling:IsA("ImageLabel") or sibling.BackgroundTransparency < 1)
-                    and drawnAbove(sibling, button)
-                    and Geometry.contains(rectOf(sibling), own, 1)
-                then
-                    add(
-                        context,
-                        "UI-COVERED",
-                        "error",
-                        button,
-                        `sits under its sibling layer {sibling.Name} (ZIndex {button.ZIndex} under {sibling.ZIndex})`
-                    )
-                    break
-                end
-            end
-        end
-    end
-end
-
 local function auditOverlap(context: Context, items: { GuiObject }, screen: Geometry.Rect)
     local buttons: { GuiObject } = {}
     for _, item in items do
@@ -616,7 +493,7 @@ local function auditOverlap(context: Context, items: { GuiObject }, screen: Geom
         for second = first + 1, #buttons do
             local a, b = buttons[first], buttons[second]
             if not isAncestorOf(a, b) and not isHitZonePair(a, b) then
-                local rectA, rectB = shownRectOf(a, context.stop), shownRectOf(b, context.stop)
+                local rectA, rectB = rectOf(a), rectOf(b)
                 local area = Geometry.overlapArea(rectA, rectB)
                 local smaller = math.min(rectA.width * rectA.height, rectB.width * rectB.height)
                 if area >= OVERLAP_MIN_AREA and area / smaller > OVERLAP_MIN_FRACTION then
@@ -658,12 +535,8 @@ local function auditLists(context: Context, container: Instance)
     local touching, minimum = 0, math.huge
     for first = 1, #rows do
         for second = first + 1, #rows do
-            local rectA, rectB =
-                shownRectOf(rows[first], context.stop), shownRectOf(rows[second], context.stop)
-            -- Two layers on the same box (a text and its shadow) are not neighbours.
-            local layered = Geometry.contains(rectA, rectB, 1) or Geometry.contains(rectB, rectA, 1)
-            local gap = if layered then math.huge else Geometry.gap(rectA, rectB)
-            if gap < GAP_MIN - 0.5 then
+            local gap = Geometry.gap(rectOf(rows[first]), rectOf(rows[second]))
+            if gap < GAP_MIN then
                 touching += 1
                 minimum = math.min(minimum, gap)
             end
@@ -690,34 +563,21 @@ local function insetsFor(source: Instance, topInset: number): number
     return 0
 end
 
-local function safeAreaCheck(context: Context, host: Instance, safe: Geometry.Rect)
-    -- A tappable outside the safe rectangle (top bar, notch, home bar) cannot be reached reliably.
+local function safeAreaCheck(context: Context, host: Frame, topInset: number)
+    -- A tappable inside the top bar band on a gui that ignores the insets collides with the Roblox menu.
     for _, item in host:GetDescendants() do
-        if
-            item:IsA("GuiObject")
-            and isInteractive(item)
-            and effectivelyVisible(item, host)
-            and not ignored(item)
-        then
+        if item:IsA("GuiObject") and isInteractive(item) and item.Visible then
             local rect = rectOf(item)
-            if
-                rect.width > 0
-                and rect.width * rect.height < safe.width * safe.height * FULL_SCREEN_FRACTION
-                and visibleFractionInWindows(item, context.stop) > 0.5
-                and Geometry.visibleFraction(safe, rect) < 0.98
-            then
+            if rect.y < topInset - 1 and rect.y + rect.height > 0 and rect.width > 0 then
                 add(
                     context,
                     "UI-SAFE-AREA",
                     "error",
                     item,
                     string.format(
-                        "%.0f%% inside the safe area (x=%.0f y=%.0f %.0fx%.0f)",
-                        100 * Geometry.visibleFraction(safe, rect),
-                        rect.x,
+                        "starts at y=%.0f inside the %d px top bar band",
                         rect.y,
-                        rect.width,
-                        rect.height
+                        topInset
                     )
                 )
             end
@@ -731,43 +591,11 @@ local function waitLayout()
     end
 end
 
---- Measures every visible item under `root` (a clone host or a live ScreenGui).
-local function measureRoot(
-    out: { Finding.Finding },
-    scope: string,
-    root: Instance,
-    screenRect: Geometry.Rect,
-    safe: Geometry.Rect
-)
-    local context: Context = { scope = scope, stop = root, out = out }
-    local items: { GuiObject } = {}
-    for _, descendant in root:GetDescendants() do
-        if
-            descendant:IsA("GuiObject")
-            and effectivelyVisible(descendant, root)
-            and not ignored(descendant)
-        then
-            table.insert(items, descendant)
-        end
-    end
-    for _, item in items do
-        auditItem(context, item, screenRect)
-    end
-    auditOverlap(context, items, screenRect)
-    auditCovered(context, items)
-    auditBehindLayer(context, items)
-    for _, item in items do
-        auditLists(context, item)
-    end
-    safeAreaCheck(context, root, safe)
-end
-
 --- Runs every scenario on every viewport and returns the report.
 function RuntimeAudit.run(options: Options): Report
     local player = Players.LocalPlayer
     local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
     local topInset = options.topInset or GuiService:GetGuiInset().Y
-    local insets: Insets = options.insets or { left = 0, right = 0, bottom = 0 }
     local findings: { Finding.Finding } = {}
     local viewportNames: { string } = {}
     local scenarioNames: { string } = {}
@@ -785,33 +613,9 @@ function RuntimeAudit.run(options: Options): Report
 
     for _, viewport in options.viewports do
         local viewportName = string.format("%dx%d", viewport.X, viewport.Y)
-            .. (if options.label ~= nil then " " .. options.label else "")
         table.insert(viewportNames, viewportName)
         local screenRect: Geometry.Rect = { x = 0, y = 0, width = viewport.X, height = viewport.Y }
-        local safe: Geometry.Rect = {
-            x = insets.left,
-            y = topInset,
-            width = viewport.X - insets.left - insets.right,
-            height = viewport.Y - topInset - insets.bottom,
-        }
         for _, scenario in options.scenarios do
-            if scenario.live then
-                if scenario.setViewport ~= nil then
-                    scenario.setViewport(viewport, safe)
-                    waitLayout()
-                    origin = Vector2.new(0, -topInset)
-                    for _, source in scenario.sources do
-                        measureRoot(
-                            findings,
-                            `{scenario.name}@{viewportName}`,
-                            source,
-                            screenRect,
-                            safe
-                        )
-                    end
-                end
-                continue
-            end
             local screen = Instance.new("Frame")
             screen.Name = "Screen"
             screen.BackgroundTransparency = 1
@@ -821,15 +625,11 @@ function RuntimeAudit.run(options: Options): Report
             screen.Parent = host
             for _, source in scenario.sources do
                 local top = insetsFor(source, topInset)
-                local sided = top > 0
-                local left = if sided then insets.left else 0
-                local right = if sided then insets.right else 0
-                local bottom = if sided then insets.bottom else 0
                 local layer = Instance.new("Frame")
                 layer.Name = `Layer_{source.Name}`
                 layer.BackgroundTransparency = 1
-                layer.Position = UDim2.fromOffset(left, top)
-                layer.Size = UDim2.new(1, -(left + right), 1, -(top + bottom))
+                layer.Position = UDim2.fromOffset(0, top)
+                layer.Size = UDim2.new(1, 0, 1, -top)
                 layer.Parent = screen
                 local roots: { Instance } = if source:IsA("ScreenGui")
                     then source:GetChildren()
@@ -849,23 +649,31 @@ function RuntimeAudit.run(options: Options): Report
             end
             waitLayout()
             origin = screen.AbsolutePosition
-            measureRoot(findings, `{scenario.name}@{viewportName}`, screen, screenRect, safe)
-            screen:Destroy()
-        end
-    end
-    local liveSize = workspace.CurrentCamera.ViewportSize
-    local liveName = string.format("%dx%d live", liveSize.X, liveSize.Y)
-    for _, scenario in options.scenarios do
-        if scenario.restore ~= nil then
-            scenario.restore()
-        end
-        if scenario.live and scenario.setViewport == nil then
-            table.insert(viewportNames, liveName)
-            origin = Vector2.new(0, -topInset)
-            local rect: Geometry.Rect = { x = 0, y = 0, width = liveSize.X, height = liveSize.Y }
-            for _, source in scenario.sources do
-                measureRoot(findings, `{scenario.name}@{liveName}`, source, rect, rect)
+            local context: Context = {
+                scope = `{scenario.name}@{viewportName}`,
+                stop = screen,
+                out = findings,
+            }
+            local items: { GuiObject } = {}
+            for _, descendant in screen:GetDescendants() do
+                if
+                    descendant:IsA("GuiObject")
+                    and effectivelyVisible(descendant, screen)
+                    and not ignored(descendant)
+                then
+                    table.insert(items, descendant)
+                end
             end
+            for _, item in items do
+                auditItem(context, item, screenRect)
+            end
+            auditOverlap(context, items, screenRect)
+            auditCovered(context, items)
+            for _, item in items do
+                auditLists(context, item)
+            end
+            safeAreaCheck(context, screen, topInset)
+            screen:Destroy()
         end
     end
     host:Destroy()

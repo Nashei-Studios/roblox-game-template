@@ -154,6 +154,8 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/adapters/RemoteNotifier.test"),
     },
     { name = "Ui", register = require("../tests/features/ui/Ui.test") },
+    { name = "UiAudit", register = require("../tests/features/ui/UiAudit.test") },
+    { name = "UiSystem", register = require("../tests/features/uisystem/UiSystem.test") },
     {
         name = "Leaderboards",
         register = require("../tests/features/leaderboards/Leaderboards.test"),

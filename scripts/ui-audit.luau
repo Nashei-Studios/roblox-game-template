@@ -1,7 +1,7 @@
 --!strict
 --[[
     Static UI audit gate (docs/ui-audit.md): `lune run scripts/ui-audit [report.json]`.
-    Reads every committed assets/ui/**/*.rbxm, applies StaticRules and exits 1 with one line per
+    Reads every committed assets/ui/**/*.rbxm (none in the template itself), applies StaticRules and exits 1 with one line per
     finding (file, path, rule). No Studio. The runtime half is run in a playtest (RuntimeAudit).
 ]]
 
@@ -15,11 +15,8 @@ local StaticRules = require("../src/shared/features/ui/audit/StaticRules")
 
 local findings: { Finding.Finding } = {}
 local files = 0
--- A game with no extracted kit pieces (the template itself) has nothing to audit statically.
-local categories: { string } = {}
-if fs.isDir("assets/ui") then
-    categories = fs.readDir("assets/ui")
-end
+-- A template has no committed pieces until a game extracts its kit into assets/ui: nothing to audit.
+local categories: { string } = if fs.isDir("assets/ui") then fs.readDir("assets/ui") else {}
 for _, category in categories do
     for _, file in fs.readDir(`assets/ui/{category}`) do
         local path = `assets/ui/{category}/{file}`
