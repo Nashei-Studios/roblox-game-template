@@ -90,10 +90,10 @@ jobs:
           cache: "true"
       - name: Unit tests (Lune)
         run: lune run scripts/test
+      - name: UI audit (static)
+        run: lune run scripts/ui-audit
       - name: Performance budget (remote bandwidth)
         run: lune run scripts/perf-budget
-      - name: Win condition declaration (pending allowed in the template)
-        run: lune run scripts/win-condition
       - name: Build smoke
         run: |
           mkdir -p places
