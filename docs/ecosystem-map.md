@@ -26,6 +26,7 @@ Fecha de verificación: 2026-11-06. Los repos se midieron con `gh repo view` (li
 | Audio | `SoundService`, `SoundGroup`; pistas CC0 (Kenney) | nativo; CC0 | n/a | Reproductor sobre el módulo de sonido | #62 |
 | Localización | `LocalizationService:GetTranslatorForPlayerAsync`; ayuda candidata: flshmodels/flash-locale | nativo; MIT | flash-locale 2026-11-02 (0 estrellas, sin revisar) | Acceso a texto con respaldo al idioma fuente | #64 |
 | Menús extra (changelog, teleport, regalo) | Ninguna hoy; centau/vide cuando dos juegos dupliquen enlace de estado | MIT | 2026-10-26 | Menús sobre `UiKit` | #53 |
+| Sistema de UI (tokens, primitivas, componentes con kit) | Ninguna: Fusion, Vide y react-luau medidos 2026-11-08 y descartados por ahora ([ADR 0035](adr/0035-ui-system-imperative-builders-over-kit-trees.md)); UI Labs como visor de historias | MIT; plugin | Fusion 2026-02-02, Vide 2026-10-26, react-luau 2026-10-30 | `features/uisystem` y `presenters/ui/system` | #81 |
 
 ## Módulos portados desde +1 Mining Power (2026-11-07)
 
