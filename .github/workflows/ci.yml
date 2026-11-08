@@ -155,7 +155,8 @@ jobs:
           if gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name' | grep -qx hold; then
             echo "PR held by label, not merging"; exit 0
           fi
-          gh pr merge "$PR" --repo "$REPO" --squash
+          # A merge made with GITHUB_TOKEN does not trigger the repo auto-delete of head branches: delete it here.
+          gh pr merge "$PR" --repo "$REPO" --squash --delete-branch
           # A merge made with GITHUB_TOKEN does not fire the closing keywords: close the linked issues here.
           for issue in $(gh pr view "$PR" --repo "$REPO" --json closingIssuesReferences --jq '.closingIssuesReferences[].number'); do
             gh issue close "$issue" --repo "$REPO" --comment "Closed by #$PR (automerge)."
