@@ -163,6 +163,10 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/features/community-reward/CommunityReward.test"),
     },
     {
+        name = "CommunityPerk",
+        register = require("../tests/features/community-reward/CommunityPerk.test"),
+    },
+    {
         name = "Leaderboards and Group adapters",
         register = require("../tests/adapters/Leaderboards.adapters.test"),
     },
@@ -208,6 +212,7 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     },
     { name = "Progress", register = require("../tests/features/progress/Progress.test") },
     { name = "LiveOps", register = require("../tests/features/liveops/LiveOps.test") },
+    { name = "Offers", register = require("../tests/features/offers/Offers.test") },
     { name = "Quests", register = require("../tests/features/quests/Quests.test") },
     { name = "HitFx", register = require("../tests/features/hitfx/HitFx.test") },
     { name = "CardGrid", register = require("../tests/features/ui/CardGrid.test") },
