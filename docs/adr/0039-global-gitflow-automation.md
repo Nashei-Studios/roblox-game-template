@@ -7,7 +7,7 @@
 
 ## Context
 
-Victor made one release flow global for every project of the factory (full decision and comparison: ADR 0024 in `vruizz22/claude-code-global`, `docs/adr/`). This template is what each game inherits when it is stamped, so it carries the workflows.
+Victor made one release flow global for every project of the factory (full decision and comparison: ADR 0025 in `vruizz22/claude-code-global`, `docs/adr/`). This template is what each game inherits when it is stamped, so it carries the workflows.
 
 ## Decision
 
