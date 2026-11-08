@@ -137,3 +137,12 @@ event RequestCommunityCheck = {
 	call: SingleSync,
 	data: (),
 }
+
+-- Server -> client. One chat system line; TextChannel:DisplaySystemMessage only runs on the
+-- client, so the server sends the text and the client displays it.
+event AnnouncerLine = {
+	from: Server,
+	type: Reliable,
+	call: SingleSync,
+	data: (text: string.utf8(1..100)),
+}

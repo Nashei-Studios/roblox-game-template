@@ -21,6 +21,7 @@ local ToastController = require(ReplicatedStorage.Shared.features.notifications.
 local net = require(ReplicatedStorage.Shared.net.generated.client)
 
 local SetCoreToastRenderer = require(script.Parent.presenters.SetCoreToastRenderer)
+local AnnouncerDisplay = require(script.Parent.presenters.AnnouncerDisplay)
 local SoundEnginePresenter = require(script.Parent.presenters.SoundEnginePresenter)
 local UiKit = require(script.Parent.presenters.ui.UiKit)
 local UiToastRenderer = require(script.Parent.presenters.ui.UiToastRenderer)
@@ -155,6 +156,9 @@ if uiConfig ~= nil then
         warn("Boards folder did not replicate; leaderboards stay empty")
     end
 end
+
+-- Server to client: one announcer line (DisplaySystemMessage is client-only).
+net.AnnouncerLine.setCallback(AnnouncerDisplay.show)
 
 -- Server to client: the balance after a grant.
 net.CoinsChanged.setCallback(function(coins)

@@ -80,6 +80,7 @@ local PerfBudget: Budget = {
         -- Engagement modules (ADR 0025).
         Notify = { maxPerSecond = 4 }, -- chosen, not sourced: a few toasts per second at most
         SoundSettings = { maxPerSecond = 2 }, -- chosen, not sourced
+        AnnouncerLine = { maxPerSecond = 1 }, -- chosen, not sourced: milestone lines, one every few seconds at most
     },
     runtime = {
         maxHeartbeatMs = 16, -- sourced: server CPU time below 16 ms to hit 60 (production/analytics/performance)

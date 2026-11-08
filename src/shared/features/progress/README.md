@@ -5,7 +5,7 @@ Visible progression: `ProgressRules`, `MilestoneTracker`, plus the server adapte
 ## What it is / is not
 
 - Is: pure rules that load under Lune. Tiers (a title and color by a counter such as rebirths), a milestone every N units, a message template, and a per-UTC-day count derived from a lifetime counter.
-- Is not: the chat. `Announcer.say` (TextChatService) is the only engine piece and lives in `server/adapters`. It does not know when to speak.
+- Is not: the chat. `Announcer.bind` (server adapter) sends the line over the `AnnouncerLine` remote and `presenters/AnnouncerDisplay` shows it, because `DisplaySystemMessage` is client-only. It does not know when to speak.
 
 ## Rules
 
@@ -23,7 +23,7 @@ local daily = ProgressRules.newDailyCounter()
 -- when the counter changes:
 local reached = tracker:observe(player.UserId, value)
 if reached ~= nil then
-    Announcer.say(ProgressRules.format(config.announceText, player.DisplayName, reached))
+    say(ProgressRules.format(config.announceText, player.DisplayName, reached))
 end
 -- daily board: set LeaderboardsConfig.extraStats = { "actionsToday" }, add a board
 -- { stat = "actionsToday", resetCycle = "daily", ... } and return actionsToday from

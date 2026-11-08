@@ -172,6 +172,9 @@ if not RunService:IsRunning() then
 		ClaimDailyReward = table.freeze({
 			fire = noop
 		}),
+		AnnouncerLine = table.freeze({
+			setCallback = noop
+		}),
 	}) :: Events
 end
 local remotes = ReplicatedStorage:WaitForChild("ZAP")
@@ -202,11 +205,12 @@ end
 
 RunService.Heartbeat:Connect(sendEvents)
 
-local reliable_events = table.create(3)
-local reliable_event_queue: { [number]: { any } } = table.create(3)
+local reliable_events = table.create(4)
+local reliable_event_queue: { [number]: { any } } = table.create(4)
 reliable_event_queue[2] = {}
 reliable_event_queue[1] = {}
 reliable_event_queue[0] = {}
+reliable_event_queue[3] = {}
 reliable.OnClientEvent:Connect(function(buff, inst)
 	incoming_buff = buff
 	incoming_inst = inst
@@ -271,6 +275,21 @@ reliable.OnClientEvent:Connect(function(buff, inst)
 				table.insert(reliable_event_queue[0], value)
 				if #reliable_event_queue[0] > 64 then
 					warn(`[ZAP] {#reliable_event_queue[0]} events in queue for CoinsChanged. Did you forget to attach a listener?`)
+				end
+			end
+		elseif id == 3 then -- AnnouncerLine
+			local value
+			local len_1 = buffer.readu16(incoming_buff, read(2)) + 1
+			assert(len_1 >= 1, "value is less than 1!")
+			assert(len_1 <= 400, "value is more than 400!")
+			value = buffer.readstring(incoming_buff, read(len_1), len_1)
+			assert(utf8.len(value) ~= nil, "value is not valid utf-8")
+			if reliable_events[3] then
+				reliable_events[3](value)
+			else
+				table.insert(reliable_event_queue[3], value)
+				if #reliable_event_queue[3] > 64 then
+					warn(`[ZAP] {#reliable_event_queue[3]} events in queue for AnnouncerLine. Did you forget to attach a listener?`)
 				end
 			end
 		else
@@ -376,13 +395,13 @@ local returns = {
 		fire = function(code: (string))
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 1)
-			local len_1 = #code
-			assert(len_1 >= 1, "value is less than 1!")
-			assert(len_1 <= 32, "value is more than 32!")
+			local len_2 = #code
+			assert(len_2 >= 1, "value is less than 1!")
+			assert(len_2 <= 32, "value is more than 32!")
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, len_1 - 1)
-			alloc(len_1)
-			buffer.writestring(outgoing_buff, outgoing_apos, code, len_1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, len_2 - 1)
+			alloc(len_2)
+			buffer.writestring(outgoing_buff, outgoing_apos, code, len_2)
 		end,
 	},
 	Notify = {
@@ -415,19 +434,32 @@ local returns = {
 		fire = function(giftId: (string))
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
-			local len_2 = #giftId
-			assert(len_2 >= 1, "value is less than 1!")
-			assert(len_2 <= 24, "value is more than 24!")
+			local len_3 = #giftId
+			assert(len_3 >= 1, "value is less than 1!")
+			assert(len_3 <= 24, "value is more than 24!")
 			alloc(1)
-			buffer.writeu8(outgoing_buff, outgoing_apos, len_2 - 1)
-			alloc(len_2)
-			buffer.writestring(outgoing_buff, outgoing_apos, giftId, len_2)
+			buffer.writeu8(outgoing_buff, outgoing_apos, len_3 - 1)
+			alloc(len_3)
+			buffer.writestring(outgoing_buff, outgoing_apos, giftId, len_3)
 		end,
 	},
 	ClaimDailyReward = {
 		fire = function()
 			alloc(1)
 			buffer.writeu8(outgoing_buff, outgoing_apos, 2)
+		end,
+	},
+	AnnouncerLine = {
+		setCallback = function(callback: (text: (string)) -> ()): () -> ()
+			reliable_events[3] = callback
+			for _, value in reliable_event_queue[3] do
+				callback(value				)
+
+			end
+			reliable_event_queue[3] = {}
+			return function()
+				reliable_events[3] = nil
+			end
 		end,
 	},
 }

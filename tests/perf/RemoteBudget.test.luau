@@ -134,6 +134,7 @@ return function(suite: harness.Harness)
             { name = "SetVolume", from = "Client", payloadBytes = 2 },
             { name = "Notify", from = "Server", payloadBytes = 5 },
             { name = "SoundSettings", from = "Server", payloadBytes = 2 },
+            { name = "AnnouncerLine", from = "Server", payloadBytes = 102 },
             { name = "RequestRewardedAd", from = "Client", payloadBytes = 1 },
             { name = "RequestPlusPrompt", from = "Client", payloadBytes = 1 },
             { name = "RequestRobuxTransfer", from = "Client", payloadBytes = 10 },

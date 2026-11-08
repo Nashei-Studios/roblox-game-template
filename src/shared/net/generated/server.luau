@@ -186,6 +186,13 @@ if not RunService:IsRunning() then
 		ClaimDailyReward = table.freeze({
 			setCallback = noop
 		}),
+		AnnouncerLine = table.freeze({
+			fire = noop,
+			fireAll = noop,
+			fireExcept = noop,
+			fireList = noop,
+			fireSet = noop
+		}),
 	}) :: Events
 end
 
@@ -775,6 +782,108 @@ local returns = {
 			reliable_events[2] = callback
 			return function()
 				reliable_events[2] = nil
+			end
+		end,
+	},
+	AnnouncerLine = {
+		fire = function(player: Player, text: (string))
+			load_player(player)
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local len_3 = #text
+			assert(len_3 >= 1, "value is less than 1!")
+			assert(len_3 <= 400, "value is more than 400!")
+			assert(utf8.len(text) ~= nil, "value is not valid utf-8")
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_3 - 1)
+			alloc(len_3)
+			buffer.writestring(outgoing_buff, outgoing_apos, text, len_3)
+			player_map[player] = save()
+		end,
+		fireAll = function(text: (string))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local len_4 = #text
+			assert(len_4 >= 1, "value is less than 1!")
+			assert(len_4 <= 400, "value is more than 400!")
+			assert(utf8.len(text) ~= nil, "value is not valid utf-8")
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_4 - 1)
+			alloc(len_4)
+			buffer.writestring(outgoing_buff, outgoing_apos, text, len_4)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireExcept = function(except: Player, text: (string))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local len_5 = #text
+			assert(len_5 >= 1, "value is less than 1!")
+			assert(len_5 <= 400, "value is more than 400!")
+			assert(utf8.len(text) ~= nil, "value is not valid utf-8")
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_5 - 1)
+			alloc(len_5)
+			buffer.writestring(outgoing_buff, outgoing_apos, text, len_5)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in Players:GetPlayers() do
+				if player ~= except then
+					load_player(player)
+					alloc(used)
+					buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+					table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+					player_map[player] = save()
+				end
+			end
+		end,
+		fireList = function(list: { [unknown]: Player }, text: (string))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local len_6 = #text
+			assert(len_6 >= 1, "value is less than 1!")
+			assert(len_6 <= 400, "value is more than 400!")
+			assert(utf8.len(text) ~= nil, "value is not valid utf-8")
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_6 - 1)
+			alloc(len_6)
+			buffer.writestring(outgoing_buff, outgoing_apos, text, len_6)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for _, player in list do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
+			end
+		end,
+		fireSet = function(set: { [Player]: any }, text: (string))
+			load_empty()
+			alloc(1)
+			buffer.writeu8(outgoing_buff, outgoing_apos, 3)
+			local len_7 = #text
+			assert(len_7 >= 1, "value is less than 1!")
+			assert(len_7 <= 400, "value is more than 400!")
+			assert(utf8.len(text) ~= nil, "value is not valid utf-8")
+			alloc(2)
+			buffer.writeu16(outgoing_buff, outgoing_apos, len_7 - 1)
+			alloc(len_7)
+			buffer.writestring(outgoing_buff, outgoing_apos, text, len_7)
+			local buff, used, inst = outgoing_buff, outgoing_used, outgoing_inst
+			for player in set do
+				load_player(player)
+				alloc(used)
+				buffer.copy(outgoing_buff, outgoing_apos, buff, 0, used)
+				table.move(inst, 1, #inst, #outgoing_inst + 1, outgoing_inst)
+				player_map[player] = save()
 			end
 		end,
 	},
