@@ -1,4 +1,4 @@
-# 0041. Clip moment: a timed plan over CaptureService
+# 0042. Clip moment: a timed plan over CaptureService
 
 - Status: accepted
 - Date: 2026-11-08

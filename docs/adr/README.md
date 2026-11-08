@@ -40,6 +40,9 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0033](0033-tap-anywhere-input-router.md) | Tap anywhere: a pure input router with blockers |
 | [0034](0034-visible-progression-modules.md) | Visible progression modules: rules, announcer, hit effects, extra board stats, card grid |
 | [0035](0035-ui-system-imperative-builders-over-kit-trees.md) | UI system: imperative builders over kit Instance trees, rules in pure modules |
-| [0041](0041-clip-moment-over-capture-service.md) | Clip moment: a timed plan over CaptureService |
+| [0039](0039-global-gitflow-automation.md) | Adopt the global gitflow: develop default, automatic merges, automated releases |
+| [0040](0040-social-hub-scaffold.md) | Social hub scaffold: layout, slots and cap as data |
+| [0041](0041-locomotion-and-tool-controller.md) | Locomotion and tool controller: the server owns the state |
+| [0042](0042-clip-moment-over-capture-service.md) | Clip moment: a timed plan over CaptureService |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).

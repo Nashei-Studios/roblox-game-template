@@ -43,6 +43,8 @@ Maduraron en el juego y vuelven a la plantilla para que el siguiente los herede.
 | `features/leaderboards` (`extraStats`) | Tablero diario de un contador del juego con una línea de config más una de tablero | `OrderedDataStore` (ya existente) | 0034 | #76 |
 | `features/ui` (`CardGrid`) | Grilla de tarjetas (guardarropa, colección) detrás de una interfaz de presentador | `UIGridLayout` (presentador) | 0034 | #76 |
 | `features/clipmoment` | Momento digno de clip: plan temporizado (sting, cámara, cámara lenta, captura, aviso de compartir) con límite por sesión y opt-out | `CaptureService` (`CaptureScreenshot`, `PromptShareCapture`; presentador cliente) | 0041 | #89 |
+| `features/locomotion` | Caminar, correr (mantener o alternar) y equipar o guardar la herramienta con estado del servidor; el golpe lo implementa el juego | `Humanoid.WalkSpeed`, `ContextActionService`, `Humanoid:EquipTool` (presentadores) | 0040 | #88 |
+| `features/hub` | Contrato de hub social: anillos de aparición, estaciones como datos, registro por orden de llegada con tope por servidor, emotes con lista y enfriamiento | `Humanoid.DisplayDistanceType`, `Players` (presentador `HubSpawner`) | 0039 | #87 |
 | `features/ui/audit` y `presenters/ui/audit` | Auditoría de UI: estática en el gate (Lune sobre las piezas `.rbxm`) y de runtime en un playtest (solape, recorte, `TextFits`, zona segura, ZIndex, contraste, 44 px); cada juego pone sus escenarios | `TextLabel.TextFits`, `GuiService` (Studio MCP `execute_luau`) | 0039 | #94 |
 
 ## Sistemas sin pieza externa

@@ -1,6 +1,6 @@
 # features/clipmoment
 
-A moment trigger that times the hype and offers one skippable share prompt over CaptureService. Decision: [ADR 0041](../../../../docs/adr/0041-clip-moment-over-capture-service.md) (it holds the Moments feed facts with sources and the open GAPs). Issue #89. Matrix row S12.
+A moment trigger that times the hype and offers one skippable share prompt over CaptureService. Decision: [ADR 0042](../../../../docs/adr/0042-clip-moment-over-capture-service.md) (it holds the Moments feed facts with sources and the open GAPs). Issue #89. Matrix row S12.
 
 ## What it is / is not
 
