@@ -207,6 +207,7 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/features/playerdata/ProfileStoreName.test"),
     },
     { name = "Progress", register = require("../tests/features/progress/Progress.test") },
+    { name = "LiveOps", register = require("../tests/features/liveops/LiveOps.test") },
     { name = "HitFx", register = require("../tests/features/hitfx/HitFx.test") },
     { name = "CardGrid", register = require("../tests/features/ui/CardGrid.test") },
     {
