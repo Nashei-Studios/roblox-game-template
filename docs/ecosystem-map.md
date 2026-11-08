@@ -49,7 +49,7 @@ No existe pieza abierta mantenida ni servicio nativo que los resuelva. Se escrib
 | Mascotas y huevos | Búsqueda en GitHub: solo repos de 0 estrellas, casi todos sin licencia | `roblox-gameplay-toolkit` (MIT, según el vault) | #24 (ya existe) |
 | Ruleta | `marchware/Roblox-Spin-Wheel` no tiene licencia | Ninguno con licencia | #26 (ya existe) |
 | Regalos entre jugadores | Sin módulo abierto | `MessagingService` nativo solo para avisar | #54 |
-| Misiones | `FarFromLittle/Questline` (MIT, 9 estrellas, 2026-10-07), código no leído | Leerlo antes de tomar nada | #56 |
+| Misiones | `FarFromLittle/Questline` (MIT) y `prooheckcp/RoQuest` (Apache-2.0): no encajan con el puerto de guardado; módulo propio `features/quests` hecho (ADR 0035, 2026-11-08) | Diseño de Questline | #56 |
 | Pase de temporada | Sin módulo abierto | Ninguno | #63 |
 | Intercambio (trade) | Sin módulo abierto; riesgo de duplicado | Ninguno; diferido hasta que un juego lo pida | #65 |
 
