@@ -18,6 +18,7 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/features/analytics/AnalyticsTracker.test"),
     },
     { name = "Flags", register = require("../tests/features/flags/Flags.test") },
+    { name = "Hub", register = require("../tests/features/hub/Hub.test") },
     {
         name = "ReceiptDelivery",
         register = require("../tests/features/monetization/ReceiptDelivery.test"),
