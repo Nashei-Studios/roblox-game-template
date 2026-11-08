@@ -10,11 +10,14 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TextChatService = game:GetService("TextChatService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local LeaderboardsConfig =
     require(ReplicatedStorage.Shared.features.leaderboards.LeaderboardsConfig)
 local NetTypes = require(ReplicatedStorage.Shared.net.generated.types)
+local AnnouncementPresenter = require(script.Parent.presenters.AnnouncementPresenter)
+local ProgressRules = require(ReplicatedStorage.Shared.features.progress.ProgressRules)
 local ShopModel = require(ReplicatedStorage.Shared.features.ui.ShopModel)
 local SoundManager = require(ReplicatedStorage.Shared.features.sound.SoundManager)
 local ToastController = require(ReplicatedStorage.Shared.features.notifications.ToastController)
@@ -24,6 +27,9 @@ local SetCoreToastRenderer = require(script.Parent.presenters.SetCoreToastRender
 local SoundEnginePresenter = require(script.Parent.presenters.SoundEnginePresenter)
 local UiKit = require(script.Parent.presenters.ui.UiKit)
 local UiToastRenderer = require(script.Parent.presenters.ui.UiToastRenderer)
+
+-- TODO(game): the milestone text is the game's data; replace it with its own copy.
+local ANNOUNCE_TEXT = "{name} reached {value}!"
 
 print(`{Config.default.gameName} client started`)
 
@@ -186,6 +192,29 @@ local toasts = ToastController.new({
         soundManager:playSfx(name)
     end,
 })
+
+-- Milestone lines: the server sends the name and the value, the text is the game's data.
+local announcements = AnnouncementPresenter.new({
+    line = function(name: string, value: number): string
+        return ProgressRules.format(ANNOUNCE_TEXT, name, value)
+    end,
+    display = function(text: string)
+        local channels = TextChatService:FindFirstChild("TextChannels")
+        local system = if channels ~= nil then channels:FindFirstChild("RBXSystem") else nil
+        if system == nil or not system:IsA("TextChannel") then
+            return
+        end
+        local shown, failure = pcall(function()
+            system:DisplaySystemMessage(text)
+        end)
+        if not shown then
+            warn(`Announcement failed: {failure}`)
+        end
+    end,
+})
+net.AnnounceMilestone.setCallback(function(name, value)
+    announcements:receive(name, value)
+end)
 
 net.Notify.setCallback(function(kind, amount)
     toasts:receive(kind, amount, os.clock())

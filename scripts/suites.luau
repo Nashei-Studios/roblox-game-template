@@ -103,6 +103,10 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/adapters/RobloxAdService.test"),
     },
     {
+        name = "Announcer (adapter and presenter)",
+        register = require("../tests/adapters/Announcer.test"),
+    },
+    {
         name = "RobloxServerContext (adapter)",
         register = require("../tests/adapters/RobloxServerContext.test"),
     },

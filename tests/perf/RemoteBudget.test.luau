@@ -133,6 +133,7 @@ return function(suite: harness.Harness)
             { name = "ClaimSessionGift", from = "Client", payloadBytes = 26 },
             { name = "SetVolume", from = "Client", payloadBytes = 2 },
             { name = "Notify", from = "Server", payloadBytes = 5 },
+            { name = "AnnounceMilestone", from = "Server", payloadBytes = 46 },
             { name = "SoundSettings", from = "Server", payloadBytes = 2 },
             { name = "RequestRewardedAd", from = "Client", payloadBytes = 1 },
             { name = "RequestPlusPrompt", from = "Client", payloadBytes = 1 },
