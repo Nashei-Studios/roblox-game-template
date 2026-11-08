@@ -51,6 +51,7 @@ No existe pieza abierta mantenida ni servicio nativo que los resuelva. Se escrib
 | Regalos entre jugadores | Sin módulo abierto | `MessagingService` nativo solo para avisar | #54 |
 | Misiones | `FarFromLittle/Questline` (MIT, 9 estrellas, 2026-10-07), código no leído | Leerlo antes de tomar nada | #56 |
 | Pase de temporada | Sin módulo abierto | Ninguno | #63 |
+| Escalera de pases y riel de ofertas | Ninguno: es lógica de producto sobre `MarketplaceService`; módulo propio `features/offers` hecho (ADR 0036, 2026-11-08) | Ninguno | #82 |
 | Intercambio (trade) | Sin módulo abierto; riesgo de duplicado | Ninguno; diferido hasta que un juego lo pida | #65 |
 
 ## Issues relacionados que ya existen
