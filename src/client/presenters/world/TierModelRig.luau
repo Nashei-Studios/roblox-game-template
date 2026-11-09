@@ -25,7 +25,7 @@ export type Options = {
     castShadow: boolean,
 }
 
-export type ShownPart = { part: BasePart, role: string }
+export type ShownPart = { part: BasePart, role: "primary" | "accent" | "glow" }
 
 export type Stats = { created: number, shown: number, swaps: number, templates: number }
 
