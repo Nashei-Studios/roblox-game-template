@@ -36,8 +36,8 @@ UiMotion.MAX_REVEAL_SECONDS = 0.32
 local REVEAL_PRESETS: { [string]: boolean } = { resultReveal = true }
 
 --- The table of the spec (section 6). Frozen so a caller cannot change it by accident.
-UiMotion.PRESETS = table.freeze({
-    modalOpen = table.freeze({
+local PRESETS: { [string]: Preset } = {
+    modalOpen = {
         seconds = 0.2,
         style = "Quart",
         direction = "Out",
@@ -45,8 +45,8 @@ UiMotion.PRESETS = table.freeze({
         scaleTo = 1,
         fadeFrom = 1,
         fadeTo = 0,
-    }),
-    modalClose = table.freeze({
+    },
+    modalClose = {
         seconds = 0.14,
         style = "Quart",
         direction = "Out",
@@ -54,50 +54,50 @@ UiMotion.PRESETS = table.freeze({
         scaleTo = 0.96,
         fadeFrom = 0,
         fadeTo = 1,
-    }),
-    scrimOpen = table.freeze({
+    },
+    scrimOpen = {
         seconds = 0.2,
         style = "Linear",
         direction = "Out",
         fadeFrom = 1,
         fadeTo = 0.6,
-    }),
-    scrimClose = table.freeze({
+    },
+    scrimClose = {
         seconds = 0.14,
         style = "Linear",
         direction = "Out",
         fadeFrom = 0.6,
         fadeTo = 1,
-    }),
-    pressDown = table.freeze({
+    },
+    pressDown = {
         seconds = 0.09,
         style = "Quad",
         direction = "Out",
         scaleFrom = 1,
         scaleTo = 0.94,
-    }),
-    pressUp = table.freeze({
+    },
+    pressUp = {
         seconds = 0.14,
         style = "Quad",
         direction = "Out",
         scaleFrom = 0.94,
         scaleTo = 1,
-    }),
-    hoverIn = table.freeze({
+    },
+    hoverIn = {
         seconds = 0.12,
         style = "Quad",
         direction = "Out",
         scaleFrom = 1,
         scaleTo = 1.04,
-    }),
-    hoverOut = table.freeze({
+    },
+    hoverOut = {
         seconds = 0.12,
         style = "Quad",
         direction = "Out",
         scaleFrom = 1.04,
         scaleTo = 1,
-    }),
-    notificationPop = table.freeze({
+    },
+    notificationPop = {
         seconds = 0.16,
         style = "Back",
         direction = "Out",
@@ -105,8 +105,8 @@ UiMotion.PRESETS = table.freeze({
         scaleTo = 1,
         fadeFrom = 1,
         fadeTo = 0,
-    }),
-    resultReveal = table.freeze({
+    },
+    resultReveal = {
         seconds = 0.28,
         style = "Back",
         direction = "Out",
@@ -114,14 +114,18 @@ UiMotion.PRESETS = table.freeze({
         scaleTo = 1,
         fadeFrom = 1,
         fadeTo = 0,
-    }),
+    },
     -- The counter has no transform: see countValue.
-    counter = table.freeze({
+    counter = {
         seconds = 0.25,
         style = "Quad",
         direction = "Out",
-    }),
-}) :: { [string]: Preset }
+    },
+}
+for _, preset in PRESETS do
+    table.freeze(preset)
+end
+UiMotion.PRESETS = table.freeze(PRESETS)
 
 --- A preset by name. Errors on an unknown name so a typo fails in the first test, not as a UI
 --- that silently never animates.
@@ -160,7 +164,8 @@ end
 function UiMotion.validate(presets: { [string]: Preset }): { string }
     local problems: { string } = {}
     for name, preset in presets do
-        local limit = if REVEAL_PRESETS[name] then UiMotion.MAX_REVEAL_SECONDS
+        local limit = if REVEAL_PRESETS[name]
+            then UiMotion.MAX_REVEAL_SECONDS
             else UiMotion.MAX_SECONDS
         if preset.seconds <= 0 or preset.seconds > limit then
             table.insert(problems, `{name}: seconds must be in (0, {limit}]`)

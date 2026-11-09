@@ -223,7 +223,14 @@ function MenuShell.new(env: UiEnv.UiEnv, parent: Instance, options: Options): Sh
             -- wherever an interrupted open had got to.
             local tween =
                 UiMotionPlayer.play("modalClose", reduced, scale, group, groupProperty, false)
-            UiMotionPlayer.play("scrimClose", reduced, nil, backdrop, "BackgroundTransparency", false)
+            UiMotionPlayer.play(
+                "scrimClose",
+                reduced,
+                nil,
+                backdrop,
+                "BackgroundTransparency",
+                false
+            )
             if tween == nil then
                 root.Visible = false
                 return

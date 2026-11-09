@@ -39,15 +39,15 @@ function UiMotionPlayer.tween(
         perInstance = {}
         active[instance] = perInstance
     end
-    local running = (perInstance :: { [string]: Tween })[property]
+    local running: Tween? = (perInstance :: { [string]: Tween })[property]
     if running ~= nil then
         running:Cancel()
     end
     if from ~= nil then
         (instance :: any)[property] = from
     end
-    local tween = TweenService:Create(instance, tweenInfo(preset), { [property] = target })
-    ;(perInstance :: { [string]: Tween })[property] = tween
+    local tween = TweenService:Create(instance, tweenInfo(preset), { [property] = target });
+    (perInstance :: { [string]: Tween })[property] = tween
     tween:Play()
     return tween
 end
