@@ -12,6 +12,7 @@ Pure model of the UI kit: `UiConfig`, `Layout`, `Contrast`, `MenuController`, `S
 
 - `InputScheme`: touch, keyboard or gamepad, from `Enum.PreferredInput` / `UserInputType` names, plus the hint label of a key.
 - `ControlRegistry`: every HUD button with its purpose and the schemes that show it; the others get a hint.
+- `UiGates`, `audit/GateRules`, `audit/ConfigAudit`: the gate limits (config) and the rules for duplicate destinations, scroll overlap, motion, button limits, touch locomotion and scroll depth (ADR 0061).
 - `audit/EcoRules`, `audit/SourceRules`: the rules that fail a glued list, text flush to a card, a cut label, an unregistered or misplaced control, a raw layout.
 - Tests: `tests/features/ui/UiEco.test.luau`. Prohibited: creating a `UIListLayout`/`UIGridLayout` outside the primitive; a gap below the `sm` token.
 
