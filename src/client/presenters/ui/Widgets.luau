@@ -66,6 +66,7 @@ end
 
 --- A vertical list with a gap token.
 function Widgets.stack(parent: Instance, gap: number, horizontal: boolean?)
+    assert(gap > 0, "Widgets.stack: the gap must be a spacing token above 0 (items would touch)")
     local list = Instance.new("UIListLayout")
     list.Padding = UDim.new(0, gap)
     list.SortOrder = Enum.SortOrder.LayoutOrder
@@ -73,6 +74,16 @@ function Widgets.stack(parent: Instance, gap: number, horizontal: boolean?)
         list.FillDirection = Enum.FillDirection.Horizontal
     end
     list.Parent = parent
+end
+
+--- A grid with a gap token on both axes; the caller sets CellSize.
+function Widgets.grid(parent: Instance, gap: number): UIGridLayout
+    assert(gap > 0, "Widgets.grid: the gap must be a spacing token above 0 (cells would touch)")
+    local grid = Instance.new("UIGridLayout")
+    grid.SortOrder = Enum.SortOrder.LayoutOrder
+    grid.CellPadding = UDim2.fromOffset(gap, gap)
+    grid.Parent = parent
+    return grid
 end
 
 --- A text label. `sizeKey` is a key of theme.textSize, `colorHex` a palette entry.

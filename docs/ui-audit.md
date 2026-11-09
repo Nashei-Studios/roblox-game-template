@@ -22,6 +22,8 @@ Reads every `assets/ui/**/*.rbxm` with the Lune roblox module and applies
 | `UI-TEXT-FIT` | a text is `TextScaled` with a `UITextSizeConstraint`, or carries the `FitHelper` attribute |
 | `UI-TOUCH-44` | a button is guaranteed 44 px at the 844x390 reference (size constraint, pixel size or grid cell) |
 | `UI-KIT-STROKE` | a `ScaledSize` stroke keeps `Thickness` of 0.2 or less (the kit values, never rewritten) |
+| `UI-RAW-LAYOUT` | (source scan of `src/**/*.luau`) no `UIListLayout`/`UIGridLayout` created outside `Atoms`, `ScrollList`, `Widgets` |
+| `UI-LITERAL-GAP` | (source scan) no list `Padding` assigned from number literals |
 
 The fixes that are not colour live in `tools/ui-restyle.luau` (`fixSpacingAndFit`), so a
 re-extraction of the kit (`lune run tools/ui-extract`) reproduces them. Kit colours, gradients and
@@ -58,6 +60,7 @@ resized to each viewport, the presenter lays itself out, and the original size i
 | `UI-BUTTON-INERT` | no `AutoButtonColor` and no `PressScale`, or `Active` false on an enabled button |
 | `UI-COVERED` | the center of a button or text is under a painting element, or a button sits under its own sibling layer (ZIndex inversion) |
 | `UI-LIST-GAP` | siblings of a list or grid are closer than 4 px (two layers on one box are not neighbours) |
+| `UI-LIST-OVERLAP`, `UI-CARD-INSET`, `UI-TEXT-LOST`, `UI-HUD-UNREGISTERED`, `UI-CONTROL-PLATFORM` | `EcoAudit` (ADR 0045): siblings closer than the `sm` token (8 px) or overlapping; text closer than 4 px to its card edge; `TextFits` false without the `Truncatable` attribute; a HUD button not in the `ControlRegistry`; a control visible on a scheme it does not list. Run once per scheme (`touch`, `keyboard`, `gamepad`). Pure rules and fixtures: `tests/features/ui/UiEco.test.luau` |
 | `UI-CONTRAST` | WCAG AA, 4.5 (3 for large text), best of the fill (a gradient multiplies the fill) and the text outline |
 | `UI-TEXT-UNDER-CONTROL` | the glyphs (TextBounds plus alignment) of a visible text run under a visible button of the same container; image buttons that carry captions and transparent hit zones are excluded |
 | `UI-TOUCH-44` | measured size under 44 px |

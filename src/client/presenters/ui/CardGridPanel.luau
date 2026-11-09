@@ -39,11 +39,8 @@ function CardGridPanel.new(deps: Deps): CardGrid.CardGridPresenter
     scroller.AutomaticCanvasSize = Enum.AutomaticSize.Y
     scroller.CanvasSize = UDim2.fromScale(0, 0)
     scroller.Parent = deps.parent
-    local grid = Instance.new("UIGridLayout")
-    grid.SortOrder = Enum.SortOrder.LayoutOrder
+    local grid = Widgets.grid(scroller, gap)
     grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    grid.CellPadding = UDim2.fromOffset(gap, gap)
-    grid.Parent = scroller
 
     local function layout()
         local width = scroller.AbsoluteSize.X - scroller.ScrollBarThickness
@@ -68,7 +65,7 @@ function CardGridPanel.new(deps: Deps): CardGrid.CardGridPresenter
         text.Position = UDim2.fromScale(0.34, 0.5)
         text.Size = UDim2.fromScale(0.62, 0.84)
         text.Parent = frame
-        Widgets.stack(text, 0)
+        Widgets.stack(text, gap)
         Widgets.label(text, theme, "Name", card.name, "body", theme.palette.textPrimary)
         local status = Widgets.label(text, theme, "Status", "", "caption", theme.palette.textMuted)
         table.insert(entries, { card = card, status = status })

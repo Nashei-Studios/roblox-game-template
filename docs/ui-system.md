@@ -37,6 +37,10 @@ flowchart LR
 | Rule | How it is enforced |
 |---|---|
 | No list without a gap | `Stack`, `ScrollList`, `Grid` take a spacing KEY and default to `tokens.defaults.gap`; the scale starts above 0. `Skin` fixes kit lists left at 0. `StaticRules` UI-LIST-PADDING and UI-GRID-PADDING. |
+| Rows never touch, text never touches its row | Sibling gap at least `spacing.sm`, row padding `defaults.cardPad` (`ScrollList.item`). `EcoRules` UI-LIST-GAP, UI-LIST-OVERLAP, UI-CARD-INSET. |
+| No hand-made list | Only the primitive creates a layout (`Atoms`, `ScrollList`, `Widgets`); `SourceRules` UI-RAW-LAYOUT and UI-LITERAL-GAP fail the gate. |
+| Controls fit the platform | Each HUD button is in the `ControlRegistry` with purpose and schemes; touch-only buttons give way to a key hint on keyboard and gamepad, live (`InputSchemeWatcher`). UI-HUD-UNREGISTERED, UI-CONTROL-PLATFORM. |
+| No text lost | A label cut by its box fails (UI-TEXT-LOST) unless it carries the attribute `Truncatable`. |
 | Scroller never clips or touches edges | `ScrollList` sets an automatic canvas and a `UIPadding`. UI-SCROLL-CANVAS, UI-SCROLL-PADDING. |
 | Touch target at least 44 px | `Atoms.touchFloor` adds a `UISizeConstraint` to every button and kit button; `Button` is 44 px tall. UI-TOUCH-44. |
 | Text always fits | `Atoms.fitText`: `TextScaled`, truncation, `UITextSizeConstraint` 12 to 40. UI-TEXT-FIT. |
