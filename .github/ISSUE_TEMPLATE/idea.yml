@@ -1,0 +1,23 @@
+name: Idea
+description: Una idea para el juego, aunque aún sea vaga
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: La idea
+      description: Qué cambiaría o se sumaría, en pocas líneas.
+    validations:
+      required: true
+  - type: textarea
+    id: por-que
+    attributes:
+      label: Por qué le serviría al jugador
+      description: Qué sentiría o haría distinto. Si viste algo parecido en otro juego, dilo.
+    validations:
+      required: true
+  - type: textarea
+    id: dudas
+    attributes:
+      label: Lo que no sabes
+      description: Las dudas son bienvenidas. Se conversan en Discussions o en este issue.
