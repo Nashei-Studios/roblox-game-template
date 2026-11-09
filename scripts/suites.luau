@@ -258,6 +258,7 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/features/collectionindex/CollectionIndex.test"),
     },
     { name = "UiEco", register = require("../tests/features/ui/UiEco.test") },
+    { name = "UiGates", register = require("../tests/features/ui/UiGates.test") },
     { name = "ItemIcon", register = require("../tests/features/ui/ItemIcon.test") },
     { name = "ItemSlots", register = require("../tests/features/itemslots/ItemSlots.test") },
     { name = "InspectView", register = require("../tests/features/inspect/InspectView.test") },

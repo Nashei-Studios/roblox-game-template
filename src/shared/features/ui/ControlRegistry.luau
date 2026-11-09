@@ -8,14 +8,21 @@
 ]]
 
 local InputScheme = require("./InputScheme")
+local UiGates = require("./UiGates")
 
 export type Control = {
     -- Instance name of the button in the HUD.
     id: string,
     -- Why the control exists, in a sentence. Required: a button with no purpose is a bug.
     purpose: string,
-    -- Schemes where the BUTTON is shown. The others never see it.
+    -- Schemes where the BUTTON is shown. The others never see it. May be empty only when `hints`
+    -- covers the control (a key-only control, e.g. run on keyboard and gamepad).
     schemes: { InputScheme.Scheme },
+    -- What the control opens or does ("menu:shop", "action:emote"). Two visible controls with the
+    -- same destination on one scheme fail UI-DUP-DESTINATION. Nil = nothing to compare.
+    destination: string?,
+    -- UiGates.CATEGORIES. A category in `touchForbiddenCategories` never gets a touch button.
+    category: string?,
     -- Text shown in place of the button on a scheme that is not in `schemes` (e.g. "Shift").
     hints: { [InputScheme.Scheme]: string }?,
 }
@@ -41,8 +48,14 @@ function ControlRegistry.validate(control: Control): { string }
     if string.match(control.purpose, "%S") == nil then
         table.insert(problems, `{control.id}: purpose is empty`)
     end
-    if #control.schemes == 0 then
-        table.insert(problems, `{control.id}: no scheme needs it`)
+    if #control.schemes == 0 and (control.hints == nil or next(control.hints) == nil) then
+        table.insert(problems, `{control.id}: no scheme shows it and there is no hint`)
+    end
+    if control.destination ~= nil and string.match(control.destination, "%S") == nil then
+        table.insert(problems, `{control.id}: destination is empty`)
+    end
+    if control.category ~= nil and table.find(UiGates.CATEGORIES, control.category) == nil then
+        table.insert(problems, `{control.id}: unknown category "{control.category}"`)
     end
     for _, scheme in control.schemes do
         if not InputScheme.isScheme(scheme) then
@@ -93,6 +106,21 @@ function ControlRegistry.visibleOn(
 ): boolean
     local control = registry.controls[id]
     return control ~= nil and table.find(control.schemes, scheme) ~= nil
+end
+
+--- The controls whose BUTTON is shown on `scheme`, in registration order.
+function ControlRegistry.onScheme(
+    registry: Registry,
+    scheme: InputScheme.Scheme
+): { Control }
+    local out: { Control } = {}
+    for _, id in registry.order do
+        local control = registry.controls[id]
+        if table.find(control.schemes, scheme) ~= nil then
+            table.insert(out, control)
+        end
+    end
+    return out
 end
 
 --- The hint text shown instead of the button on `scheme`, nil when the button is shown or

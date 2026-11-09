@@ -22,6 +22,7 @@ local function cloneUi(): UiConfig.UiConfig
         strings = table.clone(ui.strings),
         input = table.clone(ui.input),
         settings = table.clone(ui.settings),
+        gates = ui.gates,
     }
 end
 
