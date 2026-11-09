@@ -27,6 +27,10 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     { name = "Music", register = require("../tests/features/music/Music.test") },
     { name = "MoodResolver", register = require("../tests/features/music/MoodResolver.test") },
     {
+        name = "SharedObjective",
+        register = require("../tests/features/sharedobjective/SharedObjective.test"),
+    },
+    {
         name = "WinCondition",
         register = require("../tests/features/wincondition/WinCondition.test"),
     },
