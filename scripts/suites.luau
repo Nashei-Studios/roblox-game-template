@@ -35,6 +35,10 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         name = "TierModelSet",
         register = require("../tests/features/tiermodels/TierModelSet.test"),
     },
+    {
+        name = "TierSurface",
+        register = require("../tests/features/tiermodels/TierSurface.test"),
+    },
     { name = "MoodResolver", register = require("../tests/features/music/MoodResolver.test") },
     {
         name = "SharedObjective",

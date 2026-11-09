@@ -25,6 +25,8 @@ export type Options = {
     castShadow: boolean,
 }
 
+export type ShownPart = { part: BasePart, role: "primary" | "accent" | "glow" }
+
 export type Stats = { created: number, shown: number, swaps: number, templates: number }
 
 export type TierModelRig = {
@@ -41,6 +43,9 @@ export type TierModelRig = {
     hide: (self: TierModelRig) -> (),
     -- The part the rarity effects sit on, or nil while hidden.
     root: (self: TierModelRig) -> BasePart?,
+    -- The pooled parts currently shown, in recipe order, with the color role of each (empty for a
+    -- template). A game recolors them per floor or per roll; the rig never reads them back.
+    shownParts: (self: TierModelRig) -> { ShownPart },
     stats: (self: TierModelRig) -> Stats,
     destroy: (self: TierModelRig) -> (),
 }
@@ -146,6 +151,7 @@ function TierModelRigModule.new(
     local removeFx: (() -> ())? = nil
     local fxKey = ""
     local rootPart: BasePart? = nil
+    local shownParts: { ShownPart } = {}
 
     local function clearFx()
         local remove = removeFx
@@ -258,6 +264,7 @@ function TierModelRigModule.new(
             dismissTemplate()
             shownCount = 0
             rootPart = nil
+            table.clear(shownParts)
             if templateModel ~= nil then
                 templateModel:PivotTo(origin)
                 templateModel.Parent = folder
@@ -282,6 +289,7 @@ function TierModelRigModule.new(
                             else material
                         pooled.Parent = folder
                         shownCount += 1
+                        table.insert(shownParts, { part = pooled, role = spec.role })
                         if rootPart == nil then
                             rootPart = pooled
                         end
@@ -329,10 +337,14 @@ function TierModelRigModule.new(
             pool:assign({})
             shownCount = 0
             rootPart = nil
+            table.clear(shownParts)
             current = nil
         end,
         root = function(_self: TierModelRig): BasePart?
             return rootPart
+        end,
+        shownParts = function(_self: TierModelRig): { ShownPart }
+            return shownParts
         end,
         stats = function(_self: TierModelRig): Stats
             return {
