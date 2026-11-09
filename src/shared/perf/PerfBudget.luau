@@ -62,6 +62,17 @@ export type PodiumBudget = {
     maxAnimatedStatues: number,
 }
 
+-- World nodes with a model per tier (ADR 0057). The parts are built once into a pool and re-posed
+-- when the tier changes, so the cost is the standing parts and triangles, not allocations.
+export type TierModelBudget = {
+    -- Parts one node (rock, ore, slab) may use, whatever its tier.
+    maxPartsPerNode: number,
+    -- Upper bound of triangles per node (TierModelConfig.TRIANGLES per shape).
+    maxTrianglesPerNode: number,
+    -- Nodes drawn at once; the total standing cost is this times the per-node figures.
+    maxVisibleNodes: number,
+}
+
 export type Budget = {
     -- Bytes added per remote message on top of the Zap payload.
     perEventOverheadBytes: number,
@@ -81,6 +92,8 @@ export type Budget = {
     clientFx: ClientFx?,
     -- World podium limits; optional so a budget literal without it stays valid.
     podium: PodiumBudget?,
+    -- Per-tier world models; optional so a budget literal without it stays valid.
+    tierModels: TierModelBudget?,
 }
 
 local PerfBudget: Budget = {
@@ -131,6 +144,11 @@ local PerfBudget: Budget = {
         maxParts = 96, -- chosen, not measured: 3 steps + 3 plates + 3 statues of about 30 parts with accessories
         minRefreshSeconds = 60, -- chosen, not sourced: keeps the GetSortedAsync budget of 5 per minute (docs/performance.md)
         maxAnimatedStatues = 3, -- chosen, not measured: one idle loop per statue
+    },
+    tierModels = {
+        maxPartsPerNode = 24, -- chosen, not measured: a rock reads with a handful of chunky parts
+        maxTrianglesPerNode = 600, -- chosen, not measured: Roblox publishes no per-node figure for phones
+        maxVisibleNodes = 6, -- chosen, not measured: a slab plus a few ore nodes in view
     },
 }
 
