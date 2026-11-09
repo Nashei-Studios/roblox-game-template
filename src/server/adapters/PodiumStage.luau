@@ -1,7 +1,7 @@
 --!strict
 --[[
     Server presenter of the 3D podium (ADR 0056): builds the three steps, the avatar statues
-    and the name plates as ordinary world instances, so they replicate to every client with no
+    and one name tag per place as ordinary world instances, so they replicate to every client with no
     remote and no client script. It touches Instances, so it is excluded from the line-coverage
     gate; the rules (who stands where, the words, the colors, the geometry) live in
     features/podium and are tested under Lune.
@@ -9,7 +9,7 @@
     Statues: Players:CreateHumanoidModelFromUserId, scripts stripped, anchored, name tags off.
     With an idle animation configured only the root is anchored (the Motor6D chain follows it)
     and an Animator plays the loop; without one every part is anchored. A statue that fails to
-    load leaves its plate, so the podium degrades to text instead of to an error.
+    load leaves its tag, so the podium degrades to text instead of to an error.
 ]]
 
 local Players = game:GetService("Players")
@@ -33,7 +33,7 @@ export type Deps = {
 }
 
 export type Stage = {
-    -- Rebuilds only the places whose occupant changed; plates are rewritten when the text changed.
+    -- Rebuilds only the places whose occupant changed; tags are rewritten when the text changed.
     render: (self: Stage, view: PodiumModel.View) -> (),
     destroy: (self: Stage) -> (),
 }
@@ -41,9 +41,6 @@ export type Stage = {
 type PlaceState = {
     userId: number?,
     statue: Model?,
-    plate: TextLabel?,
-    detail: TextLabel?,
-    stroke: UIStroke?,
     -- The screen-sized tag above the statue (readable from the spawn camera).
     tagHead: TextLabel,
     tagDetail: TextLabel,
@@ -52,7 +49,6 @@ type PlaceState = {
 }
 
 local STEP_BASE_HEX = "#2B3148" -- chosen: dark slate the medal color is mixed into
-local PLATE_PIXELS_PER_STUD = 40
 
 local PodiumStage = {}
 
@@ -75,59 +71,10 @@ local function newPart(name: string, size: Vector3, cframe: CFrame): Part
     return part
 end
 
-local function newPlate(
-    slot: PodiumLayout.Slot,
-    root: CFrame,
-    parent: Instance
-): (Part, TextLabel, TextLabel, UIStroke)
-    local face = newPart(
-        `Plate{slot.rank}`,
-        Vector3.new(slot.stepSize.x - 0.4, 1.4, 0.2),
-        root * CFrame.new(slot.platePoint.x, 0.9, slot.platePoint.z + 0.1)
-    )
-    face.CanCollide = false
-    face.CanQuery = false
-    face.Material = Enum.Material.SmoothPlastic
-    face.Color = toColor("#171C30")
-    face.Parent = parent
-    local gui = Instance.new("SurfaceGui")
-    -- Back is the +Z face of the part: the side the viewers stand on.
-    gui.Face = Enum.NormalId.Back
-    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-    gui.PixelsPerStud = PLATE_PIXELS_PER_STUD
-    gui.AlwaysOnTop = false
-    gui.Parent = face
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 3
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.fromScale(1, 1)
-    frame.BackgroundTransparency = 1
-    frame.Parent = gui
-    stroke.Parent = frame
-    local headline = Instance.new("TextLabel")
-    headline.Name = "Headline"
-    headline.Size = UDim2.fromScale(1, 0.58)
-    headline.BackgroundTransparency = 1
-    headline.TextScaled = true
-    headline.Font = Enum.Font.GothamBold
-    headline.TextColor3 = Color3.new(1, 1, 1)
-    headline.Parent = frame
-    local detail = Instance.new("TextLabel")
-    detail.Name = "Detail"
-    detail.Position = UDim2.fromScale(0, 0.58)
-    detail.Size = UDim2.fromScale(1, 0.38)
-    detail.BackgroundTransparency = 1
-    detail.TextScaled = true
-    detail.Font = Enum.Font.Gotham
-    detail.TextColor3 = Color3.fromRGB(220, 226, 240)
-    detail.Parent = frame
-    return face, headline, detail, stroke
-end
-
--- A BillboardGui sized in pixels, so the name and the value stay legible at any distance up to
--- TAG_MAX_DISTANCE. It costs no part.
+-- The one label of a place: a BillboardGui sized in STUDS (scale), so the three labels keep their
+-- gaps at any resolution and a label never grows over its neighbour. Costs no part.
 local TAG_MAX_DISTANCE = 160 -- chosen, not measured: the far side of the deck from the spawn camera
-local TAG_SIZE = UDim2.fromOffset(150, 52)
+local TAG_SIZE = UDim2.fromScale(PodiumLayout.TAG_WIDTH, PodiumLayout.TAG_HEIGHT)
 
 local function newTag(step: Part, offset: Vector3): (TextLabel, TextLabel, UIStroke)
     local gui = Instance.new("BillboardGui")
@@ -320,20 +267,21 @@ function PodiumStage.new(deps: Deps): Stage
         step.Material = Enum.Material.Concrete
         step.Color = toColor(STEP_BASE_HEX)
         step.Parent = root
-        local _face, headline, detail, stroke = newPlate(slot, deps.origin, root)
         -- Floats just above the front edge of the step, at the statue's feet: low, so it stays inside
         -- the spawn camera frame (the camera is about as high as a 1.6x statue).
-        local tagHead, tagDetail, tagStroke =
-            newTag(step, Vector3.new(0, slot.stepSize.y / 2 + 1.4, slot.stepSize.z / 2 + 1.2))
+        local anchor = PodiumLayout.tagAnchor(slot)
+        local tagHead, tagDetail, tagStroke = newTag(
+            step,
+            deps.origin:VectorToWorldSpace(
+                Vector3.new(anchor.x - slot.stepCenter.x, anchor.y - slot.stepCenter.y, anchor.z)
+            )
+        )
         table.insert(states, {
             tagHead = tagHead,
             tagDetail = tagDetail,
             tagStroke = tagStroke,
             userId = nil,
             statue = nil,
-            plate = headline,
-            detail = detail,
-            stroke = stroke,
             step = step,
         })
     end
@@ -404,15 +352,6 @@ function PodiumStage.new(deps: Deps): Stage
                 state.tagHead.Text = place.headline
                 state.tagDetail.Text = place.detail
                 state.tagStroke.Color = toColor(place.frameHex)
-                if state.plate ~= nil then
-                    state.plate.Text = place.headline
-                end
-                if state.detail ~= nil then
-                    state.detail.Text = place.detail
-                end
-                if state.stroke ~= nil then
-                    state.stroke.Color = toColor(place.frameHex)
-                end
                 state.step.Color = toColor(
                     if place.occupied
                         then RarityFx.mix(STEP_BASE_HEX, place.frameHex, 0.35)

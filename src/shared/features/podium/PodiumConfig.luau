@@ -58,11 +58,11 @@ PodiumConfigModule.default = {
     nameMaxLength = 16, -- chosen, not sourced
     idleAnimationId = nil, -- TODO(game): an allowed idle animation id; nil is a static pose
     layout = {
-        stepWidth = 6, -- chosen, not measured: wide enough for a 1.6x statue and a readable tag
-        stepDepth = 6, -- chosen, not measured
-        stepGap = 0.6, -- chosen, not measured
+        stepWidth = 5.5, -- chosen, not measured: wide enough for a 1.4x statue
+        stepDepth = 5.5, -- chosen, not measured
+        stepGap = 2.5, -- chosen, not measured: 8 studs between centers, wider than the 6 stud tag
         stepHeights = { 3.6, 2.8, 2 }, -- chosen, not measured: low, so a 1.6x statue stays under the spawn camera height
-        statueScale = 1.6, -- chosen, not measured: statues about 1.6x an avatar
+        statueScale = 1.4, -- chosen, not measured: the largest scale whose heads stay inside the spawn frame at every window
     },
 } :: PodiumConfig
 
