@@ -272,6 +272,12 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         name = "StudioLockPolicy (hook)",
         register = require("../tests/claude/StudioLockPolicy.test"),
     },
+    { name = "Prop (property-based generator)", register = require("../tests/property/Prop.test") },
+    {
+        name = "Economy and receipts (property-based)",
+        register = require("../tests/property/Economy.property.test"),
+    },
+    { name = "Remote validators (fuzz)", register = require("../tests/fuzz/RemoteFuzz.test") },
 }
 
 local Suites = {}
