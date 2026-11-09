@@ -106,10 +106,16 @@ local function isWellFormed(result: unknown): boolean
 end
 
 -- Runs `call` on nil, every hostile value and random ones; `observe` sees each value after.
-local function fuzz(name: string, call: (value: unknown) -> unknown, observe: (value: unknown, result: unknown) -> ())
+local function fuzz(
+    name: string,
+    call: (value: unknown) -> unknown,
+    observe: (value: unknown, result: unknown) -> ()
+)
     local function once(value: unknown)
         local ok, result = pcall(call, value)
-        harness.isTrue(ok, `{name} raised: {tostring(result)} for {Prop.describe(value, 0)}`)
+        if not ok then
+            error(`{name} raised: {tostring(result)} for {Prop.describe(value, 0)}`, 0)
+        end
         harness.isTrue(isWellFormed(result), `{name} returned a malformed result`)
         observe(value, result)
     end
@@ -143,14 +149,21 @@ return function(suite: harness.Harness)
         end)
     end)
 
-    suite:test("Validation.integerInRange never raises and accepts only integers in range", function()
-        fuzz("integerInRange", function(value: unknown): unknown
-            return Validation.integerInRange(value, 0, 100)
-        end, function(value: unknown, result: unknown)
-            local expected = type(value) == "number" and value == value and value % 1 == 0 and value >= 0 and value <= 100
-            harness.equal(accepted(result), expected, "verdict")
-        end)
-    end)
+    suite:test(
+        "Validation.integerInRange never raises and accepts only integers in range",
+        function()
+            fuzz("integerInRange", function(value: unknown): unknown
+                return Validation.integerInRange(value, 0, 100)
+            end, function(value: unknown, result: unknown)
+                local expected = type(value) == "number"
+                    and value == value
+                    and value % 1 == 0
+                    and value >= 0
+                    and value <= 100
+                harness.equal(accepted(result), expected, "verdict")
+            end)
+        end
+    )
 
     suite:test("Validation.string never raises and enforces type and byte length", function()
         fuzz("string", function(value: unknown): unknown

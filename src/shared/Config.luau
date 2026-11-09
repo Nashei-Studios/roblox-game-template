@@ -152,6 +152,10 @@ export type GameConfig = {
 
 local Config = {}
 
+-- Largest integer a Luau number holds exactly (2^53); ProductGrants rejects a larger grant, so a
+-- product configured above it would charge Robux and never deliver.
+Config.MAX_GRANT_COINS = 2 ^ 53
+
 -- Platform bounds of one Robux transfer (docs: production/monetization/robux-transfers).
 Config.ROBUX_TRANSFER_PLATFORM_MIN = 10
 Config.ROBUX_TRANSFER_PLATFORM_MAX = 500
@@ -579,10 +583,15 @@ function Config.validate(config: GameConfig): { string }
         local grant = product.grant
         if grant.kind ~= "coins" then
             table.insert(problems, `developer product "{product.name}" has an unknown grant kind`)
-        elseif grant.amount ~= grant.amount or grant.amount <= 0 or grant.amount % 1 ~= 0 then
+        elseif
+            grant.amount ~= grant.amount
+            or grant.amount <= 0
+            or grant.amount % 1 ~= 0
+            or grant.amount > Config.MAX_GRANT_COINS
+        then
             table.insert(
                 problems,
-                `developer product "{product.name}" grants an invalid amount (must be a positive integer)`
+                `developer product "{product.name}" grants an invalid amount (must be a positive integer up to 2^53)`
             )
         end
     end

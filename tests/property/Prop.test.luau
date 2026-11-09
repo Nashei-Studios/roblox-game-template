@@ -102,13 +102,9 @@ return function(suite: harness.Harness)
 
     suite:test("a list shrinks by dropping elements", function()
         local message = messageOf(function()
-            Prop.check(
-                "no seven",
-                Prop.listOf(Prop.integer(0, 9), 30),
-                function(list: { number })
-                    harness.isFalse(table.find(list, 7) ~= nil, "contains 7")
-                end
-            )
+            Prop.check("no seven", Prop.listOf(Prop.integer(0, 9), 30), function(list: { number })
+                harness.isFalse(table.find(list, 7) ~= nil, "contains 7")
+            end)
         end)
         harness.isTrue(
             string.find(message or "", "[1]=7}", 1, true) ~= nil,

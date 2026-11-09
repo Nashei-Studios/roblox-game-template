@@ -110,6 +110,10 @@ function Prop.integer(low: number, high: number): Gen<number>
             if middle ~= anchor and middle ~= value then
                 table.insert(candidates, middle)
             end
+            local step = if value > anchor then value - 1 else value + 1
+            if step ~= anchor and step ~= middle then
+                table.insert(candidates, step)
+            end
         end
         return candidates
     end)
@@ -313,7 +317,7 @@ end
 
 -- Description of a failing input -----------------------------------------------------------------
 
-local function describe(value: unknown, depth: number): string
+local function describeUnsafe(value: unknown, depth: number): string
     local kind = type(value)
     if kind == "string" then
         local text = value :: string
@@ -333,11 +337,23 @@ local function describe(value: unknown, depth: number): string
                 table.insert(parts, "...")
                 break
             end
-            table.insert(parts, `[{describe(key, depth + 1)}]={describe(item, depth + 1)}`)
+            table.insert(
+                parts,
+                `[{describeUnsafe(key, depth + 1)}]={describeUnsafe(item, depth + 1)}`
+            )
         end
         return "{" .. table.concat(parts, ", ") .. "}"
     end
     return tostring(value)
+end
+
+-- A hostile value (raising metatable) must not break the report of its own failure.
+local function describe(value: unknown, depth: number): string
+    local ok, text = pcall(describeUnsafe, value, depth)
+    if ok then
+        return text
+    end
+    return `<{type(value)} that raises when inspected>`
 end
 
 -- Runner ---------------------------------------------------------------------------------------------

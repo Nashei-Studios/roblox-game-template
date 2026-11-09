@@ -143,6 +143,21 @@ return function(suite: harness.Harness)
         end)
     end)
 
+    suite:test("regression: Config.validate rejects a coins grant above 2^53", function()
+        -- Found by the property above (ADR 0062): validate used to accept 1e300 coins while
+        -- ProductGrants refused to apply it, so the player paid Robux and got nothing.
+        local config = table.clone(Config.default)
+        config.developerProducts = {
+            { name = "Huge", id = 1, grant = { kind = "coins", amount = 2 ^ 53 + 2 } },
+        }
+        local flagged = false
+        for _, problem in Config.validate(config) do
+            flagged = flagged or string.find(problem, "invalid amount", 1, true) ~= nil
+        end
+        harness.isTrue(flagged, "an amount above 2^53 is a config problem")
+        harness.equal(Config.MAX_GRANT_COINS, ProductGrants.MAX_COINS, "caps agree")
+    end)
+
     suite:test("property: integerInRange accepts exactly the finite integers in range", function()
         local gen = Prop.pair(Prop.number(), Prop.pair(Prop.integer(-50, 50), Prop.integer(0, 100)))
         Prop.check("quantity range", gen, function(input)
@@ -171,37 +186,40 @@ return function(suite: harness.Harness)
         end)
     end)
 
-    suite:test("property: a failed grant is never recorded, a recorded one never regranted", function()
-        Prop.check("receipt decisions", Prop.listOf(purchaseGen(), 40), function(purchases)
-            local ledger = Monetization.newMemoryLedger(100)
-            for _, purchase in purchases do
-                local purchaseId = `p{purchase.id}`
-                local wasRecorded = ledger:has(purchaseId)
-                local decision = Monetization.processReceipt(
-                    ledger,
-                    { playerId = 1, purchaseId = purchaseId, productId = 1 },
-                    function(): boolean
-                        return purchase.grantOk
-                    end,
-                    function(): boolean
-                        return purchase.savedOk
-                    end
-                )
-                if wasRecorded then
-                    harness.isTrue(
-                        decision == "alreadyGranted" or decision == "unconfirmed",
-                        "a recorded id is never granted again"
+    suite:test(
+        "property: a failed grant is never recorded, a recorded one never regranted",
+        function()
+            Prop.check("receipt decisions", Prop.listOf(purchaseGen(), 40), function(purchases)
+                local ledger = Monetization.newMemoryLedger(100)
+                for _, purchase in purchases do
+                    local purchaseId = `p{purchase.id}`
+                    local wasRecorded = ledger:has(purchaseId)
+                    local decision = Monetization.processReceipt(
+                        ledger,
+                        { playerId = 1, purchaseId = purchaseId, productId = 1 },
+                        function(): boolean
+                            return purchase.grantOk
+                        end,
+                        function(): boolean
+                            return purchase.savedOk
+                        end
                     )
-                elseif not purchase.grantOk then
-                    harness.equal(decision, "failed", "grant failure")
-                    harness.isFalse(ledger:has(purchaseId), "a failed grant is not recorded")
+                    if wasRecorded then
+                        harness.isTrue(
+                            decision == "alreadyGranted" or decision == "unconfirmed",
+                            "a recorded id is never granted again"
+                        )
+                    elseif not purchase.grantOk then
+                        harness.equal(decision, "failed", "grant failure")
+                        harness.isFalse(ledger:has(purchaseId), "a failed grant is not recorded")
+                    end
+                    if decision == "granted" or decision == "alreadyGranted" then
+                        harness.isTrue(purchase.savedOk, "only a confirmed save reports success")
+                    end
                 end
-                if decision == "granted" or decision == "alreadyGranted" then
-                    harness.isTrue(purchase.savedOk, "only a confirmed save reports success")
-                end
-            end
-        end)
-    end)
+            end)
+        end
+    )
 
     suite:test("property: event order and repeats do not change the total", function()
         local gen = Prop.pair(Prop.listOf(purchaseGen(), 30), Prop.integer(0, 1000000))
