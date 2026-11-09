@@ -14,6 +14,7 @@ local SoundConfig = require("./features/sound/SoundConfig")
 local WinCondition = require("./features/wincondition/WinCondition")
 local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
 local PerfBudget = require("./perf/PerfBudget")
+local InspectView = require("./features/inspect/InspectView")
 local ItemSlots = require("./features/itemslots/ItemSlots")
 local AutoFeel = require("./features/autofeel/AutoFeel")
 local PodiumConfig = require("./features/podium/PodiumConfig")
@@ -135,6 +136,8 @@ export type GameConfig = {
     rarity: RarityConfig.Config?,
     -- Hotbar of equipped items (ADR 0056): slot count and the keys that select each slot.
     itemSlots: ItemSlots.Config?,
+    -- 3D item viewer (ADR 0060): rotation and zoom limits, input speeds and the keys that close it.
+    inspect: InspectView.Config?,
     leaderboards: LeaderboardsConfig.LeaderboardsConfig?,
     -- 3D podium of a board's top three (ADR 0056); a game sets the board, words and animation.
     podium: PodiumConfig.PodiumConfig?,
@@ -302,6 +305,7 @@ Config.default = {
     },
     rarity = RarityConfig.default,
     itemSlots = ItemSlots.default,
+    inspect = InspectView.default,
     -- UI kit: tokens derived for this template (reasons in docs/design/DESIGN.md).
     ui = {
         theme = {
@@ -615,6 +619,11 @@ function Config.validate(config: GameConfig): { string }
     end
     if config.itemSlots ~= nil then
         for _, problem in ItemSlots.validate(config.itemSlots) do
+            table.insert(problems, problem)
+        end
+    end
+    if config.inspect ~= nil then
+        for _, problem in InspectView.validate(config.inspect) do
             table.insert(problems, problem)
         end
     end

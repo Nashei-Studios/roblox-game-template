@@ -109,6 +109,18 @@ export type Budget = {
     tierModels: TierModelBudget?,
     -- Auto mining visuals; optional so a budget literal without it stays valid.
     autoFeel: AutoFeelBudget?,
+    -- 3D item viewer (ADR 0060); optional so a budget literal without it stays valid.
+    inspect: InspectBudget?,
+}
+
+-- Item viewer (ADR 0060): one ViewportFrame with one WorldModel holding one model, built on open.
+export type InspectBudget = {
+    -- Parts of the model shown. The in-hand pickaxe of a game is the model, so this bounds it.
+    maxParts: number,
+    -- WorldModels alive in PlayerGui at once: 1 open, 0 closed.
+    maxWorldModels: number,
+    -- Time from tap to the first painted frame on the poorest client, milliseconds.
+    maxOpenMs: number,
 }
 
 local PerfBudget: Budget = {
@@ -170,6 +182,11 @@ local PerfBudget: Budget = {
         instancesPerSwing = 1, -- the toolanim StringValue; popups, chips and sounds are pooled
         playersInView = 12, -- chosen: a full server of auto miners all in one lobby
         maxInstancesPerSecond = 30, -- chosen, not measured: Roblox publishes no per-second figure
+    },
+    inspect = {
+        maxParts = 40, -- chosen, not measured: above the 24 of a tier node, a tool plus its glow
+        maxWorldModels = 1, -- the acceptance rule: 0 closed, 1 open, 0 after closing
+        maxOpenMs = 200, -- chosen: the issue target, to be measured on the poorest client
     },
 }
 

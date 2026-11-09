@@ -11,6 +11,7 @@ local process = require("@lune/process")
 
 local Config = require("../src/shared/Config")
 local AutoFeel = require("../src/shared/features/autofeel/AutoFeel")
+local InspectView = require("../src/shared/features/inspect/InspectView")
 local PerfBudget = require("../src/shared/perf/PerfBudget")
 local PodiumConfig = require("../src/shared/features/podium/PodiumConfig")
 local RarityConfig = require("../src/shared/features/rarity/RarityConfig")
@@ -109,6 +110,20 @@ if autoBudget ~= nil and autoConfig ~= nil then
     end
     print(
         `auto feel: {popups} popups/s of {autoBudget.maxPopupsPerSecond}, {instances} instances/s for {autoBudget.playersInView} players of {autoBudget.maxInstancesPerSecond}`
+    )
+end
+-- Item viewer (ADR 0060): the config must be valid and the budget must allow one WorldModel.
+local inspectBudget = PerfBudget.inspect
+local inspectConfig = Config.default.inspect
+if inspectBudget ~= nil and inspectConfig ~= nil then
+    for _, problem in InspectView.validate(inspectConfig) do
+        table.insert(report.failures, problem)
+    end
+    for _, problem in InspectView.budgetProblems(inspectBudget.maxParts, 1, inspectBudget) do
+        table.insert(report.failures, problem)
+    end
+    print(
+        `inspect: up to {inspectBudget.maxParts} parts, {inspectBudget.maxWorldModels} WorldModel, open under {inspectBudget.maxOpenMs} ms`
     )
 end
 if #report.failures > 0 then
