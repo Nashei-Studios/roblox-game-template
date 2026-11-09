@@ -8,6 +8,7 @@ export type FunnelEvent = {
     userId: number,
     timestamp: number,
     sessionIndex: number,
+    variant: string?,
 }
 
 export type AnalyticsSink = {
