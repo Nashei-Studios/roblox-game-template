@@ -14,6 +14,7 @@ local SoundConfig = require("./features/sound/SoundConfig")
 local WinCondition = require("./features/wincondition/WinCondition")
 local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
 local PerfBudget = require("./perf/PerfBudget")
+local PodiumConfig = require("./features/podium/PodiumConfig")
 local RarityConfig = require("./features/rarity/RarityConfig")
 local UiConfig = require("./features/ui/UiConfig")
 
@@ -130,6 +131,8 @@ export type GameConfig = {
     -- Rarity ladder and effect tiers (ADR 0048); a game overrides the tiers and colors.
     rarity: RarityConfig.Config?,
     leaderboards: LeaderboardsConfig.LeaderboardsConfig?,
+    -- 3D podium of a board's top three (ADR 0055); a game sets the board, words and animation.
+    podium: PodiumConfig.PodiumConfig?,
     communityReward: CommunityRewardConfig.CommunityRewardConfig?,
     -- Win condition (vault ADR 0032): empty in the template, filled at stage 1 of a game.
     winCondition: WinCondition.WinConditionConfig?,
@@ -362,6 +365,7 @@ Config.default = {
             WeeklyCoins = { stat = "coins", refreshSeconds = 120, size = 10, resetCycle = "weekly" },
         },
     },
+    podium = PodiumConfig.default,
     -- Off until Victor confirms the Community Standards allow rewarding a join (open [GAP]).
     communityReward = {
         enabled = false,
