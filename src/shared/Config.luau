@@ -15,6 +15,7 @@ local WinCondition = require("./features/wincondition/WinCondition")
 local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
 local PerfBudget = require("./perf/PerfBudget")
 local ItemSlots = require("./features/itemslots/ItemSlots")
+local AutoFeel = require("./features/autofeel/AutoFeel")
 local PodiumConfig = require("./features/podium/PodiumConfig")
 local RarityConfig = require("./features/rarity/RarityConfig")
 local TierModelConfig = require("./features/tiermodels/TierModelConfig")
@@ -139,6 +140,8 @@ export type GameConfig = {
     podium: PodiumConfig.PodiumConfig?,
     -- A distinct model, material and color set per tier (ADR 0057); a game lists its own tiers.
     tierModels: TierModelConfig.Config?,
+    -- Feel of an automatic miner (ADR 0058); a game with no auto drill leaves it as is, unused.
+    autoFeel: AutoFeel.AutoFeelConfig?,
     communityReward: CommunityRewardConfig.CommunityRewardConfig?,
     -- Win condition (vault ADR 0032): empty in the template, filled at stage 1 of a game.
     winCondition: WinCondition.WinConditionConfig?,
@@ -374,6 +377,7 @@ Config.default = {
     },
     podium = PodiumConfig.default,
     tierModels = TierModelConfig.default,
+    autoFeel = AutoFeel.default,
     -- Off until Victor confirms the Community Standards allow rewarding a join (open [GAP]).
     communityReward = {
         enabled = false,
