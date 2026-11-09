@@ -17,17 +17,32 @@ export type Slot = {
     stepSize: Point,
     -- Where the statue's feet stand (top center of the step).
     standPoint: Point,
-    -- Where the name plate hangs: on the front face of the step.
-    platePoint: Point,
 }
 
 local PodiumLayout = {}
 
 -- Farthest a statue part may sit from its step center. A part beyond it (an accessory that did
 -- not weld and stayed at the world origin) is a bug the stage removes and reports.
+-- Size of the name tag of a place, in studs (the BillboardGui is scaled in studs, so the gaps
+-- between neighbours hold at any resolution). Narrower than the pitch between steps.
+PodiumLayout.TAG_WIDTH = 6 -- chosen, not measured
+PodiumLayout.TAG_HEIGHT = 2.4 -- chosen, not measured
+-- Height of the tag center above the podium base and its distance in front of the step face.
+PodiumLayout.TAG_BASE_Y = 1.2 -- chosen, not measured: the center of every tag sits near the ground, in front of its step
+PodiumLayout.TAG_OUT = 1.2 -- chosen, not measured: in front of the step
+
 PodiumLayout.MAX_STATUE_RADIUS = 12 -- chosen, not measured: an R15 avatar with large accessories is under 6; scaled by the statue scale
 -- How far the feet may sit from the step top before the stage corrects them, studs.
 PodiumLayout.FEET_TOLERANCE = 0.2 -- chosen, not measured
+
+--- Podium-local center of the name tag of a slot: above the front edge of its step.
+function PodiumLayout.tagAnchor(slot: Slot): Point
+    return {
+        x = slot.stepCenter.x,
+        y = PodiumLayout.TAG_BASE_Y,
+        z = slot.stepSize.z / 2 + PodiumLayout.TAG_OUT,
+    }
+end
 
 --- The stray radius for a statue scaled by `scale` (MAX_STATUE_RADIUS is for scale 1).
 function PodiumLayout.strayRadius(scale: number): number
@@ -75,7 +90,6 @@ function PodiumLayout.slots(layout: PodiumConfig.Layout): { Slot }
             stepCenter = { x = x, y = height / 2, z = 0 },
             stepSize = { x = layout.stepWidth, y = height, z = layout.stepDepth },
             standPoint = { x = x, y = height, z = 0 },
-            platePoint = { x = x, y = height / 2, z = layout.stepDepth / 2 },
         })
     end
     return slots
