@@ -1,6 +1,6 @@
 --!strict
 --[[
-    Implementations of the PodiumSource port (ADR 0055), all pure so they load under Lune:
+    Implementations of the PodiumSource port (ADR 0056), all pure so they load under Lune:
     - fromStore: a real read through the OrderedBoardStore port (its OrderedDataStore adapter is
       server/adapters/OrderedDataStoreBoards). Costs one GetSortedAsync per refresh.
     - fromCache: reads a top that is already cached (for example Leaderboards:top), so the podium

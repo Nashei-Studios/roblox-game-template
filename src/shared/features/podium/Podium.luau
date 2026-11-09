@@ -1,6 +1,6 @@
 --!strict
 --[[
-    The podium service (ADR 0055). Pure: the source, the name resolver and the clock are injected.
+    The podium service (ADR 0056). Pure: the source, the name resolver and the clock are injected.
     `tick` is cheap and safe to call every second: it reads the source only when `refreshSeconds`
     have passed since the last read, caches the resulting view, and says whether the view
     changed so the stage rebuilds only then.

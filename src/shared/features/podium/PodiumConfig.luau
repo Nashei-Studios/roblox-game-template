@@ -1,6 +1,6 @@
 --!strict
 --[[
-    Typed config of the 3D podium and its validation (ADR 0055). Pure: loads under Lune. Words,
+    Typed config of the 3D podium and its validation (ADR 0056). Pure: loads under Lune. Words,
     unit, medal tiers, refresh and geometry live here; the engine pieces live in
     server/adapters/PodiumStage. Numbers carry their provenance: "chosen, not sourced".
 ]]

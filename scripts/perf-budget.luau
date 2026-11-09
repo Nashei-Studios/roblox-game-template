@@ -44,7 +44,7 @@ print(
 print(
     `server -> client: {report.serverToClientBytesPerSecond} B/s of {PerfBudget.serverToClientBytesPerSecond}`
 )
--- World podium (ADR 0055): the configured refresh must respect the budget floor.
+-- World podium (ADR 0056): the configured refresh must respect the budget floor.
 local podiumBudget = PerfBudget.podium
 local podiumConfig = Config.default.podium
 if podiumBudget ~= nil and podiumConfig ~= nil then

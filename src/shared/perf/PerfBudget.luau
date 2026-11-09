@@ -49,7 +49,7 @@ export type ClientFx = {
     maxRevealBeams: number,
 }
 
--- World podium (ADR 0055). The statues are server-built and anchored, so the cost is parts and
+-- World podium (ADR 0056). The statues are server-built and anchored, so the cost is parts and
 -- web calls, not frames; the only client work is the optional idle animation.
 export type PodiumBudget = {
     -- Parts of the whole podium: 3 steps, 3 plates and 3 avatar statues (a statue is ~15 parts

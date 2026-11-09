@@ -1,6 +1,6 @@
 --!strict
 --[[
-    Port: where the podium reads the top of its board (ADR 0055). Implementations live in
+    Port: where the podium reads the top of its board (ADR 0056). Implementations live in
     features/podium/PodiumSources: one over the OrderedBoardStore port (a real read), one over an
     already cached top (no extra store read), and an in-memory fake for tests and a one-client
     Studio seed. Server side only. Calls may yield in production.

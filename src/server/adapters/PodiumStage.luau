@@ -1,6 +1,6 @@
 --!strict
 --[[
-    Server presenter of the 3D podium (ADR 0055): builds the three steps, the avatar statues
+    Server presenter of the 3D podium (ADR 0056): builds the three steps, the avatar statues
     and the name plates as ordinary world instances, so they replicate to every client with no
     remote and no client script. It touches Instances, so it is excluded from the line-coverage
     gate; the rules (who stands where, the words, the colors, the geometry) live in

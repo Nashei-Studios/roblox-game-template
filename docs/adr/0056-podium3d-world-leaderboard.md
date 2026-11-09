@@ -1,4 +1,4 @@
-# 0055. Podium3D: the top three of a board as avatar statues on a 3-step podium
+# 0056. Podium3D: the top three of a board as avatar statues on a 3-step podium
 
 - Status: accepted
 - Date: 2026-11-09

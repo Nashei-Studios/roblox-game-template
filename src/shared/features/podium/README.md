@@ -1,6 +1,6 @@
 # features/podium
 
-The top three of a board as avatar statues on a 3-step podium in the world, with a name plate each. Decision: [ADR 0055](../../../../docs/adr/0055-podium3d-world-leaderboard.md). Issue #50. Vault bar W19.
+The top three of a board as avatar statues on a 3-step podium in the world, with a name plate each. Decision: [ADR 0056](../../../../docs/adr/0056-podium3d-world-leaderboard.md). Issue #50. Vault bar W19.
 
 ## What it is / is not
 
