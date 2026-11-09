@@ -34,6 +34,17 @@ jobs:
         with:
           ref: develop
           fetch-depth: 0
+      - name: Merge main back into develop so the last release tag is reachable
+        # The tag sits on main's merge commit, which develop never contains: without this, git describe
+        # and git-cliff on develop still see the previous tag and bump to a version that exists (#166).
+        # In plan the merge stays local; publish pushes it with the changelog commit.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin main >/dev/null; then
+            git fetch origin main
+            git merge --no-edit -m "chore(release): sync main into develop" origin/main
+          fi
       - name: Install git-cliff (pinned, checksum verified)
         run: |
           base="https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}"
@@ -91,6 +102,17 @@ jobs:
         with:
           ref: develop
           fetch-depth: 0
+      - name: Merge main back into develop so the last release tag is reachable
+        # The tag sits on main's merge commit, which develop never contains: without this, git describe
+        # and git-cliff on develop still see the previous tag and bump to a version that exists (#166).
+        # In plan the merge stays local; publish pushes it with the changelog commit.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin main >/dev/null; then
+            git fetch origin main
+            git merge --no-edit -m "chore(release): sync main into develop" origin/main
+          fi
       - name: Install git-cliff (pinned, checksum verified)
         run: |
           base="https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}"
@@ -106,8 +128,6 @@ jobs:
           git-cliff --unreleased --tag "$VERSION" --strip header --output "$RUNNER_TEMP/notes.md"
       - name: Commit the changelog on develop
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md
           git commit -m "chore(release): $VERSION"
           git push origin develop
