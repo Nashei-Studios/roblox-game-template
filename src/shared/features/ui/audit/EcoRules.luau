@@ -103,6 +103,24 @@ function EcoRules.cardInset(
     }
 end
 
+-- Pixels of slack: the engine rounds text bounds and sizes, so a 1 px overshoot is not a cut.
+EcoRules.TEXT_SLACK = 1
+
+--- Whether a label really shows all its text: the engine says it fits (TextFits) AND the
+--- measured text (TextBounds) is not larger than the box (AbsoluteSize). TextFits alone passes a
+--- label whose scaled text grew past a fixed-size pill (found in game 1, PR 156).
+function EcoRules.textShown(
+    textFits: boolean,
+    boundsX: number,
+    boundsY: number,
+    sizeX: number,
+    sizeY: number
+): boolean
+    return textFits
+        and boundsX <= sizeX + EcoRules.TEXT_SLACK
+        and boundsY <= sizeY + EcoRules.TEXT_SLACK
+end
+
 --- A label whose text does not fit (TextFits false) or is cut loses content. Only a label the
 --- game marked on purpose (attribute `Truncatable`) may be cut.
 function EcoRules.textLost(
