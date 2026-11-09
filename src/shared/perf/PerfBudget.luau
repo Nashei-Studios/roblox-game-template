@@ -35,6 +35,17 @@ export type Runtime = {
     receiveKbpsPerPlayer: number,
 }
 
+-- Client per-frame work the rarity language may add (ADR 0046). Read by RarityConfig tests and by
+-- the shimmer clock; a game lowers these, never raises them without measuring on a phone.
+export type ClientFx = {
+    -- Shimmer gradients animated at once; the rest render static. One Heartbeat step moves all.
+    maxLiveShimmers: number,
+    -- World emitters alive at once; the rest keep color and light but no particles.
+    maxLiveEmitters: number,
+    -- Particles per second one emitter may spawn at the high quality tier.
+    maxParticlesPerSecond: number,
+}
+
 export type Budget = {
     -- Bytes added per remote message on top of the Zap payload.
     perEventOverheadBytes: number,
@@ -50,6 +61,8 @@ export type Budget = {
     serverRemotes: { [string]: ServerSendRate },
     -- Runtime figures the dev probe checks.
     runtime: Runtime,
+    -- Per-frame client work of RarityFx; optional so a budget literal without it stays valid.
+    clientFx: ClientFx?,
 }
 
 local PerfBudget: Budget = {
@@ -89,6 +102,11 @@ local PerfBudget: Budget = {
         memoryPerPlayerMib = 100, -- sourced: 100 MiB per connected player (performance-optimization/identify)
         sendKbpsPerPlayer = 4, -- chosen, not sourced: the docs give no Kbps figure
         receiveKbpsPerPlayer = 2, -- chosen, not sourced: the docs give no Kbps figure
+    },
+    clientFx = {
+        maxLiveShimmers = 8, -- chosen, not measured: a screenful of cards, one property write each per frame
+        maxLiveEmitters = 4, -- chosen, not measured: Roblox publishes no emitter count for phones
+        maxParticlesPerSecond = 12, -- chosen, not measured: small bursts read as a sparkle, not a cloud
     },
 }
 

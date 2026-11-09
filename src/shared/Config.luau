@@ -13,6 +13,8 @@ local NotificationsConfig = require("./features/notifications/NotificationsConfi
 local SoundConfig = require("./features/sound/SoundConfig")
 local WinCondition = require("./features/wincondition/WinCondition")
 local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
+local PerfBudget = require("./perf/PerfBudget")
+local RarityConfig = require("./features/rarity/RarityConfig")
 local UiConfig = require("./features/ui/UiConfig")
 
 export type ProductConfig = {
@@ -125,6 +127,8 @@ export type GameConfig = {
     -- UI kit, leaderboards and community join reward (issues #23, #25, #36). Optional so a game
     -- can omit what it does not use; the defaults below ship all three (the reward disabled).
     ui: UiConfig.UiConfig?,
+    -- Rarity ladder and effect tiers (ADR 0046); a game overrides the tiers and colors.
+    rarity: RarityConfig.Config?,
     leaderboards: LeaderboardsConfig.LeaderboardsConfig?,
     communityReward: CommunityRewardConfig.CommunityRewardConfig?,
     -- Win condition (vault ADR 0032): empty in the template, filled at stage 1 of a game.
@@ -284,6 +288,7 @@ Config.default = {
         minAmount = 10,
         maxAmount = 500,
     },
+    rarity = RarityConfig.default,
     -- UI kit: tokens derived for this template (reasons in docs/design/DESIGN.md).
     ui = {
         theme = {
@@ -581,6 +586,14 @@ function Config.validate(config: GameConfig): { string }
     validateRobuxTransfers(config, problems)
     if config.ui ~= nil then
         for _, problem in UiConfig.validate(config.ui) do
+            table.insert(problems, problem)
+        end
+    end
+    if config.rarity ~= nil then
+        local surface = if config.ui ~= nil then config.ui.theme.palette.surface else "#171C30"
+        local fx = PerfBudget.clientFx
+        local cap = if fx ~= nil then fx.maxParticlesPerSecond else 0
+        for _, problem in RarityConfig.validate(config.rarity, surface, cap) do
             table.insert(problems, problem)
         end
     end

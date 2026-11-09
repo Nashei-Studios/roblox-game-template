@@ -6,6 +6,8 @@
     kit cards implements `CardGridPresenter` over them and keeps the same model.
 ]]
 
+local ItemIcon = require("./ItemIcon")
+
 export type Card = {
     id: string,
     name: string,
@@ -13,6 +15,9 @@ export type Card = {
     swatchHex: string,
     -- False while the card cannot be obtained yet (for example its pass id is still nil).
     obtainable: boolean,
+    -- When set, the card shows this item's own image with its rarity frame (ItemIcon) instead of
+    -- the swatch; the swatch stays the fallback inside the icon.
+    icon: ItemIcon.Item?,
 }
 
 export type StatusLabels = { owned: string, available: string, unavailable: string }
