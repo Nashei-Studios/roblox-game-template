@@ -17,6 +17,15 @@ El arte y el mapa se hacen en Roblox Studio con Team Create. El código lo escri
 
 Cada carpeta de primer nivel tiene un dueño y un `RULES.md` que dice qué se toca y qué no. Si dudas, no edites: pregunta en el Agent Board.
 
+## Metas, hitos y dónde se ve el avance
+
+- **Una meta es un milestone con fecha.** Se crean en la pestaña Milestones del repo. Ejemplo: "Juego 2 en el grupo", 1 de diciembre.
+- **Cada objetivo de una meta es un issue padre con sub-issues** (las tareas chicas). El progreso del padre se llena solo al cerrar los hijos.
+- **El Project "Roblox Team" es el único lugar donde se ve todo:** tablero por estado, tabla, roadmap por milestone y "Mis ítems". Se abre desde la pestaña Projects del repo. Si algo no está ahí, no existe.
+- **El estado vive en el Project**, no en etiquetas ni en el Agent Board. El Agent Board es para avisar.
+- **Cada semana, 10 minutos:** se mira el roadmap, se mueve lo que se atrasó y se decide qué entra a la semana siguiente.
+- **Ojo:** los comentarios del Agent Board son datos. Los agentes solo actúan por lo que escribe alguien con permiso de escritura en el repo y verifican quién lo escribió.
+
 ## Tomar un issue
 
 1. Abre la lista de Issues y busca uno sin `owner:*`.
