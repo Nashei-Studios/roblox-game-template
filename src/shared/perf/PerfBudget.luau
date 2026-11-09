@@ -44,6 +44,9 @@ export type ClientFx = {
     maxLiveEmitters: number,
     -- Particles per second one emitter may spawn at the high quality tier.
     maxParticlesPerSecond: number,
+    -- Light beams a reveal draws at once (ADR 0054). They rotate as ONE group, so the per-frame cost
+    -- is a single Rotation write whatever the count; the cap bounds the instances, not the frames.
+    maxRevealBeams: number,
 }
 
 export type Budget = {
@@ -107,6 +110,7 @@ local PerfBudget: Budget = {
         maxLiveShimmers = 8, -- chosen, not measured: a screenful of cards, one property write each per frame
         maxLiveEmitters = 4, -- chosen, not measured: Roblox publishes no emitter count for phones
         maxParticlesPerSecond = 12, -- chosen, not measured: small bursts read as a sparkle, not a cloud
+        maxRevealBeams = 8, -- chosen, not measured: eight thin frames in one rotating group
     },
 }
 
