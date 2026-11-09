@@ -3,12 +3,13 @@
     Button: the plain button, in four variants taken from the palette tokens. A kit supplies the
     HUD buttons and the menu rows (HudRailsView, Card); this is the one for everything the kit has
     no piece for (confirm, retry, tabs). It is never smaller than the touch floor, its text always
-    fits, and it activates on touch, click and gamepad (Activated covers all of them).
+    fits, it answers press (and hover on desktop) with the UiMotion presets, and it activates on touch, click and gamepad (Activated covers all of them).
 ]]
 
 local Atoms = require(script.Parent.Atoms)
 local DevGuard = require(script.Parent.DevGuard)
 local UiEnv = require(script.Parent.UiEnv)
+local UiMotionPlayer = require(script.Parent.UiMotionPlayer)
 
 -- One of primary, secondary, danger, ghost (a plain string: the stable solver widens unions).
 export type Variant = string
@@ -69,6 +70,8 @@ function Button.new(env: UiEnv.UiEnv, parent: Instance, options: Options): TextB
     Atoms.fitText(button, tokens, tokens.type.body)
     Atoms.touchFloor(button, tokens)
     button.Activated:Connect(options.onActivated)
+    -- Press feedback everywhere; hover only with a pointer (docs/adr/0063, spec section 6).
+    UiMotionPlayer.bindButton(button, env.reducedMotion, env.deviceClass == "desktop")
     button.Parent = parent
     DevGuard.verify(button, `Button {options.name}`)
     return button

@@ -62,6 +62,7 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0058](0058-auto-feel-profiles-and-scheduler.md) | AutoFeel mold: one hit-feel pipeline, two voices, and a pure scheduler for automatic mining |
 | [0060](0060-inspect-view-mold.md) | InspectView mold: rotate and zoom one item in a ViewportFrame |
 | [0061](0061-ui-gate-rules.md) | UI gate rules: duplicate destinations, scroll overlap, motion, button limits and touch locomotion |
+| [0063](0063-ui-motion-kit.md) | UI motion kit: pure preset table over native TweenService |
 | [0062](0062-property-based-and-fuzz-tests.md) | Property-based and fuzz tests for the economy, receipts and remotes (seeded, shrinking, in-repo generator) |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
