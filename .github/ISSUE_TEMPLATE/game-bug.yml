@@ -1,0 +1,40 @@
+name: Bug en el juego
+description: Algo falla mientras juegas o pruebas en Studio
+labels: [bug, needs-triage]
+body:
+  - type: textarea
+    id: que-pasa
+    attributes:
+      label: Qué pasa
+      description: Lo que viste. Si hay un mensaje en la consola de Studio, pégalo tal cual.
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Qué esperabas
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Cómo repetirlo
+      description: Pasos numerados, desde que entras al juego.
+    validations:
+      required: true
+  - type: dropdown
+    id: donde
+    attributes:
+      label: Dónde ocurre
+      options:
+        - Studio (Play)
+        - Studio (Team Create, en edición)
+        - Juego publicado
+        - No lo sé
+    validations:
+      required: true
+  - type: textarea
+    id: captura
+    attributes:
+      label: Captura o video
+      description: Arrastra aquí la imagen o el clip.

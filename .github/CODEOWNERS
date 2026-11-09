@@ -1,1 +1,13 @@
-* @vruizz22
+# Owner of each top-level folder (docs/team-workflow.md, ADR 0045).
+# Placeholders for the 2026-11-11 call: when Nande and Leon share their GitHub
+# users and accept the collaborator invite, uncomment the two commented lines
+# and replace the markers. Until then Victor owns everything, so reviews keep working.
+*                    @vruizz22
+/src/server/         @vruizz22
+/src/client/         @vruizz22
+/src/shared/         @vruizz22
+/docs/               @vruizz22
+/places/             @vruizz22
+/.github/            @vruizz22
+/assets/             @vruizz22
+# /assets/           @<nande-gh> @<leon-gh> @vruizz22

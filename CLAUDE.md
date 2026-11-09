@@ -60,3 +60,7 @@ Luau/Roblox rules: `~/.claude/rules/luau.md`. Structure, tests, CI: `arquitectur
 - Anything that spends or moves real money; test purchases only on a dev place.
 - Editing Studio-owned content through files (world, terrain, UI) or enabling fully managed Rojo without an ADR.
 - Adding a package manager or dependency without an ADR.
+
+## Team (ADR 0045)
+- Humans work in Studio (Team Create) and agents through Rojo. Each top-level folder has a `RULES.md` with its owner, what is forbidden and how to hand off; read it before touching the folder.
+- The pinned **Agent Board** issue is the message bus: post progress, blockers and handoffs there with an `@mention`, and add the `handoff` label. Never edit art or Studio-owned content through files. Human guide (Spanish): `docs/team-workflow.md`.

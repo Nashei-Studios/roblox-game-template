@@ -1,0 +1,35 @@
+name: Pedido de modelo o arte
+description: Un modelo, textura, icono o pieza del mapa que el juego necesita
+labels: [art, needs-triage]
+body:
+  - type: input
+    id: que
+    attributes:
+      label: Qué hace falta
+      description: Una frase. Por ejemplo, "silueta de ancla oxidada, rareza rara".
+    validations:
+      required: true
+  - type: textarea
+    id: para-que
+    attributes:
+      label: Para qué sirve en el juego
+      description: Dónde aparece, quién lo ve y qué hace el jugador con él.
+    validations:
+      required: true
+  - type: textarea
+    id: estilo
+    attributes:
+      label: Estilo y referencia
+      description: Low poly y cartoony. Pega un enlace o una imagen de referencia, y di si es propia o de otro juego (de otro juego solo sirve para inspirarse, no para copiar).
+  - type: input
+    id: quien
+    attributes:
+      label: Quién lo hace
+      description: "@nande, @leon o vacío si aún no se asigna."
+  - type: textarea
+    id: listo
+    attributes:
+      label: Cuándo está listo
+      description: Por ejemplo, "publicado como Package, con su línea en docs/art-log.md y visible en el lugar compartido".
+    validations:
+      required: true
