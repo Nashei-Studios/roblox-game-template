@@ -28,7 +28,7 @@ Why split: rules and words change with design, the source with the store, the st
 
 1. Set `Config.default.podium` (board id, title, unit, tiers). Run `lune run scripts/perf-budget`: it fails when the refresh is under the budget.
 2. On the server build the source. With `Leaderboards` running: `PodiumSources.fromCache(function() return board:top(config.boardId) end)` (no new store read). Without: `PodiumSources.fromStore(store, function() return BoardKey.storeKey(...) end)`.
-3. Build `PodiumNames.new({ lookup = Players.GetNameFromUserIdAsync wrapper, filter = TextServiceNameFilter.new(...), unknownName, onError })`, then `Podium.new({ config, rarity, surfaceHex, source, nameOf, now = os.time, onError })`.
+3. Build `PodiumNames.new({ lookup = Players.GetNameFromUserIdAsync wrapper, filter = TextServiceNameFilter.new(...), unknownName, onError })`, then `Podium.new({ config, rarity, surfaceHex, source, nameOf, formatValue, now = os.time, onError })` (`formatValue` is the game's own formatter, nil uses PodiumFormat).
 4. Build `PodiumStage.new({ config, origin, parent, maxParts = PerfBudget.podium.maxParts, onError })` with the `origin` CFrame kept in the game's world data.
 5. Loop once per second: `if podium:tick() then stage:render(podium:view()) end`. Call it after the board tick.
 

@@ -50,6 +50,7 @@ local function rig(): Rig
         nameOf = function(userId: number): string
             return `Miner{userId}`
         end,
+        formatValue = nil,
         now = function(): number
             return clock.now
         end,
@@ -125,7 +126,7 @@ return function(suite: harness.Harness)
             { userId = 44, value = 1 },
         }, function(userId: number): string
             return `Miner{userId}`
-        end)
+        end, nil)
         harness.equal(#view.places, 3)
         harness.equal(view.occupiedCount, 3)
         harness.equal(view.places[1].headline, "Miner11")
@@ -142,7 +143,10 @@ return function(suite: harness.Harness)
             { userId = 11, value = 5 },
         }, function(): string
             return "Solo"
+        end, function(value: number): string
+            return `{value} floors`
         end)
+        harness.equal(view.places[1].detail, "5 floors")
         harness.equal(view.occupiedCount, 1)
         harness.isTrue(not view.places[2].occupied, "place 2 empty")
         harness.equal(view.places[2].headline, "Be the first")

@@ -49,13 +49,15 @@ function PodiumModel.cutName(name: string, maxLength: number): string
 end
 
 --- Builds the three places. `entries` are best first; extra entries are ignored. `nameOf` must
---- never fail: it returns the filtered name or the config's unknown name.
+--- never fail: it returns the filtered name or the config's unknown name. `formatValue` is the
+--- game's own formatter (for example its Format module); nil uses PodiumFormat with the unit.
 function PodiumModel.build(
     config: PodiumConfig.PodiumConfig,
     rarity: RarityConfig.Config,
     surfaceHex: string,
     entries: { Entry },
-    nameOf: (userId: number) -> string
+    nameOf: (userId: number) -> string,
+    formatValue: ((value: number) -> string)?
 ): View
     local places: { Place } = {}
     local occupiedCount = 0
@@ -66,7 +68,9 @@ function PodiumModel.build(
             local tierId = config.placeTierIds[rank]
             local spec = RarityFx.spec(rarity, tierId, "high", surfaceHex)
             local headline = PodiumModel.cutName(nameOf(entry.userId), config.nameMaxLength)
-            local detail = PodiumFormat.value(entry.value, config.valueUnit)
+            local detail = if formatValue ~= nil
+                then formatValue(entry.value)
+                else PodiumFormat.value(entry.value, config.valueUnit)
             occupiedCount += 1
             table.insert(places, {
                 rank = rank,
@@ -114,7 +118,7 @@ function PodiumModel.empty(
 ): View
     return PodiumModel.build(config, rarity, surfaceHex, {}, function(): string
         return config.unknownName
-    end)
+    end, nil)
 end
 
 return PodiumModel

@@ -26,6 +26,8 @@ export type Deps = {
     source: PodiumSource.PodiumSource,
     -- PodiumNames.new(...): filtered name of a user id; never throws.
     nameOf: (userId: number) -> string,
+    -- The game's value formatter (its Format module); nil uses PodiumFormat with config.valueUnit.
+    formatValue: ((value: number) -> string)?,
     -- Server clock, Unix seconds (os.time in production).
     now: () -> number,
     onError: (message: string) -> (),
@@ -51,8 +53,14 @@ function PodiumService.new(deps: Deps): Podium
             deps.onError(`podium "{deps.config.boardId}" read failed: {read.error.message}`)
             return false
         end
-        local next =
-            PodiumModel.build(deps.config, deps.rarity, deps.surfaceHex, read.value, deps.nameOf)
+        local next = PodiumModel.build(
+            deps.config,
+            deps.rarity,
+            deps.surfaceHex,
+            read.value,
+            deps.nameOf,
+            deps.formatValue
+        )
         local changed = next.signature ~= current.signature
         current = next
         return changed
