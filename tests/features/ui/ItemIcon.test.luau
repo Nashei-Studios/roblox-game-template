@@ -20,6 +20,29 @@ return function(suite: harness.Harness)
         harness.equal(ItemIcon.imageUrl(nil), nil, "nil")
     end)
 
+    suite:test("thumb builds the rbxthumb content id and imageUrl accepts it as ready", function()
+        local url = ItemIcon.thumb("104425944384081", 420)
+        harness.equal(url, "rbxthumb://type=Asset&id=104425944384081&w=420&h=420", "digits")
+        harness.equal(
+            ItemIcon.thumb("rbxassetid://7", 150),
+            "rbxthumb://type=Asset&id=7&w=150&h=150",
+            "full form"
+        )
+        harness.equal(ItemIcon.thumb("7", 100), nil, "size outside the list")
+        harness.equal(ItemIcon.thumb("x7", 420), nil, "bad id")
+        harness.equal(ItemIcon.imageUrl(url), url, "ready content id passes through")
+        harness.equal(ItemIcon.imageUrl("rbxthumb://evil"), nil, "other thumb forms are refused")
+        local spec = ItemIcon.spec(
+            item("a", "rare", url),
+            { unlocked = true },
+            CONFIG,
+            "high",
+            SURFACE,
+            "Lv"
+        )
+        harness.equal(spec.imageUrl, url, "spec keeps the thumb url")
+    end)
+
     suite:test("an unlocked item with an image shows it with its rarity frame", function()
         local spec = ItemIcon.spec(
             item("a", "rare", "5"),

@@ -18,6 +18,7 @@ Pure model of the UI kit: `UiConfig`, `Layout`, `Contrast`, `MenuController`, `S
 ## ItemIcon (ADR 0048)
 
 - Is: the pure spec of one icon (`ItemIcon.spec`): image, silhouette when locked, swatch fallback, rarity frame from `features/rarity`, "Lv N" or "xN" badge. `CardGrid.Card.icon` makes `CardGridPanel` show it.
+- Update (2026-11-09): `rbxassetid://` of a freshly uploaded Image can fail `PreloadAsync` in Studio while `rbxthumb://type=Asset&id=N&w=W&h=W` loads. `ItemIcon.thumb(assetId, size)` builds that content id (sizes 150 or 420); `imageUrl` accepts digits, `rbxassetid://` or a ready `rbxthumb://`. The game picks the size in its icon config.
 - Painting: `client/presenters/ui/ItemIconView`. Tests: `tests/features/ui/ItemIcon.test.luau`.
 - Prohibited: a `ViewportFrame` per card; a literal color in the view.
 

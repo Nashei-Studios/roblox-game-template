@@ -17,7 +17,7 @@ export type Item = {
     name: string,
     -- A tier id of the RarityConfig.
     rarity: string,
-    -- Image asset id: digits only or "rbxassetid://<digits>". nil until uploaded.
+    -- Image asset id: digits, "rbxassetid://<digits>" or a ready "rbxthumb://..." (see `thumb`). nil until uploaded.
     imageAssetId: string?,
     -- Fallback fill when there is no image, "#RRGGBB".
     swatchHex: string,
@@ -57,7 +57,25 @@ ItemIcon.SILHOUETTE_HEX = "#000000"
 -- A swatch shown for a locked item with no image: dark, so it never reads as "owned".
 ItemIcon.LOCKED_SWATCH_HEX = "#1A1F33"
 
---- "rbxassetid://<digits>" from digits or the full form; nil for anything else (including "").
+-- Sizes the thumbnail service serves for an Asset thumbnail that a card can use (pixels).
+ItemIcon.THUMB_SIZES = { 150, 420 } :: { number }
+
+--- "rbxthumb://type=Asset&id=<digits>&w=<size>&h=<size>" for an asset id (digits or
+--- "rbxassetid://<digits>"), or nil for a bad id or a size outside THUMB_SIZES. Use it for a
+--- freshly uploaded Image: the thumbnail path loads where `rbxassetid://` can fail to preload.
+function ItemIcon.thumb(assetId: string, size: number): string?
+    if table.find(ItemIcon.THUMB_SIZES, size) == nil then
+        return nil
+    end
+    local digits = string.match(assetId, "^%d+$") or string.match(assetId, "^rbxassetid://(%d+)$")
+    if digits == nil then
+        return nil
+    end
+    return `rbxthumb://type=Asset&id={digits}&w={size}&h={size}`
+end
+
+--- A content id from digits, "rbxassetid://<digits>" or a ready "rbxthumb://type=Asset&id=..."
+--- (built with `thumb`); nil for anything else (including "").
 function ItemIcon.imageUrl(assetId: string?): string?
     if assetId == nil then
         return nil
@@ -66,6 +84,9 @@ function ItemIcon.imageUrl(assetId: string?): string?
         return `rbxassetid://{assetId}`
     end
     if string.match(assetId, "^rbxassetid://%d+$") ~= nil then
+        return assetId
+    end
+    if string.match(assetId, "^rbxthumb://type=Asset&id=%d+&w=%d+&h=%d+$") ~= nil then
         return assetId
     end
     return nil
@@ -141,7 +162,7 @@ function ItemIcon.validate(items: { Item }, config: RarityConfig.Config): { stri
         if item.imageAssetId ~= nil and ItemIcon.imageUrl(item.imageAssetId) == nil then
             table.insert(
                 problems,
-                `item "{item.id}" image id must be digits or rbxassetid://digits`
+                `item "{item.id}" image id must be digits, rbxassetid://digits or rbxthumb://`
             )
         end
         if string.match(item.swatchHex, "^#%x%x%x%x%x%x$") == nil then
