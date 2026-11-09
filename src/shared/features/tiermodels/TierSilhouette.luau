@@ -6,15 +6,15 @@
     `duplicates` lists the pairs of tiers whose masks overlap more than `maxOverlap` in BOTH views
     (the same idea as PickaxeLadder rejecting two pickaxes that look alike).
 
-    Approximations, all on the safe side (they can only make two shapes look MORE alike, so the
-    validator may reject a pair Studio would accept, never the reverse):
-    - a rotated part is replaced by the box that bounds its eight rotated corners;
-    - a ball is the ellipse inscribed in that box; a wedge is a triangle in the side view only
-      while it is unrotated; every other part is the box.
-    The real check is still a threshold capture in Studio; this keeps two clones out of the repo.
+    Exactness: a cell is filled when any point of any part along the view direction is inside the
+    part, tested with TierSurface.contains (exact for blocks, balls, cylinders and wedges at any
+    rotation), sampled at half a cell. A thin feature narrower than half a cell can be missed;
+    keep the grid fine enough for the thinnest part that must read. The real check is still a
+    threshold capture in Studio; this keeps two clones out of the repo.
 ]]
 
 local TierModelSource = require("../../ports/TierModelSource")
+local TierSurface = require("./TierSurface")
 
 export type PartSpec = TierModelSource.PartSpec
 
@@ -79,32 +79,23 @@ local function boxes(spec: PartSpec): (Box, Box)
     return front, side
 end
 
-local function unrotated(spec: PartSpec): boolean
-    return spec.yawDeg == 0 and spec.pitchDeg == 0 and spec.rollDeg == 0
-end
-
--- Is the point (a, y) inside this part's footprint in one view?
-local function covers(spec: PartSpec, box: Box, isSide: boolean, a: number, y: number): boolean
-    if a < box.minA or a > box.maxA or y < box.minY or y > box.maxY then
-        return false
-    end
-    local widthA = box.maxA - box.minA
-    local heightY = box.maxY - box.minY
-    if spec.shape == "ball" then
-        local da = (a - (box.minA + box.maxA) / 2) / (widthA / 2)
-        local dy = (y - (box.minY + box.maxY) / 2) / (heightY / 2)
-        return da * da + dy * dy <= 1
-    end
-    if spec.shape == "wedge" and isSide and unrotated(spec) then
-        -- High end toward +z: the slope rises from the low corner at minA to the top at maxA.
-        return (y - box.minY) <= (a - box.minA) / widthA * heightY
-    end
-    return true
-end
-
 local function emptyGrid(cells: number): { boolean }
     local grid: { boolean } = table.create(cells, false)
     return grid
+end
+
+-- Cell indices (1 to grid) whose centers fall inside [low, high], where cell k spans
+-- [(k - 1) * width - origin, k * width - origin].
+local function cellRange(
+    low: number,
+    high: number,
+    origin: number,
+    width: number,
+    grid: number
+): (number, number)
+    local first = math.max(1, math.floor((low + origin) / width) + 1)
+    local last = math.min(grid, math.ceil((high + origin) / width))
+    return first, last
 end
 
 --- Both masks of a model on `frame`. Cell (column, row) is stored at (row - 1) * grid + column,
@@ -112,18 +103,46 @@ end
 function TierSilhouette.raster(parts: { PartSpec }, frame: Frame): Mask
     local size = frame.grid
     local mask: Mask = { front = emptyGrid(size * size), side = emptyGrid(size * size) }
+    local cell = frame.halfWidth * 2 / size
+    local rowHeight = frame.height / size
+    local step = cell / 2
     for _, spec in parts do
         local front, side = boxes(spec)
-        for row = 1, size do
-            local y = (row - 0.5) / size * frame.height
-            for column = 1, size do
-                local a = (column - 0.5) / size * frame.halfWidth * 2 - frame.halfWidth
+        local firstRow, lastRow = cellRange(front.minY, front.maxY, 0, rowHeight, size)
+        local firstColumn, lastColumn =
+            cellRange(front.minA, front.maxA, frame.halfWidth, cell, size)
+        for row = firstRow, lastRow do
+            local y = (row - 0.5) * rowHeight
+            for column = firstColumn, lastColumn do
                 local index = (row - 1) * size + column
-                if covers(spec, front, false, a, y) then
-                    mask.front[index] = true
+                if not mask.front[index] then
+                    local x = (column - 0.5) * cell - frame.halfWidth
+                    local z = side.minA
+                    while z <= side.maxA do
+                        if TierSurface.contains(spec, x, y, z) then
+                            mask.front[index] = true
+                            break
+                        end
+                        z += step
+                    end
                 end
-                if covers(spec, side, true, a, y) then
-                    mask.side[index] = true
+            end
+        end
+        local sideFirst, sideLast = cellRange(side.minA, side.maxA, frame.halfWidth, cell, size)
+        for row = firstRow, lastRow do
+            local y = (row - 0.5) * rowHeight
+            for column = sideFirst, sideLast do
+                local index = (row - 1) * size + column
+                if not mask.side[index] then
+                    local z = (column - 0.5) * cell - frame.halfWidth
+                    local x = front.minA
+                    while x <= front.maxA do
+                        if TierSurface.contains(spec, x, y, z) then
+                            mask.side[index] = true
+                            break
+                        end
+                        x += step
+                    end
                 end
             end
         end

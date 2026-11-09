@@ -187,6 +187,33 @@ return function(suite: harness.Harness)
         harness.isTrue(TierSilhouette.overlap(straight, leaning) < 1)
     end)
 
+    suite:test("leaning thin spikes keep their gaps instead of filling a rectangle", function()
+        local frame: TierSilhouette.Frame =
+            { grid = 24, halfWidth = 12, height = 16, maxOverlap = 0.78 }
+        local spikes: { TierModelConfig.PartSpec } = {}
+        for index = -1, 1 do
+            table.insert(
+                spikes,
+                part(
+                    "block",
+                    { 1.2, 10, 1.2 },
+                    { index * 6, 5, 0 },
+                    "primary",
+                    { 0, 0, index * 25 }
+                )
+            )
+        end
+        local mask = TierSilhouette.raster(spikes, frame)
+        local filled = 0
+        for _, cell in mask.front do
+            if cell then
+                filled += 1
+            end
+        end
+        -- Three thin spikes cover well under a third of their own bounding rectangle.
+        harness.isTrue(filled < 24 * 10 * 0.3, `filled {filled} cells`)
+    end)
+
     suite:test("problems reports bad ids, hex, rarity, sizes and budgets", function()
         local config = copyConfig()
         config.tiers[1].primaryHex = "red"

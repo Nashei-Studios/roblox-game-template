@@ -34,7 +34,7 @@ Why this split: the config and the silhouette check are data and arithmetic, so 
 ## Design decisions and tradeoffs
 
 - A recipe is the fallback of every source, so a missing kit never leaves a node empty. Cost: a template's silhouette is checked through the recipe as a proxy.
-- The silhouette check is conservative (rotated parts use their bounding box, balls an inscribed ellipse). It can reject a pair Studio would accept; it never accepts a clone. Pairs clash only when they overlap in BOTH the front and the side view.
+- The silhouette check rasterizes the real parts (via `TierSurface.contains`, any rotation) on a fixed frame in studs. Pairs clash only when they overlap in BOTH the front and the side view. A feature thinner than half a cell can be missed: keep the grid fine.
 - Triangles per shape are "chosen, not measured" (`TierModelConfig.TRIANGLES`). Measure on the poorest phone before trusting them.
 - The pool is built once, per shape. A swap creates no part. RarityWorldFx lights and emitters are re-created only when the rarity id or the quality changes.
 
