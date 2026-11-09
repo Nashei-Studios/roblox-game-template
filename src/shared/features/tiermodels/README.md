@@ -24,6 +24,7 @@ tiermodels/
   TierModelSources.luau  recipes / templates(kit or replicated) / chain / registry over the TierModelSource port
   TierModelSet.luau      look(tierId, quality, surfaceHex): parts with colors, cost, RarityFx spec
   TierPool.luau          pure pool bookkeeping per part shape: capacity, assign, overflow
+  TierSurface.luau       where the model's surface is (contains, radiusAt, shell): cracks, veins, bands and hit sparks follow the shape
 ../../ports/TierModelSource.luau          the port and the part types
 ../../../client/presenters/world/TierModelRig.luau   engine: fixed pool of parts, template cache, RarityWorldFx
 ```
@@ -42,7 +43,8 @@ Why this split: the config and the silhouette check are data and arithmetic, so 
 1. Add a `TierSpec` to your config (`Config.default.tierModels.tiers`): id, label, material, three colors, a `rarityId` if it should glow, and a `recipe` built with `TierModelConfig.part(shape, size, offset, role, turn)`.
 2. `lune run scripts/perf-budget`: fix any "share a silhouette" or budget line.
 3. To use a kit model: set `templateName`, put the `Model` in the kit Package folder or in ReplicatedStorage, and chain `templates("kit", config, TierModelRig.finderFrom(folder, meshPartTriangles))` before `recipes(config)`. Record its license in `assets/kits.manifest.luau`.
-4. Draw it with `TierModelRig.new(parent, set, container, options)` and `rig:show(tierId, quality, surfaceHex)`.
+4. Hang decals on it with `TierSurface.shell(parts, angle, y, maxRadius)` instead of assuming a shape; read the shown pooled parts with `rig:shownParts()` to recolor them.
+5. Draw it with `TierModelRig.new(parent, set, container, options)` and `rig:show(tierId, quality, surfaceHex)`.
 
 ## Forbidden here
 
@@ -53,7 +55,7 @@ Why this split: the config and the silhouette check are data and arithmetic, so 
 
 ## Tests
 
-`tests/features/tiermodels/TierModelSet.test.luau`: duplicate-silhouette rejection (same recipe, recolored copy), shape raster, config problems, look and FX inheritance, the source chain and its fallback, the budget refusal, and "30 swaps create nothing". The rig is not covered by Lune.
+`tests/features/tiermodels/TierModelSet.test.luau`: surface queries (contains for every shape and rotation, radiusAt through an arch gap, shell), duplicate-silhouette rejection (same recipe, recolored copy), shape raster, config problems, look and FX inheritance, the source chain and its fallback, the budget refusal, and "30 swaps create nothing". The rig is not covered by Lune.
 
 ## Studio checklist (UNVERIFIED until run)
 
