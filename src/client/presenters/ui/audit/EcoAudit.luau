@@ -125,7 +125,13 @@ function EcoAudit.run(root: Instance, options: Options): { Finding.Finding }
                     EcoRules.textLost(
                         options.scope,
                         pathOf(item, root),
-                        item.TextFits,
+                        EcoRules.textShown(
+                            item.TextFits,
+                            item.TextBounds.X,
+                            item.TextBounds.Y,
+                            item.AbsoluteSize.X,
+                            item.AbsoluteSize.Y
+                        ),
                         item:GetAttribute("Truncatable") == true
                     )
                 )
