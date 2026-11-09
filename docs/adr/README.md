@@ -48,5 +48,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0044](0044-win-condition-checklist-and-gate.md) | Win-condition checklist and a pending-tolerant gate |
 | [0045](0045-team-create-and-rojo-split.md) | Team Create for the world and art, Rojo for code; one Rojo host; reusable models as Packages |
 | [0046](0046-collection-index-mold.md) | CollectionIndex mold: server-side discovery through a port, silhouettes, a bar to finite milestones, claim or auto |
+| [0050](0050-mood-resolver-over-signals.md) | Mood resolver: the music mood from game state through a signals port |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
