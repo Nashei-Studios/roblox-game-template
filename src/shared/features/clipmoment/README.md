@@ -11,6 +11,7 @@ A moment trigger that times the hype and offers one skippable share prompt over 
 
 ```
 clipmoment/MomentDirector.luau          config, validate, advise, Director.trigger -> Plan
+clipmoment/MomentSettings.luau          three opt-out toggles, rows for a Settings menu, resolve, route (ADR 0051)
 client/presenters/ClipMomentPresenter.luau   runs a Plan: task.delay per step, CaptureScreenshot, PromptShareCapture
 ```
 
@@ -20,7 +21,7 @@ client/presenters/ClipMomentPresenter.luau   runs a Plan: task.delay per step, C
 2. Declare the ids in the game win-condition file (`moments` list, see the win-condition checklist).
 3. The server notices the moment (the break, the drop) and tells the client over a game remote.
 4. On the client, `director:trigger(id)` and `ClipMomentPresenter.run(plan, hooks)` with `playSting`, `cameraKick`, `setTimeScale` and `launchData`.
-5. Add the two settings (effects, share prompt) to the settings menu, built with the UI system.
+5. Build the Settings rows from `MomentSettings.rows()` with the UI system, create the store with `MomentSettings.new` (pass `load` and `save` to persist), give the director `settings = function() return store:director() end` and send `MomentSettings.route(plan).capture` to `ClipMomentPresenter.run` (ADR 0051). A prompt needs a capture, so turning capture off also removes the prompt.
 6. Real capture is checked by hand: a screenshot appears and the share sheet can be dismissed.
 
 ## Forbidden here
@@ -29,4 +30,4 @@ A prompt without the player seeing it, more than the configured prompts per sess
 
 ## Tests
 
-`tests/features/clipmoment/MomentDirector.test.luau`, registered in `scripts/suites.luau`.
+`tests/features/clipmoment/MomentDirector.test.luau` and `MomentSettings.test.luau`, registered in `scripts/suites.luau`.
