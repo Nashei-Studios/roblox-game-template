@@ -93,6 +93,36 @@ return function(suite: harness.Harness)
         harness.equal(#EcoRules.textLost("Hud", "Note", false, true), 0)
     end)
 
+    suite:test(
+        "UI-TEXT-LOST also fails when TextBounds exceeds the box although TextFits",
+        function()
+            -- Fixture: a friend pill 120 x 24 px whose text measured 150 x 24 after scaling.
+            local fixture = { fits = true, boundsX = 150, boundsY = 24, sizeX = 120, sizeY = 24 }
+            local shown = EcoRules.textShown(
+                fixture.fits,
+                fixture.boundsX,
+                fixture.boundsY,
+                fixture.sizeX,
+                fixture.sizeY
+            )
+            harness.isFalse(shown, "wider than the box")
+            local bug = EcoRules.textLost("Hud", "FriendBoostPill.FriendBoost", shown, false)
+            harness.equal(#bug, 1)
+            harness.equal(bug[1].rule, "UI-TEXT-LOST")
+            harness.isFalse(EcoRules.textShown(true, 100, 40, 120, 24), "taller than the box")
+            harness.isFalse(EcoRules.textShown(false, 10, 10, 120, 24), "the engine says it is cut")
+            harness.isTrue(
+                EcoRules.textShown(true, 121, 25, 120, 24),
+                "1 px of rounding is not a cut"
+            )
+            harness.isTrue(EcoRules.textShown(true, 100, 20, 120, 24), "fits")
+            harness.equal(
+                #EcoRules.textLost("Hud", "Note", EcoRules.textShown(true, 300, 24, 120, 24), true),
+                0
+            )
+        end
+    )
+
     suite:test("UI-HUD-UNREGISTERED fails a button with no purpose and schemes", function()
         local registry = hudRegistry()
         local bug = EcoRules.hudRegistration("Hud", { "Sprint", "Top", "Mystery" }, registry)
