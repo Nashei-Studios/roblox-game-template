@@ -1,6 +1,6 @@
 --!strict
 --[[
-    One shared clock for every shimmer gradient (ADR 0046). A single Heartbeat connection moves
+    One shared clock for every shimmer gradient (ADR 0048). A single Heartbeat connection moves
     all live gradients and disconnects when none is left, so the per-frame cost is one property
     write per live shimmer and zero when no card with a shimmer is on screen. At most
     `PerfBudget.clientFx.maxLiveShimmers` run; the rest stay on a static frame.

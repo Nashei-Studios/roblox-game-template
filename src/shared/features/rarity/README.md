@@ -1,6 +1,6 @@
 # features/rarity
 
-The rarity language: one ladder of tiers and the effects each tier gets. [ADR 0046](../../../../docs/adr/0046-item-icon-and-rarity-language.md). Refs #127.
+The rarity language: one ladder of tiers and the effects each tier gets. [ADR 0048](../../../../docs/adr/0048-item-icon-and-rarity-language.md). Refs #127.
 
 ## What it is / is not
 

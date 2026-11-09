@@ -35,7 +35,7 @@ export type Runtime = {
     receiveKbpsPerPlayer: number,
 }
 
--- Client per-frame work the rarity language may add (ADR 0046). Read by RarityConfig tests and by
+-- Client per-frame work the rarity language may add (ADR 0048). Read by RarityConfig tests and by
 -- the shimmer clock; a game lowers these, never raises them without measuring on a phone.
 export type ClientFx = {
     -- Shimmer gradients animated at once; the rest render static. One Heartbeat step moves all.

@@ -1,6 +1,6 @@
 # Cómo trabajamos en equipo
 
-Para las personas del equipo (Victor, Nande, Leon). Los agentes siguen el `RULES.md` de cada carpeta y el [protocolo multiagente](multi-agent.md). La decisión de fondo está en el [ADR 0045](adr/0045-team-create-and-rojo-split.md).
+Para las personas del equipo (Victor, Nande, Leon). Los agentes siguen el `RULES.md` de cada carpeta y el [protocolo multiagente](multi-agent.md). La decisión de fondo está en el [ADR 0047](adr/0047-team-create-and-rojo-split.md).
 
 ## En una línea
 

@@ -15,7 +15,7 @@ Pure model of the UI kit: `UiConfig`, `Layout`, `Contrast`, `MenuController`, `S
 - `audit/EcoRules`, `audit/SourceRules`: the rules that fail a glued list, text flush to a card, a cut label, an unregistered or misplaced control, a raw layout.
 - Tests: `tests/features/ui/UiEco.test.luau`. Prohibited: creating a `UIListLayout`/`UIGridLayout` outside the primitive; a gap below the `sm` token.
 
-## ItemIcon (ADR 0046)
+## ItemIcon (ADR 0048)
 
 - Is: the pure spec of one icon (`ItemIcon.spec`): image, silhouette when locked, swatch fallback, rarity frame from `features/rarity`, "Lv N" or "xN" badge. `CardGrid.Card.icon` makes `CardGridPanel` show it.
 - Painting: `client/presenters/ui/ItemIconView`. Tests: `tests/features/ui/ItemIcon.test.luau`.
