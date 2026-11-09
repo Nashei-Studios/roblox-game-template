@@ -13,7 +13,12 @@ Playlists by mood, stings on moments, ducking under UI, and a licence manifest, 
 music/
   MusicConfig.luau    types, validate against SoundConfig, manifest rows
   MusicDirector.luau  setMood, onTrackEnded, sting, duck / unduck, setVolumes, step
+  MoodResolver.luau   which mood, from named signals through ports/MoodSignals (ADR 0050)
 ```
+
+## Choosing the mood (ADR 0050)
+
+`MoodResolver` turns game state into a mood name. The game answers named on/off signals through `ports/MoodSignals` and declares ordered rules: `whileOn(mood, signal)`, `holdAfter(mood, signal, seconds, onFall)` and `sustained(mood, signal, enterSeconds, holdSeconds)`, plus a fallback. Call `MoodResolver.validate(rules, knownMoods)` at bootstrap, then each frame `director:setMood(resolver:mood(now))` (a repeated mood is a no-op). Example with the shared objective: signals `objective_open` and `objective_won` (beat `drop`), rules `holdAfter("drop", "objective_won", 20, false)`, `whileOn("buildup", "objective_open")`, fallback `lobby`.
 
 ## Licence basis
 
@@ -34,4 +39,4 @@ An invented or hardcoded asset id, an audio name without a licence entry, writin
 
 ## Tests
 
-`tests/features/music/Music.test.luau`, registered in `scripts/suites.luau`.
+`tests/features/music/Music.test.luau` and `tests/features/music/MoodResolver.test.luau`, registered in `scripts/suites.luau`.

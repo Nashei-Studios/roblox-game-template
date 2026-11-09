@@ -49,6 +49,7 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0045](0045-team-create-and-rojo-split.md) | Team Create for the world and art, Rojo for code; one Rojo host; reusable models as Packages |
 | [0046](0046-collection-index-mold.md) | CollectionIndex mold: server-side discovery through a port, silhouettes, a bar to finite milestones, claim or auto |
 | [0049](0049-shared-objective-mold.md) | Shared objective mold: a server-authoritative goal the whole server pushes |
+| [0050](0050-mood-resolver-over-signals.md) | Mood resolver: the music mood from game state through a signals port |
 | [0051](0051-moment-settings-and-capture-routing.md) | Moment settings: opt-outs for effects, capture and share, and capture routing |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
