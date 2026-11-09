@@ -17,6 +17,8 @@ local TeleportService = game:GetService("TeleportService")
 local Shared = ReplicatedStorage.Shared
 local Analytics = require(Shared.features.analytics.Analytics)
 local AnalyticsTracker = require(Shared.features.analytics.AnalyticsTracker)
+local Experiments = require(Shared.features.experiments.Experiments)
+local SessionMarks = require(Shared.features.analytics.SessionMarks)
 local BenefitReconciler = require(Shared.features.subscriptions.BenefitReconciler)
 local Config = require(Shared.Config)
 local Flags = require(Shared.features.flags.Flags)
@@ -110,6 +112,25 @@ local flags = Flags.new(
     Config.flagDefaults
 )
 
+-- Experiment variants (ADR 0064): deterministic per (UserId, experiment id), never persisted.
+-- userId -> funnel event label, read by the analytics tracker.
+local funnelVariants: { [number]: string } = {}
+
+local function assignExperiments(player: Player)
+    local experimentsConfig = Config.default.experiments
+    if experimentsConfig == nil then
+        return
+    end
+    local assigned = Experiments.resolveAll(player.UserId, experimentsConfig.definitions)
+    for experimentId, variantId in assigned do
+        -- The client only reads this attribute.
+        player:SetAttribute(Experiments.attributeName(experimentId), variantId)
+        if experimentId == experimentsConfig.funnelExperimentId then
+            funnelVariants[player.UserId] = Experiments.eventLabel(experimentId, variantId)
+        end
+    end
+end
+
 -- Feature services.
 local tracker = AnalyticsTracker.new({
     sink = AnalyticsServiceSink.new({
@@ -118,9 +139,10 @@ local tracker = AnalyticsTracker.new({
                 _self: unknown,
                 player: Player,
                 eventName: string,
-                value: number
+                value: number,
+                customFields: { [string]: string }?
             )
-                AnalyticsService:LogCustomEvent(player, eventName, value)
+                AnalyticsService:LogCustomEvent(player, eventName, value, customFields)
             end,
         },
         players = {
@@ -128,11 +150,24 @@ local tracker = AnalyticsTracker.new({
                 return Players:GetPlayerByUserId(userId)
             end,
         },
+        variantFieldKey = Enum.AnalyticsCustomFieldKeys.CustomField01.Name,
     }),
     clock = function(): number
         return os.time()
     end,
     isValidEvent = Analytics.isFunnelEvent,
+    variantOf = function(userId: number): string?
+        return funnelVariants[userId]
+    end,
+})
+local sessionMarks = SessionMarks.new({
+    tracker = tracker,
+    delay = function(seconds: number, callback: () -> ())
+        task.delay(seconds, callback)
+    end,
+    isPresent = function(userId: number): boolean
+        return Players:GetPlayerByUserId(userId) ~= nil
+    end,
 })
 
 local playerData = PlayerDataService.new({
@@ -878,6 +913,7 @@ end
 
 -- Engine events.
 Players.PlayerAdded:Connect(function(player: Player)
+    assignExperiments(player)
     local joined = playerData:join(tostring(player.UserId))
     if not joined.ok then
         local failure = joined.error
@@ -896,6 +932,7 @@ Players.PlayerAdded:Connect(function(player: Player)
         return
     end
     tracker:track("session_start", player.UserId, joined.value.sessionIndex)
+    sessionMarks:start(player.UserId, joined.value.sessionIndex)
     timeRewards:startSession(player.UserId)
     soundSettings:sendCurrent(player.UserId)
     if leaderboards ~= nil then
@@ -915,6 +952,8 @@ Players.PlayerAdded:Connect(function(player: Player)
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
+    sessionMarks:forget(player.UserId)
+    funnelVariants[player.UserId] = nil
     -- Final score flush first: it reads the profile that `leave` releases.
     if leaderboards ~= nil then
         leaderboards:forget(player.UserId)
