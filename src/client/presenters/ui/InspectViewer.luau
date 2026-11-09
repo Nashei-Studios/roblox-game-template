@@ -147,7 +147,10 @@ function InspectViewer.new(deps: Deps): Viewer
         local newGui = Instance.new("ScreenGui")
         newGui.Name = "InspectViewer"
         newGui.ResetOnSpawn = false
-        newGui.IgnoreGuiInset = true
+        -- Inside the core UI safe area like the kit menus: on a phone a panel centred on the full
+        -- screen put the close button under the Roblox top bar.
+        newGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
+        newGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         newGui.DisplayOrder = deps.displayOrder
         local player = Players.LocalPlayer
         newGui.Parent = player:WaitForChild("PlayerGui")
@@ -156,7 +159,9 @@ function InspectViewer.new(deps: Deps): Viewer
         local gap = Tokens.space(tokens, "sm")
         local pad = Tokens.space(tokens, "md")
 
-        -- Backdrop: a tap anywhere outside the panel closes (the panel itself sinks its taps).
+        -- Backdrop: a tap anywhere outside the panel closes. The panel is its SIBLING, drawn above
+        -- it: a click on a descendant of a GuiButton fires that button's Activated, so a panel parented
+        -- inside the backdrop closed the viewer on the first drag in the viewport.
         local backdrop = Instance.new("TextButton")
         backdrop.Name = "Backdrop"
         backdrop.Text = ""
@@ -165,6 +170,7 @@ function InspectViewer.new(deps: Deps): Viewer
         backdrop.BackgroundColor3 = Atoms.color(tokens.palette.background)
         backdrop.BackgroundTransparency = 0.35
         backdrop.BorderSizePixel = 0
+        backdrop.ZIndex = 0
         backdrop.Parent = newGui
         table.insert(
             connections,
@@ -173,7 +179,8 @@ function InspectViewer.new(deps: Deps): Viewer
             end)
         )
 
-        local panel = Atoms.panel(backdrop, tokens, "Panel", tokens.palette.surface, "lg")
+        local panel = Atoms.panel(newGui, tokens, "Panel", tokens.palette.surface, "lg")
+        panel.ZIndex = backdrop.ZIndex + 1
         panel.AnchorPoint = Vector2.new(0.5, 0.5)
         panel.Position = UDim2.fromScale(0.5, 0.5)
         -- Wide on a phone in landscape (568x320), capped on a large screen.
