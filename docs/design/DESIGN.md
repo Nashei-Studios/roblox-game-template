@@ -41,3 +41,18 @@ Domain: short micro-game sessions, mostly on phones held in one hand, often outd
 - Touch opens menus from the HUD buttons; keyboard and gamepad toggle them through `ContextActionService` (bindings in `ui.menus`, back in `ui.input`). Nothing depends on hover.
 - Prices are never written in Config: the shop shows a placeholder until `GetProductInfoAsync` answers and keeps the buy button disabled without a price.
 - Not yet verified by a person: the Device Emulator pass (small phone, tablet, 1080p) and gamepad focus visuals.
+
+## Rarity language
+
+Derived for this template: tiers run cold to hot like a metal heating up, so the order reads without the label. Distinct from the amber accent and the status colors. Rarity is never color alone: every tier has a text label. Frames must reach 3:1 on the surface `#171C30` (checked in `Rarity.test`).
+
+| Tier | Frame | Card tint (top) | Effects |
+|---|---|---|---|
+| Common | `#9AA5B8` | `#3A4359` | none |
+| Uncommon | `#4FD18B` | `#1F4A3A` | glow ring |
+| Rare | `#4D8DFF` | `#1F3C78` | glow, shimmer |
+| Epic | `#B26BFF` | `#4A2A78` | glow, shimmer, world particles |
+| Legendary | `#FF8A3D` | `#7A3A14` | same as Epic |
+| Mythic | `#FF4FB8` | `#7A1F5A` | same as Epic |
+
+Locked frame `#3A4260`, neutral: a locked item shows a black silhouette and no rarity color. Effect start tiers, shimmer period (2.4 s), particle rate and the low-quality factor are chosen, not measured; they are config and get measured on a phone.

@@ -238,6 +238,8 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/features/collectionindex/CollectionIndex.test"),
     },
     { name = "UiEco", register = require("../tests/features/ui/UiEco.test") },
+    { name = "ItemIcon", register = require("../tests/features/ui/ItemIcon.test") },
+    { name = "Rarity", register = require("../tests/features/rarity/Rarity.test") },
     { name = "UiAudit", register = require("../tests/features/ui/UiAudit.test") },
     {
         name = "TapInput (router and filter)",
