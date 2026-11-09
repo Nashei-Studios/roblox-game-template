@@ -13,7 +13,7 @@ Friend boost, invite reward and the combined perk multiplier. Decisions: [ADR 00
 social/
   SocialConfig.luau     numbers + problems() validator (config, not code)
   FriendBoost.luau      IsFriendsWith per pair, parallel, cached, O(1) boostPct
-  FriendBoostLabel.luau "Friend +N%" text, nil when there is nothing to show
+  FriendBoostLabel.luau "Friend +N%" text, the co-play hint, the roster and the HUD pill (ADR 0052)
   Referral.luau         LaunchData payload + ReferredByPlayerId validation (200 chars)
   PairKey.luau          unordered pair + UTC day value object (ledger key)
   InviteReward.luau     rules: flag, not self, inviter present, once per pair per day, daily cap
@@ -30,7 +30,7 @@ Engine side: `server/adapters/SocialWiring.luau` (Players, HttpService, MemorySt
 1. In `Main.server`, `SocialWiring.start({ flags, beforeChange, onChanged, communityPerkPct })`; call `onJoin(player)` and `onLeave(player)` from the player events.
 2. Multiply `wiring.perksFor(userId).perkMultiplier` into the perk your game owns. In `beforeChange`, settle anything paid at the old rate; in `onChanged`, re-read the rate and push it.
 3. Add the Experience Config flag `inviteReward` to your flag defaults. Tune `SocialConfig.default`.
-4. Show `FriendBoostLabel.text(friendBoostPct)` in the HUD; bind a button to `InvitePrompt.prompt`.
+4. Show `FriendBoostLabel.pill(friendBoostPct, SocialConfig.default, tutorialDone)` in the HUD (the boost, else the hint "Friends +10% each (max 50%)"); add `FriendBoostLabel.roster(playersPresent, "players")` to the shared-objective tag; bind a button to `InvitePrompt.prompt`. Draw both with the UI system (spacing tokens, platform-aware controls). The text grants nothing (ADR 0052).
 
 ## Forbidden here
 

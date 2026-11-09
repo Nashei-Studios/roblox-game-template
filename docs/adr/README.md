@@ -51,5 +51,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0049](0049-shared-objective-mold.md) | Shared objective mold: a server-authoritative goal the whole server pushes |
 | [0050](0050-mood-resolver-over-signals.md) | Mood resolver: the music mood from game state through a signals port |
 | [0051](0051-moment-settings-and-capture-routing.md) | Moment settings: opt-outs for effects, capture and share, and capture routing |
+| [0052](0052-visible-coplay-hint.md) | Visible co-play hint: make the existing bonus visible, never pay it from the text |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
