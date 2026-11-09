@@ -73,6 +73,19 @@ export type TierModelBudget = {
     maxVisibleNodes: number,
 }
 
+-- Auto mining visuals (ADR 0058). Counts what the client creates or replicates, not frames: the
+-- popups and chips are pooled, so the only new instance is the swing's toolanim value.
+export type AutoFeelBudget = {
+    -- Popups one player may show per second (aggregated popups).
+    maxPopupsPerSecond: number,
+    -- Instances created per auto swing (the toolanim StringValue; it replicates to the others).
+    instancesPerSwing: number,
+    -- Players mining automatically in one server whose swings one client sees.
+    playersInView: number,
+    -- Cap of instances created or replicated per second across `playersInView`.
+    maxInstancesPerSecond: number,
+}
+
 export type Budget = {
     -- Bytes added per remote message on top of the Zap payload.
     perEventOverheadBytes: number,
@@ -94,6 +107,8 @@ export type Budget = {
     podium: PodiumBudget?,
     -- Per-tier world models; optional so a budget literal without it stays valid.
     tierModels: TierModelBudget?,
+    -- Auto mining visuals; optional so a budget literal without it stays valid.
+    autoFeel: AutoFeelBudget?,
 }
 
 local PerfBudget: Budget = {
@@ -149,6 +164,12 @@ local PerfBudget: Budget = {
         maxPartsPerNode = 24, -- chosen, not measured: a rock reads with a handful of chunky parts
         maxTrianglesPerNode = 600, -- chosen, not measured: Roblox publishes no per-node figure for phones
         maxVisibleNodes = 6, -- chosen, not measured: a slab plus a few ore nodes in view
+    },
+    autoFeel = {
+        maxPopupsPerSecond = 1.25, -- chosen, not measured: about one aggregated popup per second
+        instancesPerSwing = 1, -- the toolanim StringValue; popups, chips and sounds are pooled
+        playersInView = 12, -- chosen: a full server of auto miners all in one lobby
+        maxInstancesPerSecond = 30, -- chosen, not measured: Roblox publishes no per-second figure
     },
 }
 

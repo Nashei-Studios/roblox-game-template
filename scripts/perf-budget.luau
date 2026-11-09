@@ -10,6 +10,7 @@ local fs = require("@lune/fs")
 local process = require("@lune/process")
 
 local Config = require("../src/shared/Config")
+local AutoFeel = require("../src/shared/features/autofeel/AutoFeel")
 local PerfBudget = require("../src/shared/perf/PerfBudget")
 local PodiumConfig = require("../src/shared/features/podium/PodiumConfig")
 local RarityConfig = require("../src/shared/features/rarity/RarityConfig")
@@ -81,6 +82,33 @@ if tierBudget ~= nil and tierConfig ~= nil then
     end
     print(
         `tier models: at most {tierBudget.maxVisibleNodes} nodes in view = {tierBudget.maxVisibleNodes * tierBudget.maxPartsPerNode} parts`
+    )
+end
+-- Auto mining visuals (ADR 0058): popups per second and instances per second for a full lobby.
+local autoBudget = PerfBudget.autoFeel
+local autoConfig = Config.default.autoFeel
+if autoBudget ~= nil and autoConfig ~= nil then
+    for _, problem in AutoFeel.validate(autoConfig) do
+        table.insert(report.failures, problem)
+    end
+    local popups = AutoFeel.popupsPerSecond(autoConfig)
+    local instances = autoBudget.playersInView
+        * AutoFeel.swingsPerSecond(autoConfig)
+        * autoBudget.instancesPerSwing
+    if popups > autoBudget.maxPopupsPerSecond then
+        table.insert(
+            report.failures,
+            `auto feel popups {popups}/s exceed {autoBudget.maxPopupsPerSecond}/s`
+        )
+    end
+    if instances > autoBudget.maxInstancesPerSecond then
+        table.insert(
+            report.failures,
+            `auto feel instances {instances}/s exceed {autoBudget.maxInstancesPerSecond}/s`
+        )
+    end
+    print(
+        `auto feel: {popups} popups/s of {autoBudget.maxPopupsPerSecond}, {instances} instances/s for {autoBudget.playersInView} players of {autoBudget.maxInstancesPerSecond}`
     )
 end
 if #report.failures > 0 then
