@@ -4,7 +4,7 @@
     badge. A menu builds the spec from its catalog item and the player's state; the engine side
     (`client/presenters/ui/ItemIconView`) only paints it. Loads under Lune.
 
-    Image rule (ADR 0046): an item shows ITS OWN image (a pre-rendered portrait uploaded as an
+    Image rule (ADR 0048): an item shows ITS OWN image (a pre-rendered portrait uploaded as an
     image asset). With no image id it falls back to the swatch color, never to a hole. A locked
     item shows the same image as a black silhouette. No ViewportFrame is involved.
 ]]

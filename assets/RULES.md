@@ -4,7 +4,7 @@ Owner: `owner:nande` and `owner:leon` for the art they make; `owner:victor` for 
 
 ## What lives here and what does not
 - Here: manifests, source images and the UI kit that Rojo mounts, plus the paperwork of the art (`docs/art-log.md`).
-- Not here: the models, the map and the hand-built UI. They live in the Team Create place and, when reusable, as Packages (ADR 0045). `.rbxm`, `.rbxl` and `.rbxlx` stay out of Git except the UI kit already allowed.
+- Not here: the models, the map and the hand-built UI. They live in the Team Create place and, when reusable, as Packages (ADR 0047). `.rbxm`, `.rbxl` and `.rbxlx` stay out of Git except the UI kit already allowed.
 
 ## Who touches what
 - Nande and Leon: build in Studio, publish reusable models as Packages, and add a line to `docs/art-log.md` for each one (name, author, date, source, licence).

@@ -1,4 +1,4 @@
-# 0046. ItemIcon and RarityFx: an image per item and one rarity language
+# 0048. ItemIcon and RarityFx: an image per item and one rarity language
 
 Status: accepted (2026-11-09). Refs #124, #127. Bar: vault W12, W13 (`docs/bars/world-3d.md`).
 

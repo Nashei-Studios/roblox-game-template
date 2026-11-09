@@ -46,7 +46,9 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0042](0042-clip-moment-over-capture-service.md) | Clip moment: a timed plan over CaptureService |
 | [0043](0043-music-director-and-licence-manifest.md) | Music director with moment stings and a licence manifest |
 | [0044](0044-win-condition-checklist-and-gate.md) | Win-condition checklist and a pending-tolerant gate |
-| [0045](0045-team-create-and-rojo-split.md) | Team Create for the world and art, Rojo for code; one Rojo host; reusable models as Packages |
+| [0045](0045-ui-spacing-and-platform-aware-controls.md) | UI spacing and platform-aware controls are born from the ecosystem |
 | [0046](0046-collection-index-mold.md) | CollectionIndex mold: server-side discovery through a port, silhouettes, a bar to finite milestones, claim or auto |
+| [0047](0047-team-create-and-rojo-split.md) | Team Create for the world and art, Rojo for code; one Rojo host; reusable models as Packages |
+| [0048](0048-item-icon-and-rarity-language.md) | ItemIcon and RarityFx: an image per item and one rarity language |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).

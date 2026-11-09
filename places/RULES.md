@@ -3,7 +3,7 @@
 Owner: `owner:victor`.
 
 ## What it is
-`dev.rbxl` is a local file built with `rojo build` for headless checks. It is not the live place and is never published (ADR 0045). The shared place lives in Team Create.
+`dev.rbxl` is a local file built with `rojo build` for headless checks. It is not the live place and is never published (ADR 0047). The shared place lives in Team Create.
 
 ## Forbidden
 - Publishing a file from here over the live place: it would erase the art.

@@ -127,7 +127,7 @@ export type GameConfig = {
     -- UI kit, leaderboards and community join reward (issues #23, #25, #36). Optional so a game
     -- can omit what it does not use; the defaults below ship all three (the reward disabled).
     ui: UiConfig.UiConfig?,
-    -- Rarity ladder and effect tiers (ADR 0046); a game overrides the tiers and colors.
+    -- Rarity ladder and effect tiers (ADR 0048); a game overrides the tiers and colors.
     rarity: RarityConfig.Config?,
     leaderboards: LeaderboardsConfig.LeaderboardsConfig?,
     communityReward: CommunityRewardConfig.CommunityRewardConfig?,
