@@ -113,7 +113,27 @@ return function(suite: harness.Harness)
         harness.isTrue(slots[2].standPoint.y > slots[3].standPoint.y, "2 above 3")
         harness.equal(slots[1].stepCenter.y, slots[1].stepSize.y / 2)
         local footprint = PodiumLayout.footprint(PodiumConfig.default.layout)
-        harness.equal(footprint.x, 5 * 3 + 0.5 * 2)
+        local layout = PodiumConfig.default.layout
+        harness.equal(footprint.x, layout.stepWidth * 3 + layout.stepGap * 2)
+    end)
+
+    suite:test("statues stand by their feet: root height, correction and strays", function()
+        -- R15: hip height 2, root part 2 studs tall, step top at y = 4.
+        harness.equal(PodiumLayout.rootCenterY(4, 2, 2), 7)
+        harness.equal(PodiumLayout.feetShift(4, 4.15), 0)
+        harness.equal(PodiumLayout.feetShift(4, 3.5), 0.5)
+        harness.equal(PodiumLayout.feetShift(4, 9), -5)
+        local center = { x = 0, y = 2, z = 0 }
+        local points = {
+            { x = 0, y = 6, z = 0 },
+            { x = 1, y = 9, z = 1 },
+            { x = 481.5, y = 7.9, z = -176 },
+        }
+        local strays = PodiumLayout.strays(points, center, PodiumLayout.MAX_STATUE_RADIUS)
+        harness.equal(#strays, 1)
+        harness.equal(strays[1], 3)
+        harness.equal(#PodiumLayout.strays({ { x = 12, y = 2, z = 0 } }, center, 12), 0)
+        harness.equal(#PodiumLayout.strays({ { x = 12.1, y = 2, z = 0 } }, center, 12), 1)
     end)
 
     suite:test("model fills three places with medal colors and formatted values", function()

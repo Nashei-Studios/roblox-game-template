@@ -15,6 +15,8 @@ export type Layout = {
     stepGap: number,
     -- Height of the step of place 1, 2 and 3 (studs). Place 1 is the tallest.
     stepHeights: { number },
+    -- Uniform scale of every avatar statue (Model:ScaleTo). 1 is a normal avatar.
+    statueScale: number,
 }
 
 export type PodiumConfig = {
@@ -56,10 +58,11 @@ PodiumConfigModule.default = {
     nameMaxLength = 16, -- chosen, not sourced
     idleAnimationId = nil, -- TODO(game): an allowed idle animation id; nil is a static pose
     layout = {
-        stepWidth = 5, -- chosen, not measured
-        stepDepth = 5, -- chosen, not measured
-        stepGap = 0.5, -- chosen, not measured
-        stepHeights = { 4, 3, 2 }, -- chosen, not measured
+        stepWidth = 6, -- chosen, not measured: wide enough for a 1.6x statue and a readable tag
+        stepDepth = 6, -- chosen, not measured
+        stepGap = 0.6, -- chosen, not measured
+        stepHeights = { 3.6, 2.8, 2 }, -- chosen, not measured: low, so a 1.6x statue stays under the spawn camera height
+        statueScale = 1.6, -- chosen, not measured: statues about 1.6x an avatar
     },
 } :: PodiumConfig
 
@@ -121,6 +124,13 @@ function PodiumConfigModule.problems(
     end
     if not isFiniteNumber(layout.stepGap) or layout.stepGap < 0 then
         table.insert(found, "podium.layout.stepGap must be 0 or more")
+    end
+    if
+        not isFiniteNumber(layout.statueScale)
+        or layout.statueScale < 0.5
+        or layout.statueScale > 3
+    then
+        table.insert(found, "podium.layout.statueScale must be 0.5 to 3")
     end
     if #layout.stepHeights ~= PodiumConfigModule.PLACES then
         table.insert(found, "podium.layout.stepHeights needs exactly 3 heights")
