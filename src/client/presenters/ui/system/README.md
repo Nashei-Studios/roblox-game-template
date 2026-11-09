@@ -17,6 +17,7 @@ The engine half of the UI system ([ADR 0035](../../../../../docs/adr/0035-ui-sys
 | `Skin.luau` | Binds an adapter to a kit tree, verifies it at boot, clones a slot, fixes it structurally (never recolors). |
 | `SafeAreaRoot.luau` | The ScreenGui: `CoreUISafeInsets`, scaled frame at `1/scale`, margin padding, content and overlay layers. `layers` builds the same inside any frame. |
 | `Stack.luau`, `ScrollList.luau` | Vertical and horizontal stacks, scrolling list, scrolling grid; gap, padding and canvas by construction. |
+| `ScrollList.item` | A row with the card padding token, so row text never touches the row edge. |
 | `MenuShell.luau` | Modal window: backdrop that swallows input, sized by breakpoint, 44 px close, gamepad focus, scale-only motion. |
 | `Button.luau`, `Card.luau`, `Parts.luau`, `Toast.luau`, `OfferCard.luau`, `HudRailsView.luau` | Components. `Parts` holds Badge, CurrencyChip, ProgressBar, Tabs and Tooltip. |
 

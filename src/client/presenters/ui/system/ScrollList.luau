@@ -87,4 +87,13 @@ function ScrollList.grid(env: UiEnv.UiEnv, parent: Instance, options: GridOption
     return frame
 end
 
+--- One row of a list or grid: a surface panel with the card padding token on every side, so text
+--- never touches the row edge (rule UI-CARD-INSET). Put the row content inside the returned frame.
+function ScrollList.item(env: UiEnv.UiEnv, parent: Instance, name: string): Frame
+    local tokens = env.tokens
+    local row = Atoms.panel(parent, tokens, name, "surface", "md")
+    Atoms.pad(row, tokens, tokens.defaults.cardPad)
+    return row
+end
+
 return ScrollList
