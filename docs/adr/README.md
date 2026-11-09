@@ -57,5 +57,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0053](0053-presence-board-over-a-feed-store.md) | Presence board: what other players did, from a capped feed behind a port |
 | [0054](0054-reveal-moment-over-the-clip-moment-director.md) | Reveal moment: a short skippable unlock beat on top of the clip moment director |
 | [0055](0055-item-slots-mold.md) | Item slots mold: a hotbar of equipped items on the HUD bottom rail |
+| [0056](0056-podium3d-world-leaderboard.md) | Podium3D: the top three of a board as avatar statues on a 3-step podium |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).

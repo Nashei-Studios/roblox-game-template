@@ -9,7 +9,10 @@
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 
+local Config = require("../src/shared/Config")
 local PerfBudget = require("../src/shared/perf/PerfBudget")
+local PodiumConfig = require("../src/shared/features/podium/PodiumConfig")
+local RarityConfig = require("../src/shared/features/rarity/RarityConfig")
 local RemoteBudget = require("../src/shared/perf/RemoteBudget")
 
 local schemaPath = process.args[1] or "net/schema.zap"
@@ -41,6 +44,22 @@ print(
 print(
     `server -> client: {report.serverToClientBytesPerSecond} B/s of {PerfBudget.serverToClientBytesPerSecond}`
 )
+-- World podium (ADR 0056): the configured refresh must respect the budget floor.
+local podiumBudget = PerfBudget.podium
+local podiumConfig = Config.default.podium
+if podiumBudget ~= nil and podiumConfig ~= nil then
+    local problems = PodiumConfig.problems(
+        podiumConfig,
+        Config.default.rarity or RarityConfig.default,
+        podiumBudget.minRefreshSeconds
+    )
+    for _, problem in problems do
+        table.insert(report.failures, problem)
+    end
+    print(
+        `podium: refresh {podiumConfig.refreshSeconds}s (min {podiumBudget.minRefreshSeconds}s), parts cap {podiumBudget.maxParts}`
+    )
+end
 if #report.failures > 0 then
     for _, failure in report.failures do
         print(`FAIL {failure}`)

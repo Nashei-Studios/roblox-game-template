@@ -49,6 +49,19 @@ export type ClientFx = {
     maxRevealBeams: number,
 }
 
+-- World podium (ADR 0056). The statues are server-built and anchored, so the cost is parts and
+-- web calls, not frames; the only client work is the optional idle animation.
+export type PodiumBudget = {
+    -- Parts of the whole podium: 3 steps, 3 plates and 3 avatar statues (a statue is ~15 parts
+    -- plus accessories). The stage reports when a build goes over.
+    maxParts: number,
+    -- Floor for PodiumConfig.refreshSeconds: each refresh may cost a GetSortedAsync (5 per
+    -- minute per server) and up to three avatar loads.
+    minRefreshSeconds: number,
+    -- Statues animated at once (idle animation); the rest hold the static pose.
+    maxAnimatedStatues: number,
+}
+
 export type Budget = {
     -- Bytes added per remote message on top of the Zap payload.
     perEventOverheadBytes: number,
@@ -66,6 +79,8 @@ export type Budget = {
     runtime: Runtime,
     -- Per-frame client work of RarityFx; optional so a budget literal without it stays valid.
     clientFx: ClientFx?,
+    -- World podium limits; optional so a budget literal without it stays valid.
+    podium: PodiumBudget?,
 }
 
 local PerfBudget: Budget = {
@@ -111,6 +126,11 @@ local PerfBudget: Budget = {
         maxLiveEmitters = 4, -- chosen, not measured: Roblox publishes no emitter count for phones
         maxParticlesPerSecond = 12, -- chosen, not measured: small bursts read as a sparkle, not a cloud
         maxRevealBeams = 8, -- chosen, not measured: eight thin frames in one rotating group
+    },
+    podium = {
+        maxParts = 96, -- chosen, not measured: 3 steps + 3 plates + 3 statues of about 30 parts with accessories
+        minRefreshSeconds = 60, -- chosen, not sourced: keeps the GetSortedAsync budget of 5 per minute (docs/performance.md)
+        maxAnimatedStatues = 3, -- chosen, not measured: one idle loop per statue
     },
 }
 
