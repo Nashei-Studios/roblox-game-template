@@ -29,6 +29,24 @@ The fixes that are not colour live in `tools/ui-restyle.luau` (`fixSpacingAndFit
 re-extraction of the kit (`lune run tools/ui-extract`) reproduces them. Kit colours, gradients and
 strokes are never touched (ADR 0047).
 
+## Declaration gate (ADR 0061)
+
+`scripts/ui-audit` also runs `ConfigAudit` over what the template declares: the control registry
+(item slots, item viewer, locomotion) and `Config.default.ui`. Limits come from
+`Config.default.ui.gates` (`UiGates`); a game overrides them there and records why in its ADR.
+
+| Rule | Checks |
+|---|---|
+| `UI-DUP-DESTINATION` | two controls of one screen shown on one scheme have the same `destination` |
+| `UI-MOTION-MISSING` | a modal menu declares no `motion` (open and close tween or spring, hover, press, reduced-motion fallback), or `motionSeconds` is 0 |
+| `UI-BUTTON-LIMIT` | buttons per screen and scheme above `maxButtons` (HUD touch 6, keyboard 10, gamepad 8; menu 8, 12, 10) |
+| `UI-TOUCH-LOCOMOTION` | a `locomotion` control shows a button on touch (run is the joystick to the end, stow is an item slot) |
+| `UI-SCROLL-DEPTH` | scrollers nested deeper than `maxNestedScroll` (1); also in the `.rbxm` pass |
+| `UI-SCROLL-OVERLAP`, `UI-SCROLL-OUTSIDE` | in the `.rbxm` pass, the layout computed from list order, padding and offset sizes overlaps or leaves the canvas at the start, middle or end of the scroll |
+
+A game with more controls calls `ConfigAudit.auditRegistry(scope, registry, ui)` with its own
+registry. Tests: `tests/features/ui/UiGates.test.luau`.
+
 ## Runtime audit
 
 Layout needs the engine, so this half runs in a playtest.
@@ -64,6 +82,7 @@ resized to each viewport, the presenter lays itself out, and the original size i
 | `UI-CONTRAST` | WCAG AA, 4.5 (3 for large text), best of the fill (a gradient multiplies the fill) and the text outline |
 | `UI-TEXT-UNDER-CONTROL` | the glyphs (TextBounds plus alignment) of a visible text run under a visible button of the same container; image buttons that carry captions and transparent hit zones are excluded |
 | `UI-TOUCH-44` | measured size under 44 px |
+| `UI-SCROLL-OVERLAP`, `UI-SCROLL-OUTSIDE`, `UI-SCROLL-DEPTH`, `UI-BUTTON-LIMIT`, `UI-DUP-DESTINATION` | `EcoAudit` with `gates` (and `scheme`, `screenKind`): every scroller is set to the start, middle and end of its `CanvasPosition` and the `AbsolutePosition` of its children is compared; chrome buttons (outside scrollers) are counted; buttons with the same `Destination` attribute or registry destination collide. Unverified in the engine until a playtest |
 | `UI-TEXT-SMALL` | rendered text under 11 px (warning) |
 
 Escape hatches: attribute `AuditIgnore = true` on an element, `StateLess = true` on a button that

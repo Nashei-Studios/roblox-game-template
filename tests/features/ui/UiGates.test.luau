@@ -13,6 +13,9 @@ local UiGates = require("../../../src/shared/features/ui/UiGates")
 local LocomotionConfig = require("../../../src/shared/features/locomotion/LocomotionConfig")
 local LocomotionControls = require("../../../src/shared/features/locomotion/LocomotionControls")
 local Config = require("../../../src/shared/Config")
+local ConfigAudit = require("../../../src/shared/features/ui/audit/ConfigAudit")
+local Finding = require("../../../src/shared/features/ui/audit/Finding")
+local StaticRules = require("../../../src/shared/features/ui/audit/StaticRules")
 
 local gates = UiGates.default()
 
@@ -45,13 +48,10 @@ return function(suite: harness.Harness)
         })
         harness.equal(#bug, 1)
         harness.equal(bug[1].rule, "UI-DUP-DESTINATION")
-        harness.equal(
-            #GateRules.duplicateDestinations("HUD", "touch", {
-                { name = "Shop", destination = "menu:shop" },
-                { name = "Daily", destination = "menu:rewards" },
-            }),
-            0
-        )
+        harness.equal(#GateRules.duplicateDestinations("HUD", "touch", {
+            { name = "Shop", destination = "menu:shop" },
+            { name = "Daily", destination = "menu:rewards" },
+        }), 0)
     end)
 
     suite:test("registry destinations are checked per scheme from the visible controls", function()
@@ -99,8 +99,10 @@ return function(suite: harness.Harness)
     end)
 
     suite:test("scroll positions cover the start, the middle and the end of the canvas", function()
-        local positions =
-            GateRules.scrollPositions({ width = 200, height = 100 }, { width = 200, height = 300 })
+        local positions = GateRules.scrollPositions(
+            { width = 200, height = 100 },
+            { width = 200, height = 300 }
+        )
         harness.equal(#positions, 3)
         harness.equal(positions[1].y, 0)
         harness.equal(positions[3].y, 200)
@@ -160,7 +162,7 @@ return function(suite: harness.Harness)
         assert(ui ~= nil, "default ui config is declared")
         local menus: { UiGates.MotionMenu } = {}
         for _, menu in ui.menus do
-            table.insert(menus, menu)
+            table.insert(menus, { id = menu.id, modal = menu.modal, motion = menu.motion })
         end
         harness.equal(#GateRules.motion("Config", menus, ui.theme.motionSeconds), 0)
     end)
@@ -200,5 +202,117 @@ return function(suite: harness.Harness)
         harness.equal(#bug, 1)
         harness.equal(bug[1].rule, "UI-SCROLL-DEPTH")
         harness.equal(#GateRules.scrollDepth("Shop", "Outer", 1, gates), 0)
+    end)
+
+    suite:test("the template declarations pass every gate rule", function()
+        local ui = Config.default.ui
+        assert(ui ~= nil, "default ui config is declared")
+        harness.equal(#ConfigAudit.audit(ui), 0)
+    end)
+
+    suite:test(
+        "a registry with 50 buttons and a repeated destination fails the declaration gate",
+        function()
+            local ui = Config.default.ui
+            assert(ui ~= nil, "default ui config is declared")
+            local registry = ConfigAudit.templateRegistry()
+            for index = 1, 50 do
+                ControlRegistry.register(registry, {
+                    id = `Extra{index}`,
+                    purpose = "a button added by a game",
+                    schemes = { "touch", "keyboard", "gamepad" },
+                    destination = "menu:shop",
+                })
+            end
+            local counts = Finding.countByRule(ConfigAudit.auditRegistry("game", registry, ui))
+            harness.isTrue((counts["UI-BUTTON-LIMIT"] or 0) >= 3, "limit per scheme")
+            harness.equal(counts["UI-DUP-DESTINATION"], 3)
+        end
+    )
+
+    local function loadRoblox(): any
+        local ok, roblox = pcall(function()
+            return require("@lune/roblox")
+        end)
+        if ok then
+            return roblox
+        end
+        return nil
+    end
+
+    suite:test("static rules fail a nested scroller and rows that overlap in a scroller", function()
+        local roblox = loadRoblox()
+        if roblox == nil then
+            print("  (skipped: needs the Lune runtime)")
+            return
+        end
+        local function make(className: string, parent: any?, name: string): any
+            local instance = roblox.Instance.new(className)
+            instance.Name = name
+            instance.Parent = parent
+            return instance
+        end
+        local root = make("Frame", nil, "Root")
+        local outer = make("ScrollingFrame", root, "Outer")
+        outer.AutomaticCanvasSize = roblox.Enum.AutomaticSize.Y
+        make("UIPadding", outer, "Pad")
+        local inner = make("ScrollingFrame", outer, "Inner")
+        inner.AutomaticCanvasSize = roblox.Enum.AutomaticSize.Y
+        make("UIPadding", inner, "Pad")
+        local counts = Finding.countByRule(StaticRules.auditRoot(root, "synthetic"))
+        harness.equal(counts["UI-SCROLL-DEPTH"], 1)
+
+        local shop = make("Frame", nil, "Shop")
+        local list = make("ScrollingFrame", shop, "Rows")
+        list.Size = roblox.UDim2.fromOffset(300, 100)
+        list.CanvasSize = roblox.UDim2.fromOffset(0, 400)
+        list.AutomaticCanvasSize = roblox.Enum.AutomaticSize.None
+        list:SetAttribute("CanvasUpdater", true)
+        make("UIPadding", list, "Pad")
+        for index, y in { 0, 40, 200 } do
+            local row = make("Frame", list, `Row{index}`)
+            row.Position = roblox.UDim2.fromOffset(0, y)
+            row.Size = roblox.UDim2.fromOffset(300, 60)
+        end
+        local shopCounts = Finding.countByRule(StaticRules.auditRoot(shop, "synthetic"))
+        harness.equal(shopCounts["UI-SCROLL-OVERLAP"], 1)
+        harness.isTrue(shopCounts["UI-SCROLL-OUTSIDE"] == nil)
+    end)
+
+    suite:test("static rules fail list rows past a fixed canvas and pass a spaced list", function()
+        local roblox = loadRoblox()
+        if roblox == nil then
+            print("  (skipped: needs the Lune runtime)")
+            return
+        end
+        local function build(canvasHeight: number): any
+            local root = roblox.Instance.new("Frame")
+            local list = roblox.Instance.new("ScrollingFrame")
+            list.Name = "Rows"
+            list.Size = roblox.UDim2.fromOffset(300, 100)
+            list.AutomaticCanvasSize = roblox.Enum.AutomaticSize.None
+            list.CanvasSize = roblox.UDim2.fromOffset(0, canvasHeight)
+            list:SetAttribute("CanvasUpdater", true)
+            list.Parent = root
+            roblox.Instance.new("UIPadding").Parent = list
+            local layout = roblox.Instance.new("UIListLayout")
+            layout.Padding = roblox.UDim.new(0, 8)
+            layout.Parent = list
+            for index = 1, 3 do
+                local row = roblox.Instance.new("Frame")
+                row.Name = `Row{index}`
+                row.Size = roblox.UDim2.fromOffset(300, 60)
+                row.LayoutOrder = index
+                row.Parent = list
+            end
+            return root
+        end
+        harness.equal(
+            Finding.countByRule(StaticRules.auditRoot(build(100), "s"))["UI-SCROLL-OUTSIDE"],
+            1
+        )
+        harness.isTrue(
+            Finding.countByRule(StaticRules.auditRoot(build(196), "s"))["UI-SCROLL-OUTSIDE"] == nil
+        )
     end)
 end

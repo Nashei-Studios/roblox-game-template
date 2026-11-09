@@ -81,19 +81,38 @@ function GateRules.duplicateDestinations(
     return out
 end
 
---- UI-DUP-DESTINATION over a registry: the controls whose button shows on `scheme`.
+--- The screen of a control: "hud" unless it declares another.
+local function screenOf(control: ControlRegistry.Control): string
+    return control.screen or "hud"
+end
+
+--- UI-DUP-DESTINATION over a registry: per screen, the controls whose button shows on `scheme`.
 function GateRules.registryDuplicates(
     scope: string,
     registry: ControlRegistry.Registry,
     scheme: string
 ): { Finding }
-    local items: { Destination } = {}
+    local screens: { [string]: { Destination } } = {}
+    local order: { string } = {}
     for _, control in ControlRegistry.onScheme(registry, scheme) do
         if control.destination ~= nil then
-            table.insert(items, { name = control.id, destination = control.destination })
+            local screen = screenOf(control)
+            if screens[screen] == nil then
+                screens[screen] = {}
+                table.insert(order, screen)
+            end
+            table.insert(screens[screen], { name = control.id, destination = control.destination })
         end
     end
-    return GateRules.duplicateDestinations(scope, scheme, items)
+    local out: { Finding } = {}
+    for _, screen in order do
+        for _, finding in
+            GateRules.duplicateDestinations(`{scope}/{screen}`, scheme, screens[screen])
+        do
+            table.insert(out, finding)
+        end
+    end
+    return out
 end
 
 --- The scroll offsets a scroller is checked at: start, middle and end of its travel. A canvas
@@ -311,7 +330,8 @@ function GateRules.touchLocomotion(
     return out
 end
 
---- Button counts per scheme for the HUD controls of a registry (UI-BUTTON-LIMIT, kind "hud").
+--- UI-BUTTON-LIMIT over a registry: the buttons shown per screen and scheme. The "hud" screen
+--- uses the HUD limit, every other screen the menu limit.
 function GateRules.registryButtonLimits(
     scope: string,
     registry: ControlRegistry.Registry,
@@ -319,9 +339,23 @@ function GateRules.registryButtonLimits(
 ): { Finding }
     local out: { Finding } = {}
     for _, scheme in InputScheme.ALL do
-        local count = #ControlRegistry.onScheme(registry, scheme)
-        for _, finding in GateRules.buttonLimit(scope, "hud", scheme, count, gates) do
-            table.insert(out, finding)
+        local counts: { [string]: number } = {}
+        local order: { string } = {}
+        for _, control in ControlRegistry.onScheme(registry, scheme) do
+            local screen = screenOf(control)
+            if counts[screen] == nil then
+                counts[screen] = 0
+                table.insert(order, screen)
+            end
+            counts[screen] += 1
+        end
+        for _, screen in order do
+            local kind = if screen == "hud" then "hud" else "menu"
+            for _, finding in
+                GateRules.buttonLimit(`{scope}/{screen}`, kind, scheme, counts[screen], gates)
+            do
+                table.insert(out, finding)
+            end
         end
     end
     return out

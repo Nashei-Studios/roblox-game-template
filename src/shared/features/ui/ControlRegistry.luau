@@ -18,6 +18,9 @@ export type Control = {
     -- Schemes where the BUTTON is shown. The others never see it. May be empty only when `hints`
     -- covers the control (a key-only control, e.g. run on keyboard and gamepad).
     schemes: { InputScheme.Scheme },
+    -- The screen the control lives on: "hud" (default) or a menu id. Button limits and duplicate
+    -- destinations are checked per screen.
+    screen: string?,
     -- What the control opens or does ("menu:shop", "action:emote"). Two visible controls with the
     -- same destination on one scheme fail UI-DUP-DESTINATION. Nil = nothing to compare.
     destination: string?,
@@ -109,10 +112,7 @@ function ControlRegistry.visibleOn(
 end
 
 --- The controls whose BUTTON is shown on `scheme`, in registration order.
-function ControlRegistry.onScheme(
-    registry: Registry,
-    scheme: InputScheme.Scheme
-): { Control }
+function ControlRegistry.onScheme(registry: Registry, scheme: InputScheme.Scheme): { Control }
     local out: { Control } = {}
     for _, id in registry.order do
         local control = registry.controls[id]

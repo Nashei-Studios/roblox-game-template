@@ -176,6 +176,8 @@ function MenuShell.new(env: UiEnv.UiEnv, parent: Instance, options: Options): Sh
     self.list = list
 
     local previousSelection: GuiObject? = nil
+    -- Bumped on every open and close so a finished close tween cannot hide a menu that reopened.
+    local transition = 0
 
     function self.resize(_self: Shell, newEnv: UiEnv.UiEnv)
         local box = Breakpoints.menuBox(options.kind, newEnv.deviceClass, newEnv.viewport)
@@ -191,6 +193,8 @@ function MenuShell.new(env: UiEnv.UiEnv, parent: Instance, options: Options): Sh
 
     function self.setVisible(_self: Shell, visible: boolean)
         local reduced = options.reducedMotion ~= nil and options.reducedMotion()
+        transition += 1
+        local current = transition
         if visible then
             previousSelection = GuiService.SelectedObject
             root.Visible = true
@@ -206,9 +210,24 @@ function MenuShell.new(env: UiEnv.UiEnv, parent: Instance, options: Options): Sh
             end
             GuiService.SelectedObject = close
         else
-            root.Visible = false
             if GuiService.SelectedObject == close or GuiService.SelectedObject == nil then
                 GuiService.SelectedObject = previousSelection
+            end
+            if reduced or not root.Visible then
+                root.Visible = false
+            else
+                -- The declared close transition (UiGates.MenuMotion.close, ADR 0061).
+                local tween = TweenService:Create(
+                    scale,
+                    TweenInfo.new(tokens.motionSeconds, Enum.EasingStyle.Quad),
+                    { Scale = OPEN_FROM_SCALE }
+                )
+                tween.Completed:Once(function()
+                    if transition == current then
+                        root.Visible = false
+                    end
+                end)
+                tween:Play()
             end
         end
     end
