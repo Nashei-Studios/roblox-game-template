@@ -9,6 +9,8 @@
 ]]
 
 local Finding = require("./Finding")
+local GateRules = require("./GateRules")
+local UiGates = require("../UiGates")
 
 export type Inspectable = any
 export type Finding = Finding.Finding
@@ -138,6 +140,110 @@ local function checkScroller(
     end
 end
 
+--- UI-SCROLL-DEPTH: scrollers nested past the configured depth.
+local function checkScrollDepth(
+    root: Inspectable,
+    scope: string,
+    instance: Inspectable,
+    out: { Finding },
+    gates: UiGates.Gates
+)
+    if not instance:IsA("ScrollingFrame") then
+        return
+    end
+    local depth = 0
+    local current = instance
+    while current ~= nil and current ~= root.Parent do
+        if current:IsA("ScrollingFrame") then
+            depth += 1
+        end
+        current = current.Parent
+    end
+    for _, finding in GateRules.scrollDepth(scope, pathOf(root, instance), depth, gates) do
+        table.insert(out, finding)
+    end
+end
+
+local function udimPixels(udim: Inspectable, basis: number): number
+    return udim.Scale * basis + udim.Offset
+end
+
+--- UI-SCROLL-OVERLAP and UI-SCROLL-OUTSIDE: the layout of a scroller's children is computed from
+--- its properties (list order, padding, offset sizes) and checked at every scroll position.
+--- A scroller whose children are sized by the canvas itself, or laid out by a grid, is left to
+--- the runtime audit.
+local function checkScrollLayout(
+    root: Inspectable,
+    scope: string,
+    instance: Inspectable,
+    out: { Finding },
+    gates: UiGates.Gates
+)
+    if not instance:IsA("ScrollingFrame") then
+        return
+    end
+    local viewport = {
+        width = udimPixels(instance.Size.X, StaticRules.REFERENCE_WIDTH),
+        height = udimPixels(instance.Size.Y, StaticRules.REFERENCE_HEIGHT),
+    }
+    local children: { Inspectable } = {}
+    for _, child in instance:GetChildren() do
+        if child:IsA("GuiObject") and child.Visible then
+            table.insert(children, child)
+        end
+    end
+    if #children == 0 then
+        return
+    end
+    local list = instance:FindFirstChildOfClass("UIListLayout")
+    local view: GateRules.ScrollView
+    if list ~= nil then
+        if tostring(list.FillDirection) ~= "Enum.FillDirection.Vertical" then
+            return
+        end
+        table.sort(children, function(a: Inspectable, b: Inspectable): boolean
+            return a.LayoutOrder < b.LayoutOrder
+        end)
+        local heights: { number } = {}
+        for _, child in children do
+            if child.Size.Y.Scale ~= 0 then
+                return
+            end
+            table.insert(heights, child.Size.Y.Offset)
+        end
+        local padding = udimPixels(list.Padding, viewport.height)
+        local rects = GateRules.listRects(heights, padding, viewport.width)
+        local extent = GateRules.listExtent(heights, padding)
+        local automatic = tostring(instance.AutomaticCanvasSize) ~= "Enum.AutomaticSize.None"
+        local canvasHeight = if automatic
+            then extent
+            else udimPixels(instance.CanvasSize.Y, viewport.height)
+        view = {
+            viewport = viewport,
+            canvas = { width = viewport.width, height = canvasHeight },
+            children = rects,
+        }
+    else
+        local canvas = {
+            width = math.max(viewport.width, udimPixels(instance.CanvasSize.X, viewport.width)),
+            height = math.max(viewport.height, udimPixels(instance.CanvasSize.Y, viewport.height)),
+        }
+        local rects: { GateRules.Rect } = {}
+        for _, child in children do
+            table.insert(rects, {
+                x = udimPixels(child.Position.X, canvas.width),
+                y = udimPixels(child.Position.Y, canvas.height),
+                width = udimPixels(child.Size.X, canvas.width),
+                height = udimPixels(child.Size.Y, canvas.height),
+            })
+        end
+        view = { viewport = viewport, canvas = canvas, children = rects }
+    end
+    for _, finding in GateRules.scrollLayout(scope, pathOf(root, instance), view, gates) do
+        table.insert(out, finding)
+    end
+end
+
 --- UI-TEXT-FIT: a text either scales inside a size constraint or declares a fit helper.
 local function checkText(root: Inspectable, scope: string, instance: Inspectable, out: { Finding })
     if
@@ -220,8 +326,10 @@ local function checkStroke(
     end
 end
 
---- Audits one root (and everything under it). `scope` names the file or piece.
-function StaticRules.auditRoot(root: Inspectable, scope: string): { Finding }
+--- Audits one root (and everything under it). `scope` names the file or piece. `gates` are the
+--- configured limits (UiGates.default() when nil).
+function StaticRules.auditRoot(root: Inspectable, scope: string, gates: UiGates.Gates?): { Finding }
+    local limits = gates or UiGates.default()
     local out: { Finding } = {}
     local all: { Inspectable } = { root }
     for _, descendant in root:GetDescendants() do
@@ -230,6 +338,8 @@ function StaticRules.auditRoot(root: Inspectable, scope: string): { Finding }
     for _, instance in all do
         checkSpacing(root, scope, instance, out)
         checkScroller(root, scope, instance, out)
+        checkScrollDepth(root, scope, instance, out, limits)
+        checkScrollLayout(root, scope, instance, out, limits)
         checkText(root, scope, instance, out)
         checkTouch(root, scope, instance, out)
         checkStroke(root, scope, instance, out)

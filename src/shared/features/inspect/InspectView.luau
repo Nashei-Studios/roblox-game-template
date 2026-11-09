@@ -306,12 +306,14 @@ function InspectView.register(registry: ControlRegistry.Registry, config: Config
         id = InspectView.CLOSE_ID,
         purpose = "closes the item viewer; Escape or the pad back button do the same",
         schemes = { InputScheme.TOUCH, InputScheme.KEYBOARD },
+        screen = "inspect",
         hints = if padClose ~= nil then { [InputScheme.GAMEPAD] = padClose } else nil,
     })
     ControlRegistry.register(registry, {
         id = InspectView.OPEN_ID,
         purpose = "opens the 3D viewer of the item of this card",
         schemes = { InputScheme.TOUCH, InputScheme.KEYBOARD },
+        screen = "card",
         hints = if padOpen ~= nil then { [InputScheme.GAMEPAD] = padOpen } else nil,
     })
 end

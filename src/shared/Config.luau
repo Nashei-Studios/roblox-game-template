@@ -11,6 +11,7 @@ local CommunityRewardConfig = require("./features/community-reward/CommunityRewa
 local LeaderboardsConfig = require("./features/leaderboards/LeaderboardsConfig")
 local NotificationsConfig = require("./features/notifications/NotificationsConfig")
 local SoundConfig = require("./features/sound/SoundConfig")
+local UiGates = require("./features/ui/UiGates")
 local WinCondition = require("./features/wincondition/WinCondition")
 local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
 local PerfBudget = require("./perf/PerfBudget")
@@ -337,23 +338,39 @@ Config.default = {
         },
         input = { backKey = "Backspace", backPad = "ButtonB" },
         settings = { volumeStep = 10, sendDebounceSeconds = 0.4 },
+        gates = UiGates.default(),
         menus = {
             { id = "hud", title = "HUD", modal = false },
-            { id = "shop", title = "Shop", modal = true, toggleKey = "B", togglePad = "ButtonY" },
+            {
+                id = "shop",
+                title = "Shop",
+                modal = true,
+                toggleKey = "B",
+                togglePad = "ButtonY",
+                motion = UiGates.defaultMotion(),
+            },
             {
                 id = "rewards",
                 title = "Rewards",
                 modal = true,
                 toggleKey = "R",
                 togglePad = "ButtonX",
+                motion = UiGates.defaultMotion(),
             },
-            { id = "settings", title = "Settings", modal = true, toggleKey = "P" },
+            {
+                id = "settings",
+                title = "Settings",
+                modal = true,
+                toggleKey = "P",
+                motion = UiGates.defaultMotion(),
+            },
             {
                 id = "boards",
                 title = "Leaderboards",
                 modal = true,
                 toggleKey = "L",
                 togglePad = "DPadUp",
+                motion = UiGates.defaultMotion(),
             },
         },
         strings = {

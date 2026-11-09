@@ -1,7 +1,7 @@
 --!strict
 --[[
     Static UI audit gate (docs/ui-audit.md): `lune run scripts/ui-audit [report.json]`.
-    Reads every committed assets/ui/**/*.rbxm (none in the template itself), applies StaticRules, then scans src/*.luau with SourceRules, and exits 1 with one line per
+    Reads every committed assets/ui/**/*.rbxm (none in the template itself), applies StaticRules, scans src/*.luau with SourceRules, checks the declared controls and menu motion (ConfigAudit), and exits 1 with one line per
     finding (file, path, rule). No Studio. The runtime half is run in a playtest (RuntimeAudit).
 ]]
 
@@ -10,6 +10,8 @@ local process = require("@lune/process")
 local roblox = require("@lune/roblox")
 local serde = require("@lune/serde")
 
+local Config = require("../src/shared/Config")
+local ConfigAudit = require("../src/shared/features/ui/audit/ConfigAudit")
 local Finding = require("../src/shared/features/ui/audit/Finding")
 local SourceRules = require("../src/shared/features/ui/audit/SourceRules")
 local StaticRules = require("../src/shared/features/ui/audit/StaticRules")
@@ -46,6 +48,14 @@ local function scanDir(dir: string)
 end
 if fs.isDir("src") then
     scanDir("src")
+end
+
+-- Declaration gate (ADR 0061): menu motion, duplicate destinations, button limits, touch locomotion.
+local ui = Config.default.ui
+if ui ~= nil then
+    for _, finding in ConfigAudit.audit(ui) do
+        table.insert(findings, finding)
+    end
 end
 
 for _, finding in findings do

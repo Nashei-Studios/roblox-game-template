@@ -31,7 +31,8 @@ export type LocomotionConfig = {
     -- Multiplies both speeds while a tool is equipped (1 = no change).
     equippedSpeedMultiplier: number,
     keys: Keys,
-    -- Draw the sprint and equip buttons with the UI system on touch devices.
+    -- Draw the sprint and equip buttons on touch devices. Off by default (ADR 0061): run is the
+    -- joystick pushed to the end and stow is an item slot; no standard game has these buttons.
     touchButtons: boolean,
     animations: Animations,
     equipCooldownSeconds: number,
@@ -53,7 +54,7 @@ function LocomotionConfigModule.default(): LocomotionConfig
         cancelSprintOnStop = true,
         equippedSpeedMultiplier = 1,
         keys = { sprint = { "LeftShift", "ButtonL3" }, equip = { "Q", "ButtonY" } },
-        touchButtons = true,
+        touchButtons = false,
         animations = {},
         equipCooldownSeconds = 0.3,
         swingCooldownSeconds = 0.4,

@@ -60,5 +60,7 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0056](0056-podium3d-world-leaderboard.md) | Podium3D: the top three of a board as avatar statues on a 3-step podium |
 | [0057](0057-tier-model-set-mold.md) | TierModelSet mold: a distinct model, material and color set per tier |
 | [0058](0058-auto-feel-profiles-and-scheduler.md) | AutoFeel mold: one hit-feel pipeline, two voices, and a pure scheduler for automatic mining |
+| [0060](0060-inspect-view-mold.md) | InspectView mold: rotate and zoom one item in a ViewportFrame |
+| [0061](0061-ui-gate-rules.md) | UI gate rules: duplicate destinations, scroll overlap, motion, button limits and touch locomotion |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
