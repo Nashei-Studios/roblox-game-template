@@ -68,9 +68,12 @@ jobs:
     # an older develop. One more run on the combination; PRs and pushes made with GITHUB_TOKEN start no CI.
     needs: plan
     if: needs.plan.outputs.release == 'true'
+    # A called workflow cannot ask for more than its caller grants: the automerge job in ci.yml
+    # needs issues: write to close linked issues, so the gate grants it too (#162).
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     uses: ./.github/workflows/ci.yml
 
   publish:
