@@ -35,7 +35,7 @@ jobs:
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.config.outputs.run == 'true'
       - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
         if: steps.config.outputs.run == 'true'
@@ -49,7 +49,7 @@ jobs:
         run: lune run scripts/own-analytics logs/own-analytics.json 30
       - name: Upload private artifact
         if: steps.config.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: own-analytics
           path: logs/own-analytics.json

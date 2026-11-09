@@ -110,6 +110,41 @@ return function(suite: harness.Harness)
         end
     end)
 
+    suite:test("prepare runs on the raw record before Reconcile", function()
+        local fake = newProfile({ coins = 9 })
+        local store = newStore(fake.profile)
+        local seen: { number } = {}
+        local loaded = ProfileStoreRepository.new(
+            store,
+            newClock().runtime,
+            function(data: Data): { ok: boolean }
+                table.insert(fake.calls, "prepare")
+                table.insert(seen, data.coins)
+                return { ok = true }
+            end
+        )
+            :load("42")
+        harness.isTrue(loaded.ok, "loaded")
+        harness.equal(fake.calls[1], "prepare", "prepare first")
+        harness.equal(fake.calls[2], "Reconcile", "then reconcile")
+        harness.equal(seen[1], 9, "saw the stored data")
+    end)
+
+    suite:test("a failed prepare skips Reconcile and leaves the failure to the service", function()
+        local fake = newProfile({ coins = 9 })
+        local store = newStore(fake.profile)
+        local loaded = ProfileStoreRepository.new(
+            store,
+            newClock().runtime,
+            function(_data: Data): { ok: boolean }
+                return { ok = false }
+            end
+        )
+            :load("42")
+        harness.isTrue(loaded.ok, "the handle is still returned for the service to release")
+        harness.equal(#fake.calls, 0, "Reconcile was not called")
+    end)
+
     suite:test("an unavailable session maps to session_unavailable", function()
         local store = newStore(nil)
         local loaded = ProfileStoreRepository.new(store, newClock().runtime):load("42")

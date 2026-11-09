@@ -11,7 +11,16 @@ local CommunityRewardConfig = require("./features/community-reward/CommunityRewa
 local LeaderboardsConfig = require("./features/leaderboards/LeaderboardsConfig")
 local NotificationsConfig = require("./features/notifications/NotificationsConfig")
 local SoundConfig = require("./features/sound/SoundConfig")
+local UiGates = require("./features/ui/UiGates")
+local WinCondition = require("./features/wincondition/WinCondition")
 local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
+local PerfBudget = require("./perf/PerfBudget")
+local InspectView = require("./features/inspect/InspectView")
+local ItemSlots = require("./features/itemslots/ItemSlots")
+local AutoFeel = require("./features/autofeel/AutoFeel")
+local PodiumConfig = require("./features/podium/PodiumConfig")
+local RarityConfig = require("./features/rarity/RarityConfig")
+local TierModelConfig = require("./features/tiermodels/TierModelConfig")
 local UiConfig = require("./features/ui/UiConfig")
 
 export type ProductConfig = {
@@ -124,11 +133,29 @@ export type GameConfig = {
     -- UI kit, leaderboards and community join reward (issues #23, #25, #36). Optional so a game
     -- can omit what it does not use; the defaults below ship all three (the reward disabled).
     ui: UiConfig.UiConfig?,
+    -- Rarity ladder and effect tiers (ADR 0048); a game overrides the tiers and colors.
+    rarity: RarityConfig.Config?,
+    -- Hotbar of equipped items (ADR 0056): slot count and the keys that select each slot.
+    itemSlots: ItemSlots.Config?,
+    -- 3D item viewer (ADR 0060): rotation and zoom limits, input speeds and the keys that close it.
+    inspect: InspectView.Config?,
     leaderboards: LeaderboardsConfig.LeaderboardsConfig?,
+    -- 3D podium of a board's top three (ADR 0056); a game sets the board, words and animation.
+    podium: PodiumConfig.PodiumConfig?,
+    -- A distinct model, material and color set per tier (ADR 0057); a game lists its own tiers.
+    tierModels: TierModelConfig.Config?,
+    -- Feel of an automatic miner (ADR 0058); a game with no auto drill leaves it as is, unused.
+    autoFeel: AutoFeel.AutoFeelConfig?,
     communityReward: CommunityRewardConfig.CommunityRewardConfig?,
+    -- Win condition (vault ADR 0032): empty in the template, filled at stage 1 of a game.
+    winCondition: WinCondition.WinConditionConfig?,
 }
 
 local Config = {}
+
+-- Largest integer a Luau number holds exactly (2^53); ProductGrants rejects a larger grant, so a
+-- product configured above it would charge Robux and never deliver.
+Config.MAX_GRANT_COINS = 2 ^ 53
 
 -- Platform bounds of one Robux transfer (docs: production/monetization/robux-transfers).
 Config.ROBUX_TRANSFER_PLATFORM_MIN = 10
@@ -136,6 +163,8 @@ Config.ROBUX_TRANSFER_PLATFORM_MAX = 500
 
 Config.default = {
     gameName = "My Game", -- TODO(victor): set the game name
+    -- Stage 1 of a game fills this (docs/win-condition-checklist.md); `lune run scripts/win-condition --strict`.
+    winCondition = WinCondition.empty(),
     sessionLockTimeoutSeconds = 1800,
     autosaveIntervalSeconds = 120,
     purchaseLedgerSize = 50,
@@ -279,6 +308,9 @@ Config.default = {
         minAmount = 10,
         maxAmount = 500,
     },
+    rarity = RarityConfig.default,
+    itemSlots = ItemSlots.default,
+    inspect = InspectView.default,
     -- UI kit: tokens derived for this template (reasons in docs/design/DESIGN.md).
     ui = {
         theme = {
@@ -310,23 +342,39 @@ Config.default = {
         },
         input = { backKey = "Backspace", backPad = "ButtonB" },
         settings = { volumeStep = 10, sendDebounceSeconds = 0.4 },
+        gates = UiGates.default(),
         menus = {
             { id = "hud", title = "HUD", modal = false },
-            { id = "shop", title = "Shop", modal = true, toggleKey = "B", togglePad = "ButtonY" },
+            {
+                id = "shop",
+                title = "Shop",
+                modal = true,
+                toggleKey = "B",
+                togglePad = "ButtonY",
+                motion = UiGates.defaultMotion(),
+            },
             {
                 id = "rewards",
                 title = "Rewards",
                 modal = true,
                 toggleKey = "R",
                 togglePad = "ButtonX",
+                motion = UiGates.defaultMotion(),
             },
-            { id = "settings", title = "Settings", modal = true, toggleKey = "P" },
+            {
+                id = "settings",
+                title = "Settings",
+                modal = true,
+                toggleKey = "P",
+                motion = UiGates.defaultMotion(),
+            },
             {
                 id = "boards",
                 title = "Leaderboards",
                 modal = true,
                 toggleKey = "L",
                 togglePad = "DPadUp",
+                motion = UiGates.defaultMotion(),
             },
         },
         strings = {
@@ -352,6 +400,9 @@ Config.default = {
             WeeklyCoins = { stat = "coins", refreshSeconds = 120, size = 10, resetCycle = "weekly" },
         },
     },
+    podium = PodiumConfig.default,
+    tierModels = TierModelConfig.default,
+    autoFeel = AutoFeel.default,
     -- Off until Victor confirms the Community Standards allow rewarding a join (open [GAP]).
     communityReward = {
         enabled = false,
@@ -549,10 +600,15 @@ function Config.validate(config: GameConfig): { string }
         local grant = product.grant
         if grant.kind ~= "coins" then
             table.insert(problems, `developer product "{product.name}" has an unknown grant kind`)
-        elseif grant.amount ~= grant.amount or grant.amount <= 0 or grant.amount % 1 ~= 0 then
+        elseif
+            grant.amount ~= grant.amount
+            or grant.amount <= 0
+            or grant.amount % 1 ~= 0
+            or grant.amount > Config.MAX_GRANT_COINS
+        then
             table.insert(
                 problems,
-                `developer product "{product.name}" grants an invalid amount (must be a positive integer)`
+                `developer product "{product.name}" grants an invalid amount (must be a positive integer up to 2^53)`
             )
         end
     end
@@ -576,6 +632,24 @@ function Config.validate(config: GameConfig): { string }
     validateRobuxTransfers(config, problems)
     if config.ui ~= nil then
         for _, problem in UiConfig.validate(config.ui) do
+            table.insert(problems, problem)
+        end
+    end
+    if config.rarity ~= nil then
+        local surface = if config.ui ~= nil then config.ui.theme.palette.surface else "#171C30"
+        local fx = PerfBudget.clientFx
+        local cap = if fx ~= nil then fx.maxParticlesPerSecond else 0
+        for _, problem in RarityConfig.validate(config.rarity, surface, cap) do
+            table.insert(problems, problem)
+        end
+    end
+    if config.itemSlots ~= nil then
+        for _, problem in ItemSlots.validate(config.itemSlots) do
+            table.insert(problems, problem)
+        end
+    end
+    if config.inspect ~= nil then
+        for _, problem in InspectView.validate(config.inspect) do
             table.insert(problems, problem)
         end
     end

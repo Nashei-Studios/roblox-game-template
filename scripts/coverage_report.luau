@@ -17,7 +17,8 @@ local process = require("@lune/process")
 
 type FileStats = { path: string, hit: number, total: number }
 
-local EXCLUDED_PREFIXES: { string } = { "src/shared/ports/" }
+-- src/client is engine presenters (Instances); its rules live in pure modules under src/shared.
+local EXCLUDED_PREFIXES: { string } = { "src/shared/ports/", "src/client/" }
 local EXCLUDED_SEGMENTS: { string } = { "vendor", "types", "tests", "generated" }
 
 local function normalize(path: string): string

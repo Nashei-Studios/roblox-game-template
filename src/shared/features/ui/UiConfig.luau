@@ -11,6 +11,7 @@
 
 local Contrast = require("./Contrast")
 local RewardConfig = require("../rewards/RewardConfig")
+local UiGates = require("./UiGates")
 
 export type Palette = {
     background: string,
@@ -74,6 +75,9 @@ export type MenuConfig = {
     -- Keyboard key and gamepad button names (Enum.KeyCode members) that toggle the menu.
     toggleKey: string?,
     togglePad: string?,
+    -- Open/close transition and button feedback; required of a modal menu by the UI audit
+    -- (UI-MOTION-MISSING, docs/adr/0061).
+    motion: UiGates.MenuMotion?,
 }
 
 export type Strings = {
@@ -97,6 +101,8 @@ export type UiConfig = {
     strings: Strings,
     input: Input,
     settings: Settings,
+    -- Limits the UI audit enforces (docs/adr/0061).
+    gates: UiGates.Gates,
 }
 
 local UiConfigModule = {}
@@ -311,6 +317,9 @@ function UiConfigModule.validate(config: UiConfig): { string }
                 `ui.input back binding "{binding}" is also used by menu "{keys[binding]}"`
             )
         end
+    end
+    for _, problem in UiGates.validate(config.gates) do
+        table.insert(problems, problem)
     end
     local step = config.settings.volumeStep
     if not RewardConfig.isPositiveInteger(step) or step > 100 then

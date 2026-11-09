@@ -27,6 +27,10 @@ export type BoardConfig = {
 export type LeaderboardsConfig = {
     -- Stats shown as leaderstats next to the player name (at most MAX_LEADERSTATS).
     leaderstats: { string },
+    -- Game-defined stats the server injects into `Leaderboards.Deps.extraFor` (for example a count per UTC
+    -- day from progress/ProgressRules.newDailyCounter). Boards and leaderstats may then use them.
+    -- The server supplies the values through `Leaderboards.Deps.extraFor`.
+    extraStats: { string }?,
     -- Seconds between two rounds of score writes. At least MIN_WRITE_SECONDS.
     writeSeconds: number,
     -- Board id -> board. The id is 1 to MAX_ID_LENGTH characters.
@@ -47,8 +51,11 @@ LeaderboardsConfigModule.SORTED_READS_PER_MINUTE = 5 -- sourced: GetSortedAsync 
 
 local CYCLES: { [string]: boolean } = { never = true, daily = true, weekly = true }
 
-local function isKnownStat(stat: string): boolean
-    return table.find(LeaderboardsConfigModule.STATS, stat) ~= nil
+local function isKnownStat(config: LeaderboardsConfig, stat: string): boolean
+    if table.find(LeaderboardsConfigModule.STATS, stat) ~= nil then
+        return true
+    end
+    return config.extraStats ~= nil and table.find(config.extraStats, stat) ~= nil
 end
 
 --- Board ids in a stable order (map iteration order is not).
@@ -70,9 +77,17 @@ function LeaderboardsConfigModule.validate(config: LeaderboardsConfig): { string
             `leaderboards.leaderstats shows at most {LeaderboardsConfigModule.MAX_LEADERSTATS} stats`
         )
     end
+    local extraStats = config.extraStats
+    if extraStats ~= nil then
+        for _, extra in extraStats do
+            if table.find(LeaderboardsConfigModule.STATS, extra) ~= nil then
+                table.insert(problems, `leaderboards.extraStats repeats built-in stat "{extra}"`)
+            end
+        end
+    end
     local seenStats: { [string]: boolean } = {}
     for _, stat in config.leaderstats do
-        if not isKnownStat(stat) then
+        if not isKnownStat(config, stat) then
             table.insert(problems, `leaderboards.leaderstats has unknown stat "{stat}"`)
         end
         if seenStats[stat] then
@@ -105,7 +120,7 @@ function LeaderboardsConfigModule.validate(config: LeaderboardsConfig): { string
                 `leaderboards board id "{id}" may only use letters, digits and _`
             )
         end
-        if not isKnownStat(board.stat) then
+        if not isKnownStat(config, board.stat) then
             table.insert(problems, `leaderboard "{id}" ranks unknown stat "{board.stat}"`)
         end
         if not CYCLES[board.resetCycle] then

@@ -9,8 +9,14 @@
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 
+local Config = require("../src/shared/Config")
+local AutoFeel = require("../src/shared/features/autofeel/AutoFeel")
+local InspectView = require("../src/shared/features/inspect/InspectView")
 local PerfBudget = require("../src/shared/perf/PerfBudget")
+local PodiumConfig = require("../src/shared/features/podium/PodiumConfig")
+local RarityConfig = require("../src/shared/features/rarity/RarityConfig")
 local RemoteBudget = require("../src/shared/perf/RemoteBudget")
+local TierModelConfig = require("../src/shared/features/tiermodels/TierModelConfig")
 
 local schemaPath = process.args[1] or "net/schema.zap"
 local parsed = RemoteBudget.parseSchema(fs.readFile(schemaPath))
@@ -41,6 +47,85 @@ print(
 print(
     `server -> client: {report.serverToClientBytesPerSecond} B/s of {PerfBudget.serverToClientBytesPerSecond}`
 )
+-- World podium (ADR 0056): the configured refresh must respect the budget floor.
+local podiumBudget = PerfBudget.podium
+local podiumConfig = Config.default.podium
+if podiumBudget ~= nil and podiumConfig ~= nil then
+    local problems = PodiumConfig.problems(
+        podiumConfig,
+        Config.default.rarity or RarityConfig.default,
+        podiumBudget.minRefreshSeconds
+    )
+    for _, problem in problems do
+        table.insert(report.failures, problem)
+    end
+    print(
+        `podium: refresh {podiumConfig.refreshSeconds}s (min {podiumBudget.minRefreshSeconds}s), parts cap {podiumBudget.maxParts}`
+    )
+end
+-- Tier models (ADR 0057): parts, triangles and distinct silhouettes per tier.
+local tierBudget = PerfBudget.tierModels
+local tierConfig = Config.default.tierModels
+if tierBudget ~= nil and tierConfig ~= nil then
+    local problems = TierModelConfig.problems(
+        tierConfig,
+        Config.default.rarity or RarityConfig.default,
+        tierBudget
+    )
+    for _, problem in problems do
+        table.insert(report.failures, problem)
+    end
+    for _, tier in tierConfig.tiers do
+        local parts, triangles = TierModelConfig.cost(tier.recipe)
+        print(
+            `tier {tier.tierId}: {parts} parts of {tierBudget.maxPartsPerNode}, ~{triangles} triangles of {tierBudget.maxTrianglesPerNode}`
+        )
+    end
+    print(
+        `tier models: at most {tierBudget.maxVisibleNodes} nodes in view = {tierBudget.maxVisibleNodes * tierBudget.maxPartsPerNode} parts`
+    )
+end
+-- Auto mining visuals (ADR 0058): popups per second and instances per second for a full lobby.
+local autoBudget = PerfBudget.autoFeel
+local autoConfig = Config.default.autoFeel
+if autoBudget ~= nil and autoConfig ~= nil then
+    for _, problem in AutoFeel.validate(autoConfig) do
+        table.insert(report.failures, problem)
+    end
+    local popups = AutoFeel.popupsPerSecond(autoConfig)
+    local instances = autoBudget.playersInView
+        * AutoFeel.swingsPerSecond(autoConfig)
+        * autoBudget.instancesPerSwing
+    if popups > autoBudget.maxPopupsPerSecond then
+        table.insert(
+            report.failures,
+            `auto feel popups {popups}/s exceed {autoBudget.maxPopupsPerSecond}/s`
+        )
+    end
+    if instances > autoBudget.maxInstancesPerSecond then
+        table.insert(
+            report.failures,
+            `auto feel instances {instances}/s exceed {autoBudget.maxInstancesPerSecond}/s`
+        )
+    end
+    print(
+        `auto feel: {popups} popups/s of {autoBudget.maxPopupsPerSecond}, {instances} instances/s for {autoBudget.playersInView} players of {autoBudget.maxInstancesPerSecond}`
+    )
+end
+-- Item viewer (ADR 0060): the config must be valid and the budget must allow one WorldModel.
+local inspectBudget = PerfBudget.inspect
+local inspectConfig = Config.default.inspect
+if inspectBudget ~= nil and inspectConfig ~= nil then
+    for _, problem in InspectView.validate(inspectConfig) do
+        table.insert(report.failures, problem)
+    end
+    for _, problem in InspectView.budgetProblems(inspectBudget.maxParts, 1, inspectBudget) do
+        table.insert(report.failures, problem)
+    end
+    print(
+        `inspect: up to {inspectBudget.maxParts} parts, {inspectBudget.maxWorldModels} WorldModel, open under {inspectBudget.maxOpenMs} ms`
+    )
+end
 if #report.failures > 0 then
     for _, failure in report.failures do
         print(`FAIL {failure}`)

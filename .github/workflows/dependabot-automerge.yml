@@ -1,0 +1,45 @@
+name: dependabot-automerge
+
+# Minor and patch Dependabot PRs into develop squash-merge themselves once the CI gate is green (ADR gitflow).
+# Majors stay open for a decision. pull_request_target gives Dependabot runs a write token; it never checks
+# out or runs the PR code. Off until the repo variable AUTOMERGE_ENABLED is "true".
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  merge:
+    if: github.actor == 'dependabot[bot]' && vars.AUTOMERGE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        with:
+          github-token: ${{ github.token }}
+      - name: Wait for the gate, then squash-merge
+        if: steps.meta.outputs.update-type == 'version-update:semver-minor' || steps.meta.outputs.update-type == 'version-update:semver-patch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          for _ in $(seq 1 45); do
+            state=$(gh api "repos/$REPO/commits/$SHA/check-runs" --jq '
+              [.check_runs[] | select(.name == "check" or .name == "analyze" or .name == "test")]
+              | "\(length) \(map(select(.status != "completed")) | length) \(map(select(.conclusion == "failure" or .conclusion == "cancelled")) | length)"')
+            set -- $state
+            if [ "$3" -gt 0 ]; then echo "Gate failed, leaving the PR open"; exit 0; fi
+            if [ "$1" -ge 3 ] && [ "$2" -eq 0 ]; then gh pr merge "$PR" --repo "$REPO" --squash; exit 0; fi
+            sleep 30
+          done
+          echo "Gate did not finish in time, leaving the PR open"

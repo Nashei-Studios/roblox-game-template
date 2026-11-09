@@ -35,6 +35,57 @@ export type Runtime = {
     receiveKbpsPerPlayer: number,
 }
 
+-- Client per-frame work the rarity language may add (ADR 0048). Read by RarityConfig tests and by
+-- the shimmer clock; a game lowers these, never raises them without measuring on a phone.
+export type ClientFx = {
+    -- Shimmer gradients animated at once; the rest render static. One Heartbeat step moves all.
+    maxLiveShimmers: number,
+    -- World emitters alive at once; the rest keep color and light but no particles.
+    maxLiveEmitters: number,
+    -- Particles per second one emitter may spawn at the high quality tier.
+    maxParticlesPerSecond: number,
+    -- Light beams a reveal draws at once (ADR 0054). They rotate as ONE group, so the per-frame cost
+    -- is a single Rotation write whatever the count; the cap bounds the instances, not the frames.
+    maxRevealBeams: number,
+}
+
+-- World podium (ADR 0056). The statues are server-built and anchored, so the cost is parts and
+-- web calls, not frames; the only client work is the optional idle animation.
+export type PodiumBudget = {
+    -- Parts of the whole podium: 3 steps, 3 plates and 3 avatar statues (a statue is ~15 parts
+    -- plus accessories). The stage reports when a build goes over.
+    maxParts: number,
+    -- Floor for PodiumConfig.refreshSeconds: each refresh may cost a GetSortedAsync (5 per
+    -- minute per server) and up to three avatar loads.
+    minRefreshSeconds: number,
+    -- Statues animated at once (idle animation); the rest hold the static pose.
+    maxAnimatedStatues: number,
+}
+
+-- World nodes with a model per tier (ADR 0057). The parts are built once into a pool and re-posed
+-- when the tier changes, so the cost is the standing parts and triangles, not allocations.
+export type TierModelBudget = {
+    -- Parts one node (rock, ore, slab) may use, whatever its tier.
+    maxPartsPerNode: number,
+    -- Upper bound of triangles per node (TierModelConfig.TRIANGLES per shape).
+    maxTrianglesPerNode: number,
+    -- Nodes drawn at once; the total standing cost is this times the per-node figures.
+    maxVisibleNodes: number,
+}
+
+-- Auto mining visuals (ADR 0058). Counts what the client creates or replicates, not frames: the
+-- popups and chips are pooled, so the only new instance is the swing's toolanim value.
+export type AutoFeelBudget = {
+    -- Popups one player may show per second (aggregated popups).
+    maxPopupsPerSecond: number,
+    -- Instances created per auto swing (the toolanim StringValue; it replicates to the others).
+    instancesPerSwing: number,
+    -- Players mining automatically in one server whose swings one client sees.
+    playersInView: number,
+    -- Cap of instances created or replicated per second across `playersInView`.
+    maxInstancesPerSecond: number,
+}
+
 export type Budget = {
     -- Bytes added per remote message on top of the Zap payload.
     perEventOverheadBytes: number,
@@ -50,6 +101,26 @@ export type Budget = {
     serverRemotes: { [string]: ServerSendRate },
     -- Runtime figures the dev probe checks.
     runtime: Runtime,
+    -- Per-frame client work of RarityFx; optional so a budget literal without it stays valid.
+    clientFx: ClientFx?,
+    -- World podium limits; optional so a budget literal without it stays valid.
+    podium: PodiumBudget?,
+    -- Per-tier world models; optional so a budget literal without it stays valid.
+    tierModels: TierModelBudget?,
+    -- Auto mining visuals; optional so a budget literal without it stays valid.
+    autoFeel: AutoFeelBudget?,
+    -- 3D item viewer (ADR 0060); optional so a budget literal without it stays valid.
+    inspect: InspectBudget?,
+}
+
+-- Item viewer (ADR 0060): one ViewportFrame with one WorldModel holding one model, built on open.
+export type InspectBudget = {
+    -- Parts of the model shown. The in-hand pickaxe of a game is the model, so this bounds it.
+    maxParts: number,
+    -- WorldModels alive in PlayerGui at once: 1 open, 0 closed.
+    maxWorldModels: number,
+    -- Time from tap to the first painted frame on the poorest client, milliseconds.
+    maxOpenMs: number,
 }
 
 local PerfBudget: Budget = {
@@ -79,6 +150,7 @@ local PerfBudget: Budget = {
         CoinsChanged = { maxPerSecond = 2 },
         -- Engagement modules (ADR 0025).
         Notify = { maxPerSecond = 4 }, -- chosen, not sourced: a few toasts per second at most
+        AnnounceMilestone = { maxPerSecond = 1 }, -- chosen, not sourced: milestones are rare
         SoundSettings = { maxPerSecond = 2 }, -- chosen, not sourced
     },
     runtime = {
@@ -88,6 +160,33 @@ local PerfBudget: Budget = {
         memoryPerPlayerMib = 100, -- sourced: 100 MiB per connected player (performance-optimization/identify)
         sendKbpsPerPlayer = 4, -- chosen, not sourced: the docs give no Kbps figure
         receiveKbpsPerPlayer = 2, -- chosen, not sourced: the docs give no Kbps figure
+    },
+    clientFx = {
+        maxLiveShimmers = 8, -- chosen, not measured: a screenful of cards, one property write each per frame
+        maxLiveEmitters = 4, -- chosen, not measured: Roblox publishes no emitter count for phones
+        maxParticlesPerSecond = 12, -- chosen, not measured: small bursts read as a sparkle, not a cloud
+        maxRevealBeams = 8, -- chosen, not measured: eight thin frames in one rotating group
+    },
+    podium = {
+        maxParts = 96, -- chosen, not measured: 3 steps + 3 plates + 3 statues of about 30 parts with accessories
+        minRefreshSeconds = 60, -- chosen, not sourced: keeps the GetSortedAsync budget of 5 per minute (docs/performance.md)
+        maxAnimatedStatues = 3, -- chosen, not measured: one idle loop per statue
+    },
+    tierModels = {
+        maxPartsPerNode = 24, -- chosen, not measured: a rock reads with a handful of chunky parts
+        maxTrianglesPerNode = 600, -- chosen, not measured: Roblox publishes no per-node figure for phones
+        maxVisibleNodes = 6, -- chosen, not measured: a slab plus a few ore nodes in view
+    },
+    autoFeel = {
+        maxPopupsPerSecond = 1.25, -- chosen, not measured: about one aggregated popup per second
+        instancesPerSwing = 1, -- the toolanim StringValue; popups, chips and sounds are pooled
+        playersInView = 12, -- chosen: a full server of auto miners all in one lobby
+        maxInstancesPerSecond = 30, -- chosen, not measured: Roblox publishes no per-second figure
+    },
+    inspect = {
+        maxParts = 40, -- chosen, not measured: above the 24 of a tier node, a tool plus its glow
+        maxWorldModels = 1, -- the acceptance rule: 0 closed, 1 open, 0 after closing
+        maxOpenMs = 200, -- chosen: the issue target, to be measured on the poorest client
     },
 }
 

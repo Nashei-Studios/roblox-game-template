@@ -18,6 +18,37 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/features/analytics/AnalyticsTracker.test"),
     },
     { name = "Flags", register = require("../tests/features/flags/Flags.test") },
+    { name = "AutoFeel", register = require("../tests/features/autofeel/AutoFeel.test") },
+    { name = "Locomotion", register = require("../tests/features/locomotion/Locomotion.test") },
+    { name = "Hub", register = require("../tests/features/hub/Hub.test") },
+    {
+        name = "MomentDirector",
+        register = require("../tests/features/clipmoment/MomentDirector.test"),
+    },
+    {
+        name = "MomentSettings",
+        register = require("../tests/features/clipmoment/MomentSettings.test"),
+    },
+    { name = "Music", register = require("../tests/features/music/Music.test") },
+    { name = "Presence", register = require("../tests/features/presence/Presence.test") },
+    { name = "Podium", register = require("../tests/features/podium/Podium.test") },
+    {
+        name = "TierModelSet",
+        register = require("../tests/features/tiermodels/TierModelSet.test"),
+    },
+    {
+        name = "TierSurface",
+        register = require("../tests/features/tiermodels/TierSurface.test"),
+    },
+    { name = "MoodResolver", register = require("../tests/features/music/MoodResolver.test") },
+    {
+        name = "SharedObjective",
+        register = require("../tests/features/sharedobjective/SharedObjective.test"),
+    },
+    {
+        name = "WinCondition",
+        register = require("../tests/features/wincondition/WinCondition.test"),
+    },
     {
         name = "ReceiptDelivery",
         register = require("../tests/features/monetization/ReceiptDelivery.test"),
@@ -102,6 +133,10 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/adapters/RobloxAdService.test"),
     },
     {
+        name = "Announcer (adapter and presenter)",
+        register = require("../tests/adapters/Announcer.test"),
+    },
+    {
         name = "RobloxServerContext (adapter)",
         register = require("../tests/adapters/RobloxServerContext.test"),
     },
@@ -154,6 +189,8 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/adapters/RemoteNotifier.test"),
     },
     { name = "Ui", register = require("../tests/features/ui/Ui.test") },
+    { name = "UiAudit", register = require("../tests/features/ui/UiAudit.test") },
+    { name = "UiSystem", register = require("../tests/features/uisystem/UiSystem.test") },
     {
         name = "Leaderboards",
         register = require("../tests/features/leaderboards/Leaderboards.test"),
@@ -161,6 +198,10 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     {
         name = "CommunityReward",
         register = require("../tests/features/community-reward/CommunityReward.test"),
+    },
+    {
+        name = "CommunityPerk",
+        register = require("../tests/features/community-reward/CommunityPerk.test"),
     },
     {
         name = "Leaderboards and Group adapters",
@@ -171,9 +212,73 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/adapters/RobloxGroupMembership.test"),
     },
     {
+        name = "JoinCoordinator",
+        register = require("../tests/features/join/JoinCoordinator.test"),
+    },
+    {
+        name = "JoinPolicy",
+        register = require("../tests/features/join/JoinPolicy.test"),
+    },
+    {
+        name = "FriendBoost",
+        register = require("../tests/features/social/FriendBoost.test"),
+    },
+    {
+        name = "FriendBoostLabel",
+        register = require("../tests/features/social/FriendBoostLabel.test"),
+    },
+    {
+        name = "Invite (reward, referral, ledger)",
+        register = require("../tests/features/social/Invite.test"),
+    },
+    {
+        name = "SocialRuntime",
+        register = require("../tests/features/social/SocialRuntime.test"),
+    },
+    {
+        name = "JoinProbe",
+        register = require("../tests/features/joinprobe/JoinProbe.test"),
+    },
+    {
+        name = "JoinProbeSink",
+        register = require("../tests/features/joinprobe/JoinProbeSink.test"),
+    },
+    {
+        name = "ProfileStoreName",
+        register = require("../tests/features/playerdata/ProfileStoreName.test"),
+    },
+    { name = "Progress", register = require("../tests/features/progress/Progress.test") },
+    { name = "LiveOps", register = require("../tests/features/liveops/LiveOps.test") },
+    { name = "Offers", register = require("../tests/features/offers/Offers.test") },
+    { name = "Quests", register = require("../tests/features/quests/Quests.test") },
+    { name = "HitFx", register = require("../tests/features/hitfx/HitFx.test") },
+    { name = "CardGrid", register = require("../tests/features/ui/CardGrid.test") },
+    {
+        name = "CollectionIndex",
+        register = require("../tests/features/collectionindex/CollectionIndex.test"),
+    },
+    { name = "UiEco", register = require("../tests/features/ui/UiEco.test") },
+    { name = "UiGates", register = require("../tests/features/ui/UiGates.test") },
+    { name = "ItemIcon", register = require("../tests/features/ui/ItemIcon.test") },
+    { name = "ItemSlots", register = require("../tests/features/itemslots/ItemSlots.test") },
+    { name = "InspectView", register = require("../tests/features/inspect/InspectView.test") },
+    { name = "Rarity", register = require("../tests/features/rarity/Rarity.test") },
+    { name = "RevealMoment", register = require("../tests/features/reveal/RevealMoment.test") },
+    { name = "UiAudit", register = require("../tests/features/ui/UiAudit.test") },
+    {
+        name = "TapInput (router and filter)",
+        register = require("../tests/features/input/TapInput.test"),
+    },
+    {
         name = "StudioLockPolicy (hook)",
         register = require("../tests/claude/StudioLockPolicy.test"),
     },
+    { name = "Prop (property-based generator)", register = require("../tests/property/Prop.test") },
+    {
+        name = "Economy and receipts (property-based)",
+        register = require("../tests/property/Economy.property.test"),
+    },
+    { name = "Remote validators (fuzz)", register = require("../tests/fuzz/RemoteFuzz.test") },
 }
 
 local Suites = {}

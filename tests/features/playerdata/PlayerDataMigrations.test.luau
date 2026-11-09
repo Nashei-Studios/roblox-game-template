@@ -7,6 +7,7 @@ local v2Fixture = require("../../fixtures/playerdata/v2")
 local v3Fixture = require("../../fixtures/playerdata/v3")
 local v4Fixture = require("../../fixtures/playerdata/v4")
 local v5Fixture = require("../../fixtures/playerdata/v5")
+local v4ReconciledFixture = require("../../fixtures/playerdata/v4-reconciled")
 
 local function errorKind(result: PlayerDataMigrations.MigrationResult): string
     if result.ok then
@@ -102,6 +103,40 @@ return function(suite: harness.Harness)
         harness.isTrue(result.ok and result.value.redeemedCodes.WELCOME == 1, "codes")
         harness.isTrue(result.ok and result.value.timeRewards.streak == 3, "streak")
         harness.isTrue(result.ok and result.value.settings.musicVolume == 40, "volume")
+    end)
+
+    suite:test("a reconciled v4 record migrates and keeps its data", function()
+        local result = PlayerDataMigrations.migrate(v4ReconciledFixture)
+        harness.isTrue(result.ok, "migrates")
+        if result.ok then
+            harness.equal(result.value.schemaVersion, 5, "schemaVersion")
+            harness.equal(result.value.timeRewards.lastDay, 20000, "lastDay kept")
+            harness.equal(result.value.timeRewards.streak, 3, "streak kept")
+            harness.equal(result.value.settings.musicVolume, 40, "volume kept")
+            harness.equal(result.value.coins, 120, "coins kept")
+        end
+    end)
+
+    suite:test("ignoring unknown keys never accepts a wrong type for a key that is read", function()
+        local function withTime(patch: { [string]: unknown }): string
+            local data = (table.clone(v4ReconciledFixture) :: unknown) :: { [string]: unknown }
+            local time = (table.clone(v4ReconciledFixture.timeRewards) :: unknown) :: {
+                [string]: unknown,
+            }
+            for key, value in patch do
+                time[key] = value
+            end
+            data.timeRewards = time
+            return migrateRaw(data)
+        end
+        harness.equal(withTime({ lastDay = "x" }), "invalid_data", "lastDay type")
+        harness.equal(withTime({ streak = -1 }), "invalid_data", "streak sign")
+        harness.equal(withTime({ extra = "ignored" }), "none", "unknown time key ignored")
+        local settings = (table.clone(v4ReconciledFixture) :: unknown) :: { [string]: unknown }
+        settings.settings = { musicVolume = "loud", future = true }
+        harness.equal(migrateRaw(settings), "invalid_data", "settings type")
+        settings.settings = { musicVolume = 40, future = "ignored" }
+        harness.equal(migrateRaw(settings), "none", "unknown settings key ignored")
     end)
 
     suite:test("v4 with broken engagement state is refused", function()

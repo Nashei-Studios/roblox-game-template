@@ -25,6 +25,8 @@ Assert-True ($r.Code -eq 0) 'accepts a valid slug in dry run'
 Assert-True ($r.Text -match 'gh repo create vruizz22/tap-the-slime --private --template vruizz22/roblox-game-template') 'dry run prints the create command'
 Assert-True ($r.Text -match 'ASPHALT_API_KEY' -and $r.Text -match 'ROBLOX_API_KEY') 'prints env var names'
 Assert-True ($r.Text -match 'Tap The Slime') 'derives the title from the slug'
+Assert-True ($r.Text -match 'docs/win-condition-checklist\.md' -and $r.Text -match 'scripts/win-condition --strict') 'dry run lists the win-condition checklist and gate'
+Assert-True (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'docs/win-condition-checklist.md')) 'the template ships the checklist'
 
 $env:ROBLOX_API_KEY = 'dummy-sentinel-value'
 $r = Invoke-Stamp @('-Slug', 'tap-the-slime', '-DryRun')

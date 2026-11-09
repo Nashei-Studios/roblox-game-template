@@ -93,7 +93,12 @@ local repository = ProfileStoreRepository.new(store, {
     wait = function(seconds: number)
         task.wait(seconds)
     end,
-})
+}, function(data: PlayerData.PlayerData): { ok: boolean }
+    -- Migrate the raw record before Reconcile fills template keys into it.
+    local migrated = PlayerDataMigrations.migrateInPlace(data)
+    local ok: boolean = migrated.ok
+    return { ok = ok }
+end)
 local flags = Flags.new(
     ConfigServiceFlags.new({
         configService = {
@@ -197,10 +202,17 @@ local monetization = MonetizationService.new({
             warn(`Could not grant "{product.name}": {applied.error.kind}`)
             return false
         end
-        local player = Players:GetPlayerByUserId(receipt.playerId)
-        if player ~= nil then
-            -- The wire type is u32: clamp instead of letting a large balance fail the send.
-            net.CoinsChanged.fire(player, math.min(data.coins, MAX_WIRE_COINS))
+        -- The grant is done. Anything that fails from here on must not abort the receipt before it
+        -- is recorded, or Roblox would retry it and deliver the product a second time.
+        local told, failure = pcall(function()
+            local player = Players:GetPlayerByUserId(receipt.playerId)
+            if player ~= nil then
+                -- The wire type is u32: clamp instead of letting a large balance fail the send.
+                net.CoinsChanged.fire(player, math.min(data.coins, MAX_WIRE_COINS))
+            end
+        end)
+        if not told then
+            warn(`Purchase of "{product.name}" delivered, but telling the client failed: {failure}`)
         end
         return true
     end,
@@ -875,6 +887,12 @@ Players.PlayerAdded:Connect(function(player: Player)
                 else failure.kind}`
         )
         player:Kick("Could not load your data. Please rejoin.")
+        return
+    end
+    -- The join yields: if the player left meanwhile, PlayerRemoving found no session to close and
+    -- nobody else would release this one.
+    if player.Parent == nil then
+        playerData:leave(tostring(player.UserId))
         return
     end
     tracker:track("session_start", player.UserId, joined.value.sessionIndex)

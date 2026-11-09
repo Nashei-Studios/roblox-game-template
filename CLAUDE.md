@@ -13,6 +13,7 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - `stylua .` format, `stylua --check .` verify
 - `selene .` lint
 - `lune run scripts/test` unit tests (add new suites to the list in `scripts/suites.luau`)
+- `lune run scripts/ui-audit` static UI audit over `assets/ui` (spacing, scrollers, text fit, 44 px, kit strokes); runtime half in docs/ui-audit.md
 - `pwsh scripts/coverage.ps1` line coverage gate (75 % of the total, ADR 0017)
 - `lune run scripts/perf-budget` worst-case remote bandwidth vs `src/shared/perf/PerfBudget` (ADR 0019); every new remote needs a rate entry there
 - `lune run scripts/own-analytics [out] [days]` own-game Open Cloud analytics (CI only, needs ROBLOX_UNIVERSE_ID and ROBLOX_ANALYTICS_KEY; ADR 0023); never print or commit its values
@@ -27,9 +28,13 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - Errors are values (typed Result), never silently swallowed.
 - Ids (game passes, products) stay `nil` with `-- TODO(victor): set id` until real. Never invent ids.
 - New decision -> new ADR in `docs/adr/`, never edit an accepted one.
-- Conventional Commits in English (`feat|fix|docs|style|refactor|perf|test|chore`); CI checks the PR title. Everything enters `main` by PR with `Closes #N`, "how it was verified" and the ai-log link (`.github/pull_request_template.md`). No AI attribution in commits or PRs.
+- Conventional Commits in English (`feat|fix|docs|style|refactor|perf|test|chore`); CI checks the PR title. Everything enters by PR with `Closes #N`, "how it was verified" and the ai-log link (`.github/pull_request_template.md`). No AI attribution in commits or PRs.
+- Branches (ADR 0039, global gitflow): `develop` is the default branch and takes squash PRs (`Closes #N` works, branch deleted on merge). `main` is production and takes only releases: `gh workflow run release.yml` opens PR `develop -> main` with a merge commit, tags `vX.Y.Z` and publishes the Release with the CHANGELOG. A PR that changes game runtime is opened as draft and is verified in Studio first; marking it ready lets it merge itself when green (repo variable `AUTOMERGE_ENABLED`). Publishing the place and going public stay manual.
 - Coverage gate 75 % (ADR 0017). Work leaves the machine at the first commit: push after every commit. Session with technical decisions -> `docs/ai-logs/YYYY-MM-DD-topic.md` (skill `ai-log`).
 - CI is budget: one trigger per change, no CI on drafts or docs-only changes, `timeout-minutes` on every job, `concurrency` cancel-in-progress. Reproduce failures locally before pushing. Details: skill `github-integrado`.
+
+## UI (ADR 0035)
+- All UI is built with the UI system, never raw `Instance.new` in a presenter: tokens, `SafeAreaRoot`, `Stack`/`ScrollList`/`MenuShell`, kit-skinned components, `DevGuard`. Guide: `docs/ui-system.md`; kit intake: `docs/ui-kit-intake.md`. A new game adapts tokens and picks a kit adapter. `lune run scripts/ui-audit` is part of the gate for committed `assets/ui` pieces.
 
 ## Roblox knowledge (ADR 0021)
 - The `lihfolk` plugin is enabled at project scope from the pinned copy in `D:\Victor\Roblox\kits\lihfolk-vault-v2.5.0\`. Before writing player data, receipts, remotes, monetization or anything with a 2025-2026 limit, price or policy, look it up through the `lihfolk` router (or `python -I "<vault>/_tools/vault.py" "<question>"`) and cite the note titles in the PR.
@@ -55,3 +60,7 @@ Luau/Roblox rules: `~/.claude/rules/luau.md`. Structure, tests, CI: `arquitectur
 - Anything that spends or moves real money; test purchases only on a dev place.
 - Editing Studio-owned content through files (world, terrain, UI) or enabling fully managed Rojo without an ADR.
 - Adding a package manager or dependency without an ADR.
+
+## Team (ADR 0047)
+- Humans work in Studio (Team Create) and agents through Rojo. Each top-level folder has a `RULES.md` with its owner, what is forbidden and how to hand off; read it before touching the folder.
+- The pinned **Agent Board** issue is the message bus: post progress, blockers and handoffs there with an `@mention`, and add the `handoff` label. Never edit art or Studio-owned content through files. Human guide (Spanish): `docs/team-workflow.md`.
