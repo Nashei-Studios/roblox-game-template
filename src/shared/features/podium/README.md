@@ -46,3 +46,10 @@ A client script on a statue; a remote for the board; reading the store per join;
 ## Tests
 
 `tests/features/podium/Podium.test.luau` (config, format, layout, model, names, cache, failure). The stage is engine code and is checked in Studio.
+
+## Placement, scale and tags (found in Studio)
+
+- Statues are placed by their feet: root center = step top + `HipHeight` + half the root height, then the lowest foot is aligned to the step top (`PodiumLayout.rootCenterY`, `feetShift`). Never by bounding box: an accessory that did not weld sat 500 studs away and broke it.
+- The model is parented in the world with the root anchored, accessories without a joint are re-welded (`Humanoid:AddAccessory`), physics settles for 0.1 s, and only then everything is anchored. A part farther than `PodiumLayout.strayRadius(statueScale)` from its step is removed and reported.
+- `layout.statueScale` scales the avatar (`Model:ScaleTo`); the steps are set in the same config. Keep statues about as tall as the camera of the game, or the head leaves the frame.
+- Each place has a plate on the front face (`NormalId.Back` of the plate part, the +Z side) and a screen-sized `BillboardGui` tag at the step edge: pixel size, legible at any distance up to 160 studs, zero parts.
