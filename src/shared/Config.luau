@@ -14,6 +14,7 @@ local SoundConfig = require("./features/sound/SoundConfig")
 local WinCondition = require("./features/wincondition/WinCondition")
 local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
 local PerfBudget = require("./perf/PerfBudget")
+local ItemSlots = require("./features/itemslots/ItemSlots")
 local RarityConfig = require("./features/rarity/RarityConfig")
 local UiConfig = require("./features/ui/UiConfig")
 
@@ -129,6 +130,8 @@ export type GameConfig = {
     ui: UiConfig.UiConfig?,
     -- Rarity ladder and effect tiers (ADR 0048); a game overrides the tiers and colors.
     rarity: RarityConfig.Config?,
+    -- Hotbar of equipped items (ADR 0055): slot count and the keys that select each slot.
+    itemSlots: ItemSlots.Config?,
     leaderboards: LeaderboardsConfig.LeaderboardsConfig?,
     communityReward: CommunityRewardConfig.CommunityRewardConfig?,
     -- Win condition (vault ADR 0032): empty in the template, filled at stage 1 of a game.
@@ -289,6 +292,7 @@ Config.default = {
         maxAmount = 500,
     },
     rarity = RarityConfig.default,
+    itemSlots = ItemSlots.default,
     -- UI kit: tokens derived for this template (reasons in docs/design/DESIGN.md).
     ui = {
         theme = {
@@ -594,6 +598,11 @@ function Config.validate(config: GameConfig): { string }
         local fx = PerfBudget.clientFx
         local cap = if fx ~= nil then fx.maxParticlesPerSecond else 0
         for _, problem in RarityConfig.validate(config.rarity, surface, cap) do
+            table.insert(problems, problem)
+        end
+    end
+    if config.itemSlots ~= nil then
+        for _, problem in ItemSlots.validate(config.itemSlots) do
             table.insert(problems, problem)
         end
     end
