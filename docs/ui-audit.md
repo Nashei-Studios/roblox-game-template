@@ -39,7 +39,7 @@ strokes are never touched (ADR 0047).
 |---|---|
 | `UI-DUP-DESTINATION` | two controls of one screen shown on one scheme have the same `destination` |
 | `UI-MOTION-MISSING` | a modal menu declares no `motion` (open and close tween or spring, hover, press, reduced-motion fallback), or `motionSeconds` is 0 |
-| `UI-BUTTON-LIMIT` | buttons per screen and scheme above `maxButtons` (HUD touch 6, keyboard 10, gamepad 8; menu 8, 12, 10) |
+| `UI-BUTTON-LIMIT` | buttons per screen and scheme above `maxButtons` (HUD touch 4, keyboard 6, gamepad 6; menu 8, 12, 10; ADR 0065) |
 | `UI-TOUCH-LOCOMOTION` | a `locomotion` control shows a button on touch (run is the joystick to the end, stow is an item slot) |
 | `UI-SCROLL-DEPTH` | scrollers nested deeper than `maxNestedScroll` (1); also in the `.rbxm` pass |
 | `UI-SCROLL-OVERLAP`, `UI-SCROLL-OUTSIDE` | in the `.rbxm` pass, the layout computed from list order, padding and offset sizes overlaps or leaves the canvas at the start, middle or end of the scroll |

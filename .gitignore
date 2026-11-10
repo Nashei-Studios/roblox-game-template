@@ -22,3 +22,6 @@ node_modules/
 # Studio lock (docs/multi-agent.md)
 .studio.lock
 assets/kits/
+
+# Agent board state (tools/board cursors)
+.board/
