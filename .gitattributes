@@ -4,3 +4,5 @@
 *.rbxm binary
 *.png binary
 *.jpg binary
+
+.githooks/* text eol=lf

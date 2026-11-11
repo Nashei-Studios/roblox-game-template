@@ -96,6 +96,10 @@ Write-Host '  3. Open a DEV/throwaway place first, never a production place.'
 Write-Host '  4. Check the MCP answers (Studio open): claude mcp get Roblox_Studio'
 Write-Host '  5. Start syncing: `rojo serve`, then Connect in the Rojo plugin.'
 
+# 6. Local guard for main and develop (ADR 0066): the repo hooks in .githooks.
+& git -C $repoRoot config core.hooksPath .githooks
+Write-Step 'Git hooks path set to .githooks' ($LASTEXITCODE -eq 0)
+
 if ($script:failures -gt 0) {
     Write-Host ''
     Write-Host "$($script:failures) step(s) failed. Fix them and re-run; the script is idempotent."

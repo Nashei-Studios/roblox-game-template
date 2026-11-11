@@ -1,8 +1,8 @@
 name: notion-mirror
 
 # One-way mirror of issues and PRs into a Notion database (ADR 0065, docs/notion-mirror.md).
-# Inactive until Victor adds the Actions secret NOTION_TOKEN and the variable NOTION_DATABASE_ID:
-# without them the script prints one line and exits 0. It is not part of the gate: a failure here
+# Inactive until the Actions secret NOTION_TOKEN and the variable NOTION_DATABASE_ID exist: without
+# the variable the job is skipped. It needs contents: read to check out the script in a private repo. It is not part of the gate: a failure here
 # never blocks a merge, and it costs seconds per event (timeout 2 minutes).
 on:
   issues:
@@ -14,10 +14,13 @@ concurrency:
   group: notion-mirror-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: false
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   mirror:
+    # Skip the whole job (zero minutes) until the database is configured.
+    if: vars.NOTION_DATABASE_ID != ''
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
