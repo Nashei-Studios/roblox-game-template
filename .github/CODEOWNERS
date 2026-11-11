@@ -1,13 +1,17 @@
-# Owner of each top-level folder (docs/team-workflow.md, ADR 0047).
-# Placeholders for the 2026-11-11 call: when Nande and Leon share their GitHub
-# users and accept the collaborator invite, uncomment the two commented lines
-# and replace the markers. Until then Victor owns everything, so reviews keep working.
+# Owner of each top-level folder (docs/team-workflow.md, ADR 0047, ADR 0065, AGENTS.md section 4).
+# Markers: <VICTOR_GH> <NANDE_GH> <LEON_GH>. When each person shares their GitHub user and accepts
+# the invite, uncomment the last block and replace the markers (for an organization team: @<ORG>/<team>).
+# Until then Victor owns everything, so review requests keep working. The last matching line wins.
 *                    @vruizz22
 /src/server/         @vruizz22
 /src/client/         @vruizz22
 /src/shared/         @vruizz22
+/tests/              @vruizz22
+/scripts/            @vruizz22
+/tools/              @vruizz22
 /docs/               @vruizz22
 /places/             @vruizz22
 /.github/            @vruizz22
+/AGENTS.md           @vruizz22
 /assets/             @vruizz22
-# /assets/           @<nande-gh> @<leon-gh> @vruizz22
+# /assets/           @<NANDE_GH> @<LEON_GH> @<VICTOR_GH>

@@ -12,6 +12,7 @@ export type FunnelEventName =
     | "first_purchase_prompt"
     | "first_purchase"
     | "day1_return"
+    | "session_5min"
     | "session_end"
 
 export type FunnelEvent = {
@@ -19,9 +20,14 @@ export type FunnelEvent = {
     userId: number,
     timestamp: number,
     sessionIndex: number,
+    -- "<experimentId>:<variantId>" of the funnel experiment, when one is running.
+    variant: string?,
 }
 
 local Analytics = {}
+
+--- Seconds into a session when `session_5min` fires (the 5-minute retention mark).
+Analytics.SESSION_MARK_SECONDS = 300
 
 --- Every valid funnel event, in funnel order.
 Analytics.eventNames = {
@@ -32,6 +38,7 @@ Analytics.eventNames = {
     "first_purchase_prompt",
     "first_purchase",
     "day1_return",
+    "session_5min",
     "session_end",
 } :: { FunnelEventName }
 
@@ -48,13 +55,15 @@ function Analytics.buildEvent(
     name: FunnelEventName,
     userId: number,
     timestamp: number,
-    sessionIndex: number
+    sessionIndex: number,
+    variant: string?
 ): FunnelEvent
     return {
         name = name,
         userId = userId,
         timestamp = timestamp,
         sessionIndex = sessionIndex,
+        variant = variant,
     }
 end
 

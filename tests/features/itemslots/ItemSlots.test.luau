@@ -67,7 +67,7 @@ return function(suite: harness.Harness)
 
     suite:test("N slots come from the config; fewer entries leave empty slots", function()
         local slots = view({ entry("a", "common"), entry("b", "rare") }, 2)
-        harness.equal(#slots, 5, "slot count")
+        harness.equal(#slots, ItemSlots.default.count, "slot count")
         harness.equal(slots[1].id, "Slot1", "id")
         harness.equal(slots[2].itemId, "b", "item")
         harness.isTrue(slots[2].selected, "selected")
@@ -126,13 +126,21 @@ return function(suite: harness.Harness)
         )
         harness.equal(ItemSlots.hintFor(config, 9, InputScheme.KEYBOARD), nil, "out of range")
         local slots = view({ entry("a", "common") }, 1)
-        harness.equal(slots[5].hints[InputScheme.GAMEPAD], "R1", "hints table")
+        harness.equal(
+            slots[ItemSlots.default.count].hints[InputScheme.GAMEPAD],
+            "R1",
+            "hints table"
+        )
         harness.isTrue(slots[1].hints[InputScheme.TOUCH] == nil, "no touch hint")
     end)
 
     suite:test("keys map to slots", function()
         harness.equal(ItemSlots.indexForKey(ItemSlots.default, "Three"), 3, "Three")
-        harness.equal(ItemSlots.indexForKey(ItemSlots.default, "ButtonR1"), 5, "R1")
+        harness.equal(
+            ItemSlots.indexForKey(ItemSlots.default, "ButtonR1"),
+            ItemSlots.default.count,
+            "R1"
+        )
         harness.equal(ItemSlots.indexForKey(ItemSlots.default, "Nine"), nil, "unbound")
     end)
 
@@ -152,9 +160,9 @@ return function(suite: harness.Harness)
     suite:test("every slot is registered for all schemes and passes the Eco rules", function()
         local registry = ControlRegistry.new()
         ItemSlots.register(registry, ItemSlots.default)
-        harness.equal(#registry.order, 5, "five controls")
+        harness.equal(#registry.order, ItemSlots.default.count, "one control per slot")
         local names: { string } = {}
-        for index = 1, 5 do
+        for index = 1, ItemSlots.default.count do
             table.insert(names, ItemSlots.slotId(index))
         end
         harness.equal(#EcoRules.hudRegistration("hud", names, registry), 0, "registered")
@@ -210,7 +218,7 @@ return function(suite: harness.Harness)
                         table.insert(row, tile)
                     end
                 end
-                harness.equal(#row, 5, `{label}: all slots placed`)
+                harness.equal(#row, ItemSlots.default.count, `{label}: all slots placed`)
                 for index, tile in row do
                     harness.isTrue(tile.rect.width >= tokens.touchMin, `{label}: touch floor`)
                     if index > 1 then

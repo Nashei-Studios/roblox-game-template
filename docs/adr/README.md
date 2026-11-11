@@ -64,5 +64,7 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0061](0061-ui-gate-rules.md) | UI gate rules: duplicate destinations, scroll overlap, motion, button limits and touch locomotion |
 | [0063](0063-ui-motion-kit.md) | UI motion kit: pure preset table over native TweenService |
 | [0062](0062-property-based-and-fuzz-tests.md) | Property-based and fuzz tests for the economy, receipts and remotes (seeded, shrinking, in-repo generator) |
+| [0064](0064-onboarding-experiments.md) | Onboarding experiments: deterministic server-side assignment (FNV-1a of UserId and experiment id), variant on funnel events, `session_5min` |
+| [0065](0065-group-workflow-github-source-notion-view.md) | Group workflow: GitHub is the source of truth, Notion the view; Agent Board, one-way Notion mirror, HUD limit 4 touch and 6 keyboard |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
