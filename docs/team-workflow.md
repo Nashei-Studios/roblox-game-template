@@ -93,3 +93,17 @@ Si el criterio de "listo" está claro, hay menos idas y vueltas.
 ## Primeros pasos de cada persona
 
 Están en `docs/team-kickoff.md` (primera llamada) y en el README del repo.
+
+## Sistema completo (ADR 0065)
+
+- **GitHub manda, Notion muestra.** Las tareas se toman y se cierran en GitHub; Notion es la tabla de lectura para Nande y Leon ([espejo](notion-mirror.md)). La guía corta para ellos está en [guia-equipo-10-min.md](guia-equipo-10-min.md).
+- **Plantillas de issue:** Tarea, Bug en el juego, Brecha de UI, Pedido de arte, Idea, y el Message Board (el que se fija como Agent Board). Las categorías de Discussions están en [discussions-categories.md](discussions-categories.md).
+- **Agentes:** reglas, cadena de mando y dueños por carpeta en `AGENTS.md` en la raíz. El tablero se usa con `tools/board` (Git Bash) o `pwsh tools/board.ps1`.
+- **Mostrar los mensajes nuevos al abrir Claude Code** (lo aplica una persona, un agente no edita su propia configuración). En `.claude/settings.json`, dentro de `hooks`, agrega:
+
+```json
+"SessionStart": [{ "matcher": "startup|resume|clear", "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/tools/board-hooks/board-session-start.sh\"", "timeout": 20 }] }],
+"UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/tools/board-hooks/board-prompt.sh\"", "timeout": 10 }] }]
+```
+
+- **Límite de botones del HUD:** 4 en celular, 6 en PC y control; lo revisa `lune run scripts/ui-audit` (`UI-BUTTON-LIMIT`).
