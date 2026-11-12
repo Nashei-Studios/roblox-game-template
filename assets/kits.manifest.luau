@@ -1,8 +1,9 @@
 --!strict
 --[[
     Manifest of the third-party kits held in the local kit library (vault decisions 0016 and 0019).
-    Generated from D:/Victor/Roblox/kits/INDEX.json on 2026-11-05; the binaries are NOT in git
-    (ADR 0006, ADR 0027). `rojoPath` is the `$path` to use after the kit is copied into the
+    Generated from the kit library INDEX.json on 2026-11-05; the binaries are NOT in git
+    (ADR 0006, ADR 0027). `libraryPath` is relative to the library, whose place differs per machine
+    (ADR 0067): `pwsh scripts/kit-use.ps1 <slug>` copies a kit into the game. `rojoPath` is the `$path` to use after the kit is copied into the
     git-ignored `assets/kits/`. Validated by `KitManifest.validate` (tests/assets/KitManifest.test.luau).
 ]]
 
@@ -15,7 +16,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "78f89dab3064a088b540ff4ca1a9e8fc1a83a04978d0b6f77bb87659eb023d25",
         license = "unknown",
-        libraryPath = "D:/Victor/Roblox/kits/animals-mega-pack",
+        libraryPath = "animals-mega-pack",
         rojoPath = "assets/kits/animals-mega-pack",
     },
     {
@@ -24,7 +25,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "34e75a436df55dec41fdb1d1b00c1b8296c931adae395b5ac8ceadebf12f4453",
         license = "unknown",
-        libraryPath = "D:/Victor/Roblox/kits/crucial-stud-ui-pack",
+        libraryPath = "crucial-stud-ui-pack",
         rojoPath = "assets/kits/crucial-stud-ui-pack",
     },
     {
@@ -33,7 +34,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "8d52f9e4cab0b64b30e3d6b8a44976551aada830310a58ce22b06159db2850c9",
         license = "unknown",
-        libraryPath = "D:/Victor/Roblox/kits/food-kit-glb",
+        libraryPath = "food-kit-glb",
         rojoPath = "assets/kits/food-kit-glb",
     },
     {
@@ -42,7 +43,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "9abcc72954a586153ec2f1adda56d4123160ef3efbd289f0bb1ef52f74d32be0",
         license = "CC-BY-4.0 for notes, skills, agents, hooks; (c) fwjelaa for the make-* packs",
-        libraryPath = "D:/Victor/Roblox/kits/fwjelaa-vault-0.1.0",
+        libraryPath = "fwjelaa-vault-0.1.0",
         rojoPath = "assets/kits/fwjelaa-vault-0.1.0",
     },
     {
@@ -51,7 +52,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "4347177b0b689cc58e6b70653ff8d6ab4375300ff2849da79a25bdb862c76a0f",
         license = "(c) fwjelaa per the vault LICENSE",
-        libraryPath = "D:/Victor/Roblox/kits/fwjelaa-vfx-method",
+        libraryPath = "fwjelaa-vfx-method",
         rojoPath = "assets/kits/fwjelaa-vfx-method",
     },
     {
@@ -60,7 +61,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "13f5528b9e3aba860e98d3cac993a19a8b6698e0b702565eff36d456fe8912a4",
         license = "Unknown for most icons; two folders (rank icons, keyboard keys) CC0 by RhosGFX per License.txt",
-        libraryPath = "D:/Victor/Roblox/kits/icons-pack",
+        libraryPath = "icons-pack",
         rojoPath = "assets/kits/icons-pack",
     },
     {
@@ -69,7 +70,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "cdad90853682499b94c9fda2f87678b24bfd8f3264e0ed323f6b6a27fd7c6f6f",
         license = "CC0-1.0",
-        libraryPath = "D:/Victor/Roblox/kits/kenney-food-kit",
+        libraryPath = "kenney-food-kit",
         rojoPath = "assets/kits/kenney-food-kit",
     },
     {
@@ -78,7 +79,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8",
         license = "CC0-1.0",
-        libraryPath = "D:/Victor/Roblox/kits/kenney-impact-sounds",
+        libraryPath = "kenney-impact-sounds",
         rojoPath = "assets/kits/kenney-impact-sounds",
     },
     {
@@ -87,7 +88,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "9c357b83e78897dc314d9eaa61877efb52da75ac29f6bdf67655e1c58a3a5935",
         license = "None stated; FWJ STUDIOS README says characters of the author's series Lift Rock for Anime",
-        libraryPath = "D:/Victor/Roblox/kits/lift-rock-models",
+        libraryPath = "lift-rock-models",
         rojoPath = "assets/kits/lift-rock-models",
     },
     {
@@ -96,7 +97,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "63a924b9fc03fbd3eb87c6c9183db31537f9ae1c6d43b602a48930d7bdedb3af",
         license = "CC BY 4.0 plus custom asset terms",
-        libraryPath = "D:/Victor/Roblox/kits/lihfolk-vault-v2.5.0",
+        libraryPath = "lihfolk-vault-v2.5.0",
         rojoPath = "assets/kits/lihfolk-vault-v2.5.0",
     },
     {
@@ -105,7 +106,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "4722d1ca2d4aa473e956feed14a13fe80516a23f71263abed0481321d9fc6f9f",
         license = "unknown",
-        libraryPath = "D:/Victor/Roblox/kits/low-poly-town",
+        libraryPath = "low-poly-town",
         rojoPath = "assets/kits/low-poly-town",
     },
     {
@@ -114,7 +115,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "911bbf5b3c0fe1b5a86d6127f617947f1938d0a7e197bbaf8e2da49cbbfe556a",
         license = "None stated",
-        libraryPath = "D:/Victor/Roblox/kits/master-prompt",
+        libraryPath = "master-prompt",
         rojoPath = "assets/kits/master-prompt",
     },
     {
@@ -123,7 +124,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "363210b8f29900f49a191f29c573a1a96cbcbd77907995d622e4f332a6f99b2f",
         license = "None stated",
-        libraryPath = "D:/Victor/Roblox/kits/nexora-ai-game-studio-skill-pack",
+        libraryPath = "nexora-ai-game-studio-skill-pack",
         rojoPath = "assets/kits/nexora-ai-game-studio-skill-pack",
     },
     {
@@ -132,7 +133,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "0a847652db657093d7ec6ac42a3f962d28f0b3d922714a482b76b9bd93be74cd",
         license = "unknown",
-        libraryPath = "D:/Victor/Roblox/kits/pds-particles-models-kit",
+        libraryPath = "pds-particles-models-kit",
         rojoPath = "assets/kits/pds-particles-models-kit",
     },
     {
@@ -141,7 +142,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "7091d7d0399d9c48f8562550d1ce39d0130a4bfe35d71f85dd19b65667dc18bd",
         license = "(c) fwjelaa; no use license stated",
-        libraryPath = "D:/Victor/Roblox/kits/picture-to-roblox-model",
+        libraryPath = "picture-to-roblox-model",
         rojoPath = "assets/kits/picture-to-roblox-model",
     },
     {
@@ -150,7 +151,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "85128f576f7a8a7e443c9172587e178f99337cac6085bd66b5012774389ff8ff",
         license = "Free, author terms: commercial use in own games allowed, no standalone redistribution or resale (itch.io comment 2026)",
-        libraryPath = "D:/Victor/Roblox/kits/rblx-essentials-codes",
+        libraryPath = "rblx-essentials-codes",
         rojoPath = "assets/kits/rblx-essentials-codes",
     },
     {
@@ -159,7 +160,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "3caeea0a92a9f337cf2a915e637910b17d1d2d52fbee239c17d2543045d648c1",
         license = "Free, author terms: commercial use in own games allowed, no standalone redistribution or resale (itch.io comment 2026)",
-        libraryPath = "D:/Victor/Roblox/kits/rblx-essentials-datastore-purchase",
+        libraryPath = "rblx-essentials-datastore-purchase",
         rojoPath = "assets/kits/rblx-essentials-datastore-purchase",
     },
     {
@@ -168,7 +169,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = nil,
         license = "Free, author terms: commercial use in own games allowed, no standalone redistribution or resale (itch.io comment 2026)",
-        libraryPath = "D:/Victor/Roblox/kits/rblx-essentials-notifications",
+        libraryPath = "rblx-essentials-notifications",
         rojoPath = "assets/kits/rblx-essentials-notifications",
     },
     {
@@ -177,7 +178,7 @@ local kits: { KitManifest.Kit } = {
         ships = "no",
         sha256 = nil,
         license = "Free Studio plugin, author terms on itch.io; no license file in the model",
-        libraryPath = "D:/Victor/Roblox/kits/rblx-essentials-plugin",
+        libraryPath = "rblx-essentials-plugin",
         rojoPath = nil,
     },
     {
@@ -186,7 +187,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = nil,
         license = "Free, author terms: commercial use in own games allowed, no standalone redistribution or resale (itch.io comment 2026)",
-        libraryPath = "D:/Victor/Roblox/kits/rblx-essentials-sound",
+        libraryPath = "rblx-essentials-sound",
         rojoPath = "assets/kits/rblx-essentials-sound",
     },
     {
@@ -195,7 +196,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "071f882fec8576bac6792d05f32632288539e7487ae1c45a575a63cf1e7e2dfd",
         license = "Free design file, author terms: commercial use in own games allowed, no standalone redistribution or resale (itch.io comment 2026)",
-        libraryPath = "D:/Victor/Roblox/kits/rblx-essentials-studded-ui",
+        libraryPath = "rblx-essentials-studded-ui",
         rojoPath = "assets/kits/rblx-essentials-studded-ui",
     },
     {
@@ -204,7 +205,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "73d1a1202d4c0e06803a87f6d915c5deb3bb8ed82fd0657bc16f6ed56a5b7556",
         license = "Mixed: Apache-2.0 skills, MIT animate skill, Apache-2.0 ProfileStore, GPL-3.0-or-later Blender add-on; game and art none stated",
-        libraryPath = "D:/Victor/Roblox/kits/roblox-ai-free-pack-full",
+        libraryPath = "roblox-ai-free-pack-full",
         rojoPath = "assets/kits/roblox-ai-free-pack-full",
     },
     {
@@ -213,7 +214,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "7ebb9019e3936650c92dfd7f7b11734b528c629fa3af907bc8113dcf1ed729dd",
         license = "(c) fwjelaa; no use license stated",
-        libraryPath = "D:/Victor/Roblox/kits/roblox-animations",
+        libraryPath = "roblox-animations",
         rojoPath = "assets/kits/roblox-animations",
     },
     {
@@ -222,7 +223,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "22d733ca75be30cfe10fdeb831a0b8faabca94eecd476a368f7bc09a266033eb",
         license = "None stated; three fonts without documented licenses",
-        libraryPath = "D:/Victor/Roblox/kits/roblox-art-pipeline",
+        libraryPath = "roblox-art-pipeline",
         rojoPath = "assets/kits/roblox-art-pipeline",
     },
     {
@@ -231,7 +232,7 @@ local kits: { KitManifest.Kit } = {
         ships = "no",
         sha256 = nil,
         license = "Screenshots of roblox.com pages saved by Victor; Roblox content, not an asset",
-        libraryPath = "D:/Victor/Roblox/kits/roblox-charts-2026-11-04",
+        libraryPath = "roblox-charts-2026-11-04",
         rojoPath = nil,
     },
     {
@@ -240,7 +241,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "c0b5a94391f4b1a5c5fff2d4548801a82e799160688d136a96220a06bcdfc2f6",
         license = "(c) fwjelaa; no use license stated; props and textures listed as CC0 in its credits",
-        libraryPath = "D:/Victor/Roblox/kits/roblox-maps",
+        libraryPath = "roblox-maps",
         rojoPath = "assets/kits/roblox-maps",
     },
     {
@@ -249,7 +250,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "c5de3f8375a8a5e5c0f1c0ce49d535cb5ac13666ea478ecface53dfc37db4966",
         license = "None stated; pictures belong to their creators per the pack README",
-        libraryPath = "D:/Victor/Roblox/kits/roblox-ui-references",
+        libraryPath = "roblox-ui-references",
         rojoPath = "assets/kits/roblox-ui-references",
     },
     {
@@ -258,7 +259,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "25051bc0757eba0ad555b31230151a19444810c2e54c4b8442217a00bf9dc8a7",
         license = "None stated",
-        libraryPath = "D:/Victor/Roblox/kits/sfx-roblox-audio-pack",
+        libraryPath = "sfx-roblox-audio-pack",
         rojoPath = "assets/kits/sfx-roblox-audio-pack",
     },
     {
@@ -267,7 +268,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "edfc10b6d4cab796796ad4b0ecaeef16d1748524f3e86c0db77521b45756fa29",
         license = "unknown",
-        libraryPath = "D:/Victor/Roblox/kits/small-stud-asset-pack",
+        libraryPath = "small-stud-asset-pack",
         rojoPath = "assets/kits/small-stud-asset-pack",
     },
     {
@@ -276,7 +277,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "96f0cea8c60e445c2223d2293b37db3ee5cce1e617cc50f8b70245b95ae49aea",
         license = "unknown",
-        libraryPath = "D:/Victor/Roblox/kits/stud-ui-pack",
+        libraryPath = "stud-ui-pack",
         rojoPath = "assets/kits/stud-ui-pack",
     },
     {
@@ -285,7 +286,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = nil,
         license = "Gvesster itch.io terms (License.txt): commercial use in own projects allowed; no resale, no redistribution as pack, no AI training, no client work",
-        libraryPath = "D:/Victor/Roblox/kits/studs-icon-pack",
+        libraryPath = "studs-icon-pack",
         rojoPath = "assets/kits/studs-icon-pack",
     },
     {
@@ -294,7 +295,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "d34593fd17917e7e1445c3c4d16447d24df39eac0520894911b0afa023167652",
         license = "Unknown for most icons; two folders (rank icons, keyboard keys) CC0 by RhosGFX per its README",
-        libraryPath = "D:/Victor/Roblox/kits/ui-icon-pack",
+        libraryPath = "ui-icon-pack",
         rojoPath = "assets/kits/ui-icon-pack",
     },
     {
@@ -303,7 +304,7 @@ local kits: { KitManifest.Kit } = {
         ships = "yes",
         sha256 = "8fef99ee906936dab62d1ba8f8ab3f055321421ccbd2f6a89f54b5d02c48082f",
         license = "unknown",
-        libraryPath = "D:/Victor/Roblox/kits/ultimate-food-pack-glb",
+        libraryPath = "ultimate-food-pack-glb",
         rojoPath = "assets/kits/ultimate-food-pack-glb",
     },
 }
