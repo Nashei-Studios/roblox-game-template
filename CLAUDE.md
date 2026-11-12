@@ -51,7 +51,7 @@ Luau/Roblox rules: `~/.claude/rules/luau.md`. Structure, tests, CI: `arquitectur
 - Never merge `.rbxl` files. Monetization and player-data changes need human approval.
 
 ## Assets and skills
-- Third-party kits: `assets/kits.manifest.luau` (ADR 0027). Binaries stay in `D:/Victor/Roblox/kits`; copy into the git-ignored `assets/kits/<slug>` and use `"$path": "assets/kits/<slug>"`. Respect each kit's `license` and `ships`.
+- Third-party kits: `assets/kits.manifest.luau` (ADR 0027). Binaries stay in each person's kit library (ADR 0067); `pwsh scripts/kit-use.ps1 <slug>` copies one into the git-ignored `assets/kits/<slug>` and use `"$path": "assets/kits/<slug>"`. Respect each kit's `license` and `ships`.
 - Roblox skills live globally in `~/.claude/skills` (roblox-*, make-map, make-model, make-anim, quality-score, roblox-characters, roblox-physics and others) and load by description; nothing is copied into this repo.
 
 ## Forbidden

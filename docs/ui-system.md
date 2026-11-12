@@ -71,10 +71,10 @@ Menus: `MenuShell.new(env, root.content, { id, title, kind, onClose })`, then pu
 
 ## Theme a new game
 
-1. **Pick the kit.** Default: Studded UI (`D:/Victor/Roblox/kits/rblx-essentials-studded-ui`). Copy it to the git-ignored `assets/kits/<slug>` (see CLAUDE.md, ADR 0027) and extract only the pieces the game uses into `assets/ui/*.rbxm` synced to `ReplicatedStorage.UiKit`. Check its licence first (`ships`).
+1. **Pick the kit.** Default: Studded UI (`rblx-essentials-studded-ui` in the kit library). Copy it with `pwsh scripts/kit-use.ps1 rblx-essentials-studded-ui` to the git-ignored `assets/kits/<slug>` (see CLAUDE.md, ADR 0027) and extract only the pieces the game uses into `assets/ui/*.rbxm` synced to `ReplicatedStorage.UiKit`. Check its licence first (`ships`).
 2. **Choose the adapter.** `adapters/Studded` covers all seven slots. Another kit: copy `adapters/Studded.luau`, change the paths and part maps, run `lune run scripts/ui-adapter-check <name> <kit.rbxm>` (add the adapter to the table in the script). Slots the kit lacks are simply omitted; the plain piece covers them.
 3. **Set the tokens.** Copy `Tokens.default()` into the game Config and change: `palette` (only for plain pieces and code-drawn parts; a kit keeps its own colors), `font`, `spacing` (keep the 4 px grid), `radius`, `type`. Derive the values from the game domain and write the reason of each into `docs/design/DESIGN.md` (delivery bar rule 4). `Tokens.validate` rejects a scale that does not grow, a touch floor under 44, text under 12 and a palette under WCAG AA.
-4. **Pick the icon set.** Icons are uploaded under the creator account and referenced by asset id in Config (ADR 0006); candidates in `D:/Victor/Roblox/kits/studs-icon-pack` and `ui-icon-pack`. Never invent ids: `-- TODO(victor): set id`.
+4. **Pick the icon set.** Icons are uploaded under the creator account and referenced by asset id in Config (ADR 0006); candidates in the kits `studs-icon-pack` and `ui-icon-pack` of the library. Never invent ids: `-- TODO(victor): set id`.
 5. **Run the gate and review the stories** (below).
 
 ## Quality gate

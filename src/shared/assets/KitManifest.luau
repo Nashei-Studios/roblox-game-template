@@ -1,6 +1,6 @@
 --!strict
 --[[
-    Pure validation of the third-party kit manifest (ADR 0027). No engine calls, loads under Lune.
+    Pure validation of the third-party kit manifest (ADR 0027, ADR 0067). No engine calls, loads under Lune.
     A failure is a plain sentence naming the kit, so a CI log says what to fix.
 ]]
 
@@ -16,13 +16,25 @@ export type Kit = {
     rojoPath: string?,
 }
 
-local LIBRARY_ROOT = "D:/Victor/Roblox/kits/"
 local ROJO_ROOT = "assets/kits/"
 
 local KitManifest = {}
 
 local function isSlug(value: string): boolean
     return string.match(value, "^[a-z0-9]+[a-z0-9%.%-]*$") ~= nil
+end
+
+-- Relative to the library root: no drive, no leading slash, no parent segment.
+local function isRelative(value: string): boolean
+    if value == "" or string.match(value, "^%a:") or string.match(value, "^[/]") then
+        return false
+    end
+    for segment in string.gmatch(value, "[^/]+") do
+        if segment == ".." then
+            return false
+        end
+    end
+    return true
 end
 
 local function isSha256(value: string): boolean
@@ -50,8 +62,11 @@ function KitManifest.validate(kits: { Kit }): { string }
         if kit.license == "" then
             table.insert(failures, `{name}: license must state the terms or "unknown"`)
         end
-        if string.sub(kit.libraryPath, 1, #LIBRARY_ROOT) ~= LIBRARY_ROOT then
-            table.insert(failures, `{name}: libraryPath must live under {LIBRARY_ROOT}`)
+        if not isRelative(kit.libraryPath) then
+            table.insert(
+                failures,
+                `{name}: libraryPath must be relative to the kit library (ADR 0067)`
+            )
         end
         if kit.rojoPath ~= nil then
             if kit.ships == "no" then
