@@ -9,6 +9,7 @@ export type FunnelEvent = {
     userId: number,
     timestamp: number,
     sessionIndex: number,
+    variant: string?,
 }
 
 export type Sink = {
@@ -19,6 +20,8 @@ export type Deps = {
     sink: Sink,
     clock: () -> number,
     isValidEvent: (name: string) -> boolean,
+    -- Variant label to stamp on every event of this player (ADR 0064); nil when none.
+    variantOf: ((userId: number) -> string?)?,
 }
 
 export type AnalyticsTracker = {
@@ -44,6 +47,7 @@ function AnalyticsTrackerModule.new(deps: Deps): AnalyticsTracker
                 userId = userId,
                 timestamp = deps.clock(),
                 sessionIndex = sessionIndex,
+                variant = if deps.variantOf ~= nil then deps.variantOf(userId) else nil,
             })
             return true
         end,

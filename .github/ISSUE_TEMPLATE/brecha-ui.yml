@@ -1,0 +1,37 @@
+name: Brecha de UI
+description: La interfaz se ve mal, se corta, no se entiende o rompe la revisión automática de UI
+labels: [ui, needs-triage]
+body:
+  - type: textarea
+    id: que
+    attributes:
+      label: Qué se ve mal
+      description: Describe la pantalla y qué falla (texto cortado, botón tapado, demasiados botones).
+    validations:
+      required: true
+  - type: dropdown
+    id: dispositivo
+    attributes:
+      label: En qué dispositivo
+      options:
+        - Celular
+        - Tablet
+        - PC
+        - Consola o control
+    validations:
+      required: true
+  - type: input
+    id: regla
+    attributes:
+      label: Regla de la revisión automática (si la hay)
+      description: Por ejemplo UI-BUTTON-LIMIT. Está en la salida de `lune run scripts/ui-audit`.
+      placeholder: UI-BUTTON-LIMIT
+  - type: textarea
+    id: captura
+    attributes:
+      label: Captura o referencia
+      description: Pega una imagen o el enlace al juego de referencia.
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Cómo debería verse

@@ -7,6 +7,7 @@
 ]]
 
 local CodesConfig = require("./features/codes/CodesConfig")
+local Experiments = require("./features/experiments/Experiments")
 local CommunityRewardConfig = require("./features/community-reward/CommunityRewardConfig")
 local LeaderboardsConfig = require("./features/leaderboards/LeaderboardsConfig")
 local NotificationsConfig = require("./features/notifications/NotificationsConfig")
@@ -105,6 +106,8 @@ export type RobuxTransfersConfig = {
 
 export type GameConfig = {
     gameName: string,
+    -- A/B experiments (ADR 0064): ids, variants, weights and an on/off switch each.
+    experiments: Experiments.ExperimentsConfig?,
     -- Seconds after which ProfileStore assumes a silent server is dead (ASSUME_DEAD).
     sessionLockTimeoutSeconds: number,
     -- Seconds between ProfileStore autosaves (AUTO_SAVE_PERIOD).
@@ -163,6 +166,20 @@ Config.ROBUX_TRANSFER_PLATFORM_MAX = 500
 
 Config.default = {
     gameName = "My Game", -- TODO(victor): set the game name
+    experiments = {
+        funnelExperimentId = "onboarding",
+        definitions = {
+            -- Off by default: everyone gets the control until a game turns it on (vault 0038).
+            {
+                id = "onboarding",
+                active = false,
+                variants = {
+                    { id = "control", weight = 1 },
+                    { id = "variant_a", weight = 1 },
+                },
+            },
+        },
+    },
     -- Stage 1 of a game fills this (docs/win-condition-checklist.md); `lune run scripts/win-condition --strict`.
     winCondition = WinCondition.empty(),
     sessionLockTimeoutSeconds = 1800,
@@ -582,6 +599,11 @@ function Config.validate(config: GameConfig): { string }
     end
     if config.saveConfirmTimeoutSeconds <= 0 then
         table.insert(problems, "saveConfirmTimeoutSeconds must be positive")
+    end
+    if config.experiments ~= nil then
+        for _, problem in Experiments.validate(config.experiments) do
+            table.insert(problems, problem)
+        end
     end
     for _, pass in config.gamePasses do
         if pass.id == nil then

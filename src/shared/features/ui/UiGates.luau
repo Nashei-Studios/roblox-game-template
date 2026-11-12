@@ -54,7 +54,7 @@ UiGates.CATEGORIES = { "locomotion", "menu", "action", "social" } :: { string }
 function UiGates.default(): Gates
     return {
         maxButtons = {
-            hud = { touch = 6, keyboard = 10, gamepad = 8 },
+            hud = { touch = 4, keyboard = 6, gamepad = 6 },
             menu = { touch = 8, keyboard = 12, gamepad = 10 },
         },
         maxNestedScroll = 1,

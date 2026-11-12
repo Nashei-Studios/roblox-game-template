@@ -49,13 +49,12 @@ local ItemSlots = {}
 ItemSlots.MAX_SLOTS = 9
 
 ItemSlots.default = {
-    count = 5,
+    count = 4,
     keys = {
         { "One", "ButtonL1" },
         { "Two" },
         { "Three" },
-        { "Four" },
-        { "Five", "ButtonR1" },
+        { "Four", "ButtonR1" },
     },
 } :: Config
 

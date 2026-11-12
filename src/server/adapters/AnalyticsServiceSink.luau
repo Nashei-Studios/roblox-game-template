@@ -13,6 +13,7 @@ type FunnelEvent = {
     userId: number,
     timestamp: number,
     sessionIndex: number,
+    variant: string?,
 }
 
 type AnalyticsSink = {
@@ -25,12 +26,20 @@ export type PlayersLike<P> = {
 }
 
 export type AnalyticsServiceLike<P> = {
-    LogCustomEvent: (self: unknown, player: P, eventName: string, value: number) -> (),
+    LogCustomEvent: (
+        self: unknown,
+        player: P,
+        eventName: string,
+        value: number,
+        customFields: { [string]: string }?
+    ) -> (),
 }
 
 export type Deps<P> = {
     analytics: AnalyticsServiceLike<P>,
     players: PlayersLike<P>,
+    -- Enum.AnalyticsCustomFieldKeys.CustomField01.Name; injected so this file loads under Lune.
+    variantFieldKey: string,
 }
 
 local AnalyticsServiceSink = {}
@@ -42,7 +51,11 @@ function AnalyticsServiceSink.new<P>(deps: Deps<P>): AnalyticsSink
             if player == nil then
                 return -- The player left before the event was sent; drop it.
             end
-            deps.analytics:LogCustomEvent(player, event.name, event.sessionIndex)
+            local fields: { [string]: string }? = nil
+            if event.variant ~= nil then
+                fields = { [deps.variantFieldKey] = event.variant }
+            end
+            deps.analytics:LogCustomEvent(player, event.name, event.sessionIndex, fields)
         end,
     }
     return sink
