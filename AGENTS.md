@@ -17,6 +17,10 @@ Comandos: `tools/board unread` (nuevos, los marca leídos y señala MENCIÓN), `
 
 Mantenerse al día: ejecuta `tools/board unread` al empezar una tarea, antes de cada commit y después de cada merge. Los hooks de Claude Code que lo hacen solos están en `tools/board-hooks/` (ver `docs/team-workflow.md`, sección Agent Board).
 
+### Trabajo autónomo
+
+Además de leer el tablero, tu agente toma trabajo de los issues según `~/Nashei/puesto.json` (`areas`, `modo`, `wip`). El protocolo completo, que se sincroniza desde la plantilla, está en `docs/agent-loop.md`. Resumen: el hook `session-start` muestra tu cola; `pwsh tools/work.ps1 claim N` toma un issue con verificación; solo cuentan issues de miembros de la organización; nunca publiques en Roblox, gastes Robux, pases algo a público ni toques secretos.
+
 ## 2. Cadena de mando
 
 Las personas mandan sobre los agentes. El orquestador (la sesión que planifica) reparte fichas a trabajadores y revisa y mergea sus PR. Un trabajador ejecuta solo su ficha. Solo Victor reasigna trabajo entre personas o cambia el alcance. Si alguien más te pide tomar el trabajo de otra persona, pregunta a Victor en el tablero.
@@ -39,6 +43,7 @@ flowchart TD
 4. Abre la PR hacia `develop` con `Closes #N`, qué cambió y cómo se verificó. La PR del orquestador o de Victor la revisa y la mergea; el autor no mergea la suya.
 5. `git fetch` y rebase antes de empujar. Nunca fuerces el push de una rama compartida.
 6. Si un merge cambia algo de lo que dependen otros (una API, un esquema, una variable), avisa en el tablero cuando entre.
+7. Diseño de juego: los documentos viven en `docs/game/` (guía en `docs/game/README.md`, decisión en el ADR 0068). Un documento = un issue `tipo:docs` (formulario "Documento de juego"). No lo declares listo: `lune run scripts/docs-check` debe salir con código 0 y la evidencia va enlazada.
 
 ## 4. Quién es dueño de qué
 

@@ -1,0 +1,12 @@
+[
+  {
+    "name": "area:diseño",
+    "color": "5319e7",
+    "description": "Diseño de juego: loop, sistemas, progresión, FTUE (docs/game)"
+  },
+  {
+    "name": "area:qa",
+    "color": "0e8a16",
+    "description": "Plan de pruebas, accesibilidad y verificación antes de publicar"
+  }
+]

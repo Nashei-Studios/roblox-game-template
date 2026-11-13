@@ -22,7 +22,7 @@ local function kit(overrides: Overrides?): KitManifest.Kit
         ships = o.ships or "yes",
         sha256 = if o.noSha then nil else o.sha256 or string.rep("a", 64),
         license = o.license or "CC0-1.0",
-        libraryPath = o.libraryPath or "D:/Victor/Roblox/kits/demo-kit",
+        libraryPath = o.libraryPath or "demo-kit",
         rojoPath = if o.noRojo then nil else o.rojoPath or "assets/kits/demo-kit",
     }
 end
@@ -54,8 +54,12 @@ return function(suite: harness.Harness)
         harness.equal(#failuresFor({ noSha = true }), 0)
     end)
 
-    suite:test("rejects a library path outside the kit library", function()
+    suite:test("rejects a library path that is absolute or leaves the kit library", function()
         harness.equal(#failuresFor({ libraryPath = "C:/tmp/demo-kit" }), 1)
+        harness.equal(#failuresFor({ libraryPath = "/home/someone/kits/demo-kit" }), 1)
+        harness.equal(#failuresFor({ libraryPath = "../demo-kit" }), 1)
+        harness.equal(#failuresFor({ libraryPath = "" }), 1)
+        harness.equal(#failuresFor({ libraryPath = "packs/demo-kit" }), 0)
     end)
 
     suite:test("ties rojoPath to ships", function()

@@ -1,0 +1,44 @@
+name: template-sync-notify
+
+# Optional fast path (ADR 0069): when the template changes, ask every game generated from it to run its
+# template-sync now instead of waiting for the daily cron. Games are discovered from the GitHub
+# `template_repository` field, there is no list of repos. Needs the org secret TEMPLATE_SYNC_TOKEN
+# (actions: write on the games); without it the job exits in seconds and the daily cron still works.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.templatesync'
+      - 'scripts/**'
+      - '.github/**'
+      - '.githooks/**'
+      - 'docs/RULES.md'
+      - 'docs/ui-system.md'
+      - 'docs/game/**'
+      - 'tools/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    if: github.repository == 'Nashei-Studios/roblox-game-template'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.TEMPLATE_SYNC_TOKEN }}
+    steps:
+      - name: Dispatch template-sync in every game
+        shell: pwsh
+        run: |
+          if (-not $env:GH_TOKEN) { Write-Host 'TEMPLATE_SYNC_TOKEN not set: the daily cron in each game covers it.'; exit 0 }
+          $org = '${{ github.repository_owner }}'
+          $names = gh api --paginate "orgs/$org/repos?per_page=100" --jq '.[] | select(.archived == false) | .name'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not list the org repos.' }
+          foreach ($name in $names) {
+            $origin = gh api "repos/$org/$name" --jq '.template_repository.full_name // ""'
+            if ($origin -ne '${{ github.repository }}') { continue }
+            gh workflow run template-sync.yml --repo "$org/$name" --ref develop
+            Write-Host "Dispatched $org/$name (exit $LASTEXITCODE)"
+          }

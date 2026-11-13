@@ -1,0 +1,56 @@
+name: Documento de juego
+description: Escribir o actualizar un documento de docs/game/
+title: "Doc: "
+labels: ["tipo:docs"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Un issue por documento. Se cierra cuando `lune run scripts/docs-check` pasa para ese archivo y la persona dueña aprobó. Guía: `docs/game/README.md`.
+  - type: dropdown
+    id: documento
+    attributes:
+      label: Documento
+      options:
+        - concept
+        - competition
+        - core-loop
+        - prototype-report
+        - systems
+        - economy
+        - progression
+        - ftue
+        - world-and-narrative
+        - audio
+        - ui-flows
+        - content-roadmap
+        - monetization
+        - metrics
+        - community
+        - qa-plan
+        - accessibility
+        - liveops
+    validations:
+      required: true
+  - type: input
+    id: fuente
+    attributes:
+      label: Filas del grill que lo originan (por ejemplo 3.1 a 3.5)
+    validations:
+      required: true
+  - type: textarea
+    id: listo
+    attributes:
+      label: Criterio de listo (copiado del molde en docs/game/)
+    validations:
+      required: true
+  - type: checkboxes
+    id: cierre
+    attributes:
+      label: Cierre
+      options:
+        - label: docs-check pasa para este archivo
+          required: true
+        - label: La persona dueña aprobó
+          required: true
+        - label: Las decisiones abiertas tienen su issue acuerdo

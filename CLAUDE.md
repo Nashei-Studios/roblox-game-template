@@ -14,6 +14,7 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - `selene .` lint
 - `lune run scripts/test` unit tests (add new suites to the list in `scripts/suites.luau`)
 - `lune run scripts/ui-audit` static UI audit over `assets/ui` (spacing, scrollers, text fit, 44 px, kit strokes); runtime half in docs/ui-audit.md
+- `lune run scripts/docs-check [stage]` game-docs gate: documents of `docs/game/` up to the current stage (`docs/game/STAGE`) are `ready`, filled and carry evidence (ADR 0068; molds and flow in `docs/game/README.md`)
 - `pwsh scripts/coverage.ps1` line coverage gate (75 % of the total, ADR 0017)
 - `lune run scripts/perf-budget` worst-case remote bandwidth vs `src/shared/perf/PerfBudget` (ADR 0019); every new remote needs a rate entry there
 - `lune run scripts/own-analytics [out] [days]` own-game Open Cloud analytics (CI only, needs ROBLOX_UNIVERSE_ID and ROBLOX_ANALYTICS_KEY; ADR 0023); never print or commit its values
@@ -51,7 +52,7 @@ Luau/Roblox rules: `~/.claude/rules/luau.md`. Structure, tests, CI: `arquitectur
 - Never merge `.rbxl` files. Monetization and player-data changes need human approval.
 
 ## Assets and skills
-- Third-party kits: `assets/kits.manifest.luau` (ADR 0027). Binaries stay in `D:/Victor/Roblox/kits`; copy into the git-ignored `assets/kits/<slug>` and use `"$path": "assets/kits/<slug>"`. Respect each kit's `license` and `ships`.
+- Third-party kits: `assets/kits.manifest.luau` (ADR 0027). Binaries stay in each person's kit library (ADR 0067); `pwsh scripts/kit-use.ps1 <slug>` copies one into the git-ignored `assets/kits/<slug>` and use `"$path": "assets/kits/<slug>"`. Respect each kit's `license` and `ships`.
 - Roblox skills live globally in `~/.claude/skills` (roblox-*, make-map, make-model, make-anim, quality-score, roblox-characters, roblox-physics and others) and load by description; nothing is copied into this repo.
 
 ## Forbidden
