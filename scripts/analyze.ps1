@@ -24,6 +24,12 @@ try {
         '--base-luaurc', '.luaurc'
     )
     if ($NewSolver) { $arguments += '--flag:LuauSolverV2=true' }
+    # A game may exclude paths (legacy code, generated files) in gate.config.json, the same file
+    # coverage_report.luau and CI read. Without the file the gate runs exactly as the template's.
+    if (Test-Path -LiteralPath 'gate.config.json') {
+        $gate = Get-Content -Raw -LiteralPath 'gate.config.json' | ConvertFrom-Json
+        foreach ($glob in @($gate.analyzeIgnore)) { if ($glob) { $arguments += @('--ignore', $glob) } }
+    }
     $arguments += @('src', 'tests', 'scripts', '.claude/hooks')
     & luau-lsp @arguments
     exit $LASTEXITCODE

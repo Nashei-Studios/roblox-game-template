@@ -178,6 +178,7 @@ pwsh scripts/coverage.ps1          # runs the suites under `luau --coverage`, wr
 ```
 
 - The gate is 75 % of the TOTAL lines (`-Threshold` to try another value) and also fails when a file that is not excluded never appears in the lcov (a module no test loads would otherwise hide).
+- A game excludes paths it does not own yet (legacy code, generated files) in `gate.config.json`: `analyzeIgnore` for `scripts/analyze.ps1` and CI, `coverageExcludedPrefixes` for the coverage gate. The file belongs to the game and is never synced from the template; `selene.toml` and `.styluaignore` mirror the same paths by hand.
 - Excluded: `vendor/`, `types/`, `tests/`, `generated/`, `src/shared/ports/`, `Main.*` and any file that touches `game` (engine code). The report lists every excluded file.
 - This is line coverage only (no branches). Tests that need the engine are out of scope until the Luau Execution API job exists (ADR 0005).
 - `scripts/suites.luau` is the runtime-neutral runner; `scripts/test.luau` is its Lune entry and `scripts/test_luau.luau` its Luau CLI entry.

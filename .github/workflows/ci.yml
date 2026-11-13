@@ -109,17 +109,23 @@ jobs:
         run: |
           lune setup
           rojo sourcemap default.project.json -o sourcemap.json
+      # A game may exclude paths in gate.config.json (analyzeIgnore); the template lists none.
+      # The globs go through an array so the shell never expands them.
       - name: Analyze (stable solver, blocking)
-        run: >
-          luau-lsp analyze --sourcemap sourcemap.json
-          --definitions=@roblox=types/globalTypes.None.d.luau
-          --base-luaurc .luaurc src tests scripts
+        run: |
+          ignores=()
+          if [ -f gate.config.json ]; then mapfile -t ignores < <(jq -r '.analyzeIgnore[]? | "--ignore", .' gate.config.json); fi
+          luau-lsp analyze "${ignores[@]}" --sourcemap sourcemap.json \
+            --definitions=@roblox=types/globalTypes.None.d.luau \
+            --base-luaurc .luaurc src tests scripts
       - name: Analyze (new solver, informational drift detector, ADR 0008)
         continue-on-error: true
-        run: >
-          luau-lsp analyze --flag:LuauSolverV2=true --sourcemap sourcemap.json
-          --definitions=@roblox=types/globalTypes.None.d.luau
-          --base-luaurc .luaurc src tests scripts
+        run: |
+          ignores=()
+          if [ -f gate.config.json ]; then mapfile -t ignores < <(jq -r '.analyzeIgnore[]? | "--ignore", .' gate.config.json); fi
+          luau-lsp analyze "${ignores[@]}" --flag:LuauSolverV2=true --sourcemap sourcemap.json \
+            --definitions=@roblox=types/globalTypes.None.d.luau \
+            --base-luaurc .luaurc src tests scripts
 
   test:
     # Unit tests, performance budget, build smoke and the 75 % line-coverage gate (ADR 0017).
