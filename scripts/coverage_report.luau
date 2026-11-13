@@ -13,13 +13,24 @@
 ]]
 
 local fs = require("@lune/fs")
+local serde = require("@lune/serde")
 local process = require("@lune/process")
 
+type GateConfig = { coverageExcludedPrefixes: { string }? }
 type FileStats = { path: string, hit: number, total: number }
 
 -- src/client is engine presenters (Instances); its rules live in pure modules under src/shared.
 local EXCLUDED_PREFIXES: { string } = { "src/shared/ports/", "src/client/" }
 local EXCLUDED_SEGMENTS: { string } = { "vendor", "types", "tests", "generated" }
+
+-- A game adds its own exclusions in gate.config.json, the same file analyze.ps1 and CI read.
+if fs.isFile("gate.config.json") then
+    local gate = serde.decode("json", fs.readFile("gate.config.json")) :: GateConfig
+    local prefixes: { string } = gate.coverageExcludedPrefixes or {}
+    for _, prefix in prefixes do
+        table.insert(EXCLUDED_PREFIXES, prefix)
+    end
+end
 
 local function normalize(path: string): string
     local cleaned = string.gsub(path, "\\", "/")
