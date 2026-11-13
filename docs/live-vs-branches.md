@@ -45,20 +45,21 @@ Team Create autosaves the place every few minutes. Players see nothing until som
 
 ## Test your branch in Studio
 
-Each person has a test bench: a local copy of the shared place with the real world, plus their own `rojo serve` of their branch. Never connect to the group place itself.
+Each person has a test bench: a local copy of the shared place with the real world, plus the code of their branch. Never test a branch in the group place itself.
 
-1. Get the copy: in Studio, open the shared place and use File, Save a Copy (or Save to File As) to `places/dev.rbxl` (`places/` is gitignored). Open that file.
-2. Take the worktree's `.studio.lock` ([multi-agent.md](multi-agent.md)), then run `rojo serve --port <free port>` from your branch's worktree (pick a port no other serve uses).
-3. In the Rojo plugin, set the same port and click Connect.
-4. Release the lock when you stop.
+1. **Get the copy once per game**, into `places/dev.rbxl` of the main clone (`places/` is gitignored), and refresh it only when the world changes. Open Cloud first: `GET https://apis.roblox.com/asset-delivery-api/v1/assetId/<place id>` with a key that has `legacy-asset:manage` returns a temporary `location` to download. Without that scope (403), in Studio with the shared place open: File, Download a Copy (Save to File As in some versions), and save it there. An agent with a desktop MCP does that click; it is the only one.
+2. **Put your branch's code into it**, from your worktree: `lune run scripts/merge-into-copy <path to places/dev.rbxl> places/<branch>.rbxl`. It runs `rojo build` and replaces only the containers that `default.project.json` maps with `$path`; the world stays as the builders left it.
+3. **Open `places/<branch>.rbxl` in Studio** (`RobloxStudioBeta -task EditFile -localPlaceFile <file>` on Windows, `open -a RobloxStudio <file>` on macOS) and test through the Studio MCP: playtest, console, and real input with its keyboard tool.
+4. Close that Studio when you stop. After a code change, repeat step 2 and reopen.
 
 Notes:
 
 - Without a DataStore (the copy is not published), the game keeps player data in memory, so a test never touches real data.
 - Refresh the copy when the world changes: builders announce it on the board, and you repeat step 1.
-- The agent does these steps for the person (copy, lock, serve, port, Connect notice) and reports where the bench is.
+- No Rojo connection and no Connect click: the agent does steps 1 to 4 for the person with the Studio MCP and reports what it tested. `rojo serve` plus Connect still works for live editing, but no step depends on it.
+- Studio MCP pitfalls seen in testing: a ProximityPrompt only shows when its object is on screen, so restore a minimized Studio before pressing its key; a camera set from `execute_luau` is reset when the call ends; `ProximityPrompt:InputHoldBegin` from `execute_luau` does not reach the engine, use the keyboard tool.
 
-Fallback, only for a game with no shared place yet: build an empty place from your branch with `rojo build default.project.json -o places/dev.rbxl` and follow steps 2 to 4. If the game has world builders (scripts that generate terrain or props), run them on that place first so it is not empty; the builders live in the repo and any person can rerun them.
+Fallback, only for a game with no shared place yet: build an empty place from your branch with `rojo build default.project.json -o places/<branch>.rbxl` and open it (step 3). If the game has world builders (scripts that generate terrain or props), run them on that place first so it is not empty; the builders live in the repo and any person can rerun them.
 
 ## The Rojo machine: keep the place on develop
 
