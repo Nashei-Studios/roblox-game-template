@@ -9,10 +9,10 @@ El tablero sigue el modelo de `azizu06/hackathon-agent-board`: un issue fijado, 
 `~/Nashei/puesto.json`:
 
 ```json
-{ "areas": ["area:código"], "modo": "preguntar", "wip": 1 }
+{ "areas": ["area:código"], "modo": "preguntar" }
 ```
 
-`modo`: `preguntar` (propone y espera un sí, por defecto) o `autonomo`. `wip`: issues a la vez (por defecto 1). `pwsh tools/puesto.ps1 check` en `studio` lo verifica.
+`modo`: `preguntar` (propone y espera un sí, por defecto) o `autonomo`. `wip` (opcional): tope de issues a la vez; sin él no hay tope y solo tú lo pones si lo quieres. `pwsh tools/puesto.ps1 check` en `studio` lo verifica.
 
 ## Protocolo
 
@@ -20,7 +20,7 @@ El tablero sigue el modelo de `azizu06/hackathon-agent-board`: un issue fijado, 
 2. Armas un solo `pwsh tools/board.ps1 wait` en segundo plano (no gasta tokens mientras espera).
 3. `autonomo`: `pwsh tools/work.ps1 claim N` sobre el primero. `preguntar`: lo propones y esperas el sí.
 4. `claim` asigna, comenta el marcador y verifica. Gana el reclamo más antiguo; si pierdes, el comando sale con 3 y sueltas solo.
-5. Rama y worktree propios, PR a `develop` con `Closes #N`, mensaje en el tablero, siguiente issue si hay cupo de `wip`.
+5. Rama y worktree propios, PR a `develop` con `Closes #N`, mensaje en el tablero, siguiente issue (solo se frena si pusiste un `wip` propio).
 6. Un reclamo con más de 24 h sin PR ni actividad está abandonado: puedes retomarlo avisando en el tablero.
 
 ## Seguridad
