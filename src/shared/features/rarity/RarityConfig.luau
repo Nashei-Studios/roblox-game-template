@@ -44,6 +44,11 @@ export type Config = {
 
 local RarityConfig = {}
 
+--- Card surface the default frames are verified against (3:1) when Config validates the ladder.
+--- The template draws no UI, so this is the reference dark surface the ladder was derived on; a
+--- game whose UI uses another card surface passes its own to `validate`.
+RarityConfig.referenceSurfaceHex = "#171C30"
+
 --- The default ladder. Cold to hot, like a metal heating up: slate, moss, steel blue, violet,
 --- ember orange, white-hot magenta. Distinct from the UI accent (amber) and status colors.
 RarityConfig.default = {

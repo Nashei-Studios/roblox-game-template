@@ -2,7 +2,7 @@
 --[[
     Pure model of a collection index (an ore index, a pet index, a pickaxe index): which entries
     the player has found, the found/total counter, the progress toward a small finite reward and
-    the claim rule. Loads under Lune. The engine side is `client/presenters/ui/CollectionIndexPanel`;
+    the claim rule. Loads under Lune. The game UI paints it;
     the server side is `CollectionService`, which feeds this model from persisted data through
     ports (ADR 0046).
 

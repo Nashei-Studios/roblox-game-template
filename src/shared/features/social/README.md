@@ -30,7 +30,7 @@ Engine side: `server/adapters/SocialWiring.luau` (Players, HttpService, MemorySt
 1. In `Main.server`, `SocialWiring.start({ flags, beforeChange, onChanged, communityPerkPct })`; call `onJoin(player)` and `onLeave(player)` from the player events.
 2. Multiply `wiring.perksFor(userId).perkMultiplier` into the perk your game owns. In `beforeChange`, settle anything paid at the old rate; in `onChanged`, re-read the rate and push it.
 3. Add the Experience Config flag `inviteReward` to your flag defaults. Tune `SocialConfig.default`.
-4. Show `FriendBoostLabel.pill(friendBoostPct, SocialConfig.default, tutorialDone)` in the HUD (the boost, else the hint "Friends +10% each (max 50%)"); add `FriendBoostLabel.roster(playersPresent, "players")` to the shared-objective tag; bind a button to `InvitePrompt.prompt`. Draw both with the UI system (spacing tokens, platform-aware controls). The text grants nothing (ADR 0052).
+4. Show `FriendBoostLabel.pill(friendBoostPct, SocialConfig.default, tutorialDone)` in the HUD (the boost, else the hint "Friends +10% each (max 50%)"); add `FriendBoostLabel.roster(playersPresent, "players")` to the shared-objective tag; bind a button to `InvitePrompt.prompt`. Draw both with the game UI. The text grants nothing (ADR 0052).
 
 ## Forbidden here
 

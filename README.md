@@ -4,7 +4,7 @@ A starting kit for monetized Roblox games: strict Luau, Rojo-synced code, a type
 
 ## What it is and is not
 
-- Is: a template you copy per game. Code lives in Git; the world, terrain and UI are built in Studio ([ADR 0002](docs/adr/0002-rojo-partially-managed.md)).
+- Is: a template you copy per game. Code lives in Git; the world, terrain and UI are built in Studio ([ADR 0002](docs/adr/0002-rojo-partially-managed.md)). What the team shares live in Studio and what goes through branches: [docs/live-vs-branches.md](docs/live-vs-branches.md).
 - Is not: a game, a framework, or a dependency manager setup (no Wally/pesde yet, [ADR 0003](docs/adr/0003-no-package-manager-yet.md)). It contains no real ids, keys or assets.
 
 ## Local setup from zero (Windows, PowerShell 7)
@@ -15,7 +15,7 @@ A starting kit for monetized Roblox games: strict Luau, Rojo-synced code, a type
    - `rokit install` (installs the versions pinned in `rokit.toml`)
    - `rojo plugin install`
    - VS Code profile: `code --profile roblox --install-extension JohnnyMorganz.luau-lsp` (repeat for `evaera.vscode-rojo`, `Kampfkarren.selene-vscode`, `JohnnyMorganz.stylua`), then open the folder with `code --profile roblox .`
-4. `rojo serve`, open a dev place in Studio, click Connect in the Rojo plugin.
+4. `rojo serve`, open a dev place in Studio, click Connect in the Rojo plugin. Step by step, never the group place: [Test your branch in Studio](docs/live-vs-branches.md#test-your-branch-in-studio).
 5. Studio MCP (optional, see below): bootstrap installs and registers it at user scope; then Assistant > Manage MCP Servers > Enable Studio as MCP server.
 6. Check the headless gate passes before writing code: `stylua --check .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `lune run scripts/docs-check`, `pwsh scripts/coverage.ps1`, `lune run scripts/perf-budget`, `rojo build default.project.json -o places/dev.rbxl`.
 
@@ -73,7 +73,7 @@ Why this split: anything that needs only values lives in `shared` so Lune can te
 3. Add `tests/features/<feature>/<Module>.test.luau` and register it in `scripts/suites.luau`.
    Property-based and fuzz tests that try to break the economy, receipts and remotes run in the same command (`lune run scripts/test`); a failure prints its seed, replay it with `{ seed = N }` (see `tests/README.md`, ADR 0062).
 4. For a remote: validate every argument with `shared/net/Validation` and gate it with a `RateLimiter` (ADR 0012).
-5. `stylua .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `lune run scripts/ui-audit` ([docs/ui-audit.md](docs/ui-audit.md)), `pwsh scripts/coverage.ps1`, then open a PR (CI runs the same). Several agents at once: read `docs/multi-agent.md`.
+5. `stylua .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `lune run scripts/docs-check`, `pwsh scripts/coverage.ps1`, then open a PR (CI runs the same). Several agents at once: read `docs/multi-agent.md`.
 
 ## Engagement modules (codes, time rewards, toasts, sound)
 
@@ -97,21 +97,20 @@ Client wiring: the Studio-built UI calls `net.RedeemCode.fire(text)`, `net.Claim
 
 Forbidden here: a code, reward, text, duration, volume or asset id written in a script instead of `Config`; a client-supplied amount, time or reward (remotes carry intent only); the client clock for any reward; `ProfileStore` or DataStore calls outside `ProfileRepository`; engine services in `features/`; granting a reward without `ProductGrants`.
 
-## UI kit, leaderboards and community reward
+## Leaderboards and community reward
 
-[ADR 0026](docs/adr/0026-ui-kit-leaderboards-community-reward.md), implementing ADR 0022. Each is a pure folder under `src/shared/features/` behind a port in `src/shared/ports/`; every value lives in `Config.default` and `Config.validate` reports each problem.
+[ADR 0026](docs/adr/0026-ui-kit-leaderboards-community-reward.md), implementing ADR 0022 (its UI kit half is superseded by [ADR 0071](docs/adr/0071-ui-belongs-to-the-art-owner.md): the template ships no UI). Each is a pure folder under `src/shared/features/` behind a port in `src/shared/ports/`; every value lives in `Config.default` and `Config.validate` reports each problem.
 
 | Module | Folder | Ports | Config key |
 |---|---|---|---|
-| UI kit (HUD, shop, rewards, settings, boards, toast host) | `features/ui` | `UiPresenter` | `ui` |
 | Leaderboards (leaderstats, global boards) | `features/leaderboards` | `Leaderboards`, `OrderedBoardStore`, `StatView`, `BoardPublisher` | `leaderboards` |
 | Community join reward | `features/community-reward` | `MembershipChecker` | `communityReward` |
 
-- **Restyle the UI**: change `ui.theme` (palette, radius, spacing, text sizes, font, scale limits, panel size) and `ui.strings`; the reasons for the defaults are in [docs/design/DESIGN.md](docs/design/DESIGN.md). Add or rename a menu in `ui.menus` (`hud`, `shop`, `rewards`, `settings`, `boards` are required). `theme.studs = true` gives the Studded variant by tokens only.
+- **Attach a UI**: the template draws nothing (ADR 0071). The game UI attaches at the "UI HOOK POINT" of `src/client/Main.client.luau` through `src/client/presenters/GameUiBridge.luau` (actions, content and a listener for coins, shop rows, boards and volumes). Pure models it can reuse live in `src/shared/features/ui`.
 - **Add a board**: add `leaderboards.boards.<Id> = { stat, refreshSeconds, size, resetCycle }` (`stat` is `coins` or `sessions`; a new stat goes in `LeaderboardsConfig.STATS` and `PlayerStats.read`). Validation enforces the OrderedDataStore read budget (sum of `60 / refreshSeconds` at most 5). Show a stat next to the name with `leaderboards.leaderstats`.
 - **Enable the community reward**: set `communityReward.communityId` and `communityReward.reward` (`{ kind = "coins", amount = n }`), then `enabled = true`. It ships `enabled = false` because rewarding a join is an open [GAP] in the vault research: Victor must confirm the Community Standards and Terms text first.
-- **Forbidden here**: a color, size, font, text or price written in a presenter instead of Config; a fixed pixel size (use scale and the root `UIScale`); a control under the 44 pt touch floor; hover as the only way to do something; a client write path to a board or a "I joined" message from the client; rewarding likes, favorites or anything in Robux; a client-supplied score; reading the ordered store per join.
-- **Tests**: `tests/features/ui`, `tests/features/leaderboards`, `tests/features/community-reward` and `tests/adapters`. The presenters in `src/client/presenters/ui` and the engine lambdas in `Main.server` need a Studio check (Device Emulator: small phone, tablet, 1080p).
+- **Forbidden here**: a price written in Config or in a presenter; a client write path to a board or a "I joined" message from the client; rewarding likes, favorites or anything in Robux; a client-supplied score; reading the ordered store per join.
+- **Tests**: `tests/features/ui`, `tests/features/leaderboards`, `tests/features/community-reward` and `tests/adapters`. The engine lambdas in `Main.server` and `GameUiBridge` need a Studio check.
 
 ## Start a new game from this template
 

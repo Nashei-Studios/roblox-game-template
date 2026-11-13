@@ -2,7 +2,7 @@
 --[[
     The input scheme a control is shown for: touch, keyboard (keyboard and mouse) or gamepad.
     Pure, so the mapping from the engine enum names is unit tested; the engine side only reads
-    `UserInputService.PreferredInput` and calls `fromPreferredInput` (client/presenters/ui/
+    `UserInputService.PreferredInput` and calls `fromPreferredInput` (client/presenters/
     InputSchemeWatcher). `fromLastInputType` is the fallback for an engine without PreferredInput.
     Decision: docs/adr/0045-ui-spacing-and-platform-aware-controls.md.
 ]]

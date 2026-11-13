@@ -141,8 +141,6 @@ jobs:
           cache: "true"
       - name: Unit tests (Lune)
         run: lune run scripts/test
-      - name: UI audit (static)
-        run: lune run scripts/ui-audit
       - name: Performance budget (remote bandwidth)
         run: lune run scripts/perf-budget
       - name: Build smoke

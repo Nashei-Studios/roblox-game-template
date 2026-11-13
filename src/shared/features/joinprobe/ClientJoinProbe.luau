@@ -10,7 +10,7 @@ local ProbeLine = require("./ProbeLine")
 local Validation = require("../../net/Validation")
 
 export type Mark =
-    "uiKit"
+    "ui"
     | "content"
     | "hello"
     | "action"
@@ -30,7 +30,7 @@ export type Report = {
     boot: number,
     -- time() when Main.client started: seconds the game had been running.
     gameTime: number,
-    uiKit: number,
+    ui: number,
     content: number,
     hello: number,
     action: number,
@@ -149,7 +149,7 @@ function ClientJoinProbeModule.new(deps: Deps): ClientJoinProbe
             return {
                 boot = startedAt,
                 gameTime = gameTimeAtStart,
-                uiKit = markOr("uiKit"),
+                ui = markOr("ui"),
                 content = markOr("content"),
                 hello = markOr("hello"),
                 action = markOr("action"),
@@ -179,7 +179,7 @@ function ClientJoinProbeModule.fields(report: Report, extra: ProbeLine.Fields?):
         kind = "client",
         boot = report.boot,
         gameTime = report.gameTime,
-        uiKitS = report.uiKit,
+        uiS = report.ui,
         contentS = report.content,
         helloS = report.hello,
         actionS = report.action,
@@ -218,7 +218,7 @@ end
 local RANGES: { { name: string, min: number, max: number } } = {
     { name = "boot", min = 0, max = MAX_CLOCK },
     { name = "gameTime", min = 0, max = MAX_CLOCK },
-    { name = "uiKit", min = -1, max = MAX_SECONDS },
+    { name = "ui", min = -1, max = MAX_SECONDS },
     { name = "content", min = -1, max = MAX_SECONDS },
     { name = "hello", min = -1, max = MAX_SECONDS },
     { name = "action", min = -1, max = MAX_SECONDS },
@@ -277,7 +277,7 @@ function ClientJoinProbeModule.validate(raw: unknown): ValidationResult
         value = {
             boot = numbers.boot,
             gameTime = numbers.gameTime,
-            uiKit = numbers.uiKit,
+            ui = numbers.ui,
             content = numbers.content,
             hello = numbers.hello,
             action = numbers.action,

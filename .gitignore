@@ -25,3 +25,6 @@ assets/kits/
 
 # Agent board state (tools/board cursors)
 .board/
+
+# Branch test places (docs/live-vs-branches.md)
+places/

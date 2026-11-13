@@ -31,7 +31,7 @@ selene.toml
 # Rules and molds that carry no game content
 docs/RULES.md
 docs/agent-loop.md
-docs/ui-system.md
+docs/live-vs-branches.md
 docs/win-condition-checklist.md
 docs/game/README.md
 docs/game/grill.md

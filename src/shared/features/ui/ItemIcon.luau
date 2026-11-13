@@ -1,8 +1,8 @@
 --!strict
 --[[
     Pure spec of one item icon: the image, the rarity frame, the lock state and the count or level
-    badge. A menu builds the spec from its catalog item and the player's state; the engine side
-    (`client/presenters/ui/ItemIconView`) only paints it. Loads under Lune.
+    badge. A menu builds the spec from its catalog item and the player's state; the game UI
+    only paints it. Loads under Lune.
 
     Image rule (ADR 0048): an item shows ITS OWN image (a pre-rendered portrait uploaded as an
     image asset). With no image id it falls back to the swatch color, never to a hole. A locked

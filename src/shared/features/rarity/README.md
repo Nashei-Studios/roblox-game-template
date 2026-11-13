@@ -5,7 +5,7 @@ The rarity language: one ladder of tiers and the effects each tier gets. [ADR 00
 ## What it is / is not
 
 - Is: `RarityConfig` (tier order, colors, effect start tiers, validation), `RarityFx` (spec per tier and quality, quality choice, color mix). Pure, loads under Lune.
-- Is not: painting. `client/presenters/rarity/RarityShimmer` (shared clock) and `RarityWorldFx` (light and sparkles on a part) paint; `client/presenters/ui/ItemIconView` paints cards.
+- Is not: painting. `client/presenters/rarity/RarityShimmer` (shared clock) and `RarityWorldFx` (light and sparkles on a part) paint; the game UI paints cards.
 
 ## Tree
 

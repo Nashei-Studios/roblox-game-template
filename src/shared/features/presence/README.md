@@ -5,7 +5,7 @@ What other players did in the last hours, in any server, for a wall or a panel, 
 ## What it is / is not
 
 - Is: pure Luau that loads under Lune. A capped feed over a `FeedStore` port, a codec for entries that trusts nothing, and a board that picks and words rows from templates the game declares.
-- Is not: the store (that is `server/adapters/MemoryStoreFeed`), the name filter (`server/adapters/TextServiceNameFilter`), the wall or panel (a presenter built with the UI system), or a remote. It has no remote.
+- Is not: the store (that is `server/adapters/MemoryStoreFeed`), the name filter (`server/adapters/TextServiceNameFilter`), the wall or panel (a presenter of the game UI), or a remote. It has no remote.
 
 ## Tree
 
@@ -29,7 +29,7 @@ Why split: the rules (cap, TTL, gap, picking) change with design; the store and 
 2. On the server build `MemoryStoreFeed.new({ handle })` over `MemoryStoreService:GetSortedMap(...)`, wrap the filter with `TextServiceNameFilter.new`, and create `PresenceFeed.new({ config, store, filterName, now = os.time, onError })`.
 3. Call `feed:record(kind, userId, name, value)` from the server feature that knows the thing happened (not from a client).
 4. Publish `PresenceBoard.encode(PresenceBoard.build(feed:read(), os.time(), config))` into one replicated value (a `StringValue`) on a timer slightly longer than `readCacheSeconds`.
-5. On the client `PresenceBoard.rows(PresenceBoard.decode(text), os.time(), config)` and draw the rows with the UI system (spacing tokens, platform-aware controls). Studio only: seed an `InMemoryFeedStore` with entries of other players.
+5. On the client `PresenceBoard.rows(PresenceBoard.decode(text), os.time(), config)` and draw the rows with the game UI. Studio only: seed an `InMemoryFeedStore` with entries of other players.
 
 ## Add a new kind
 

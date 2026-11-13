@@ -38,7 +38,7 @@ Compromiso explícito de un nivel. Molde adaptado de `accessibility-requirements
 
 - [ ] Nivel básico de las Game Accessibility Guidelines aplicado o cada excepción justificada.
 - [ ] Contraste verificado, no asumido.
-- [ ] Objetivos táctiles de 44 puntos comprobados con `lune run scripts/ui-audit`.
+- [ ] Objetivos táctiles de 44 puntos comprobados en el simulador de dispositivos.
 
 ## Evidencia
 

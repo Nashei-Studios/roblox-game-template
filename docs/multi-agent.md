@@ -1,6 +1,6 @@
 # Multi-agent protocol
 
-How several coding agents (and humans) work on this repo at once without stepping on each other. Decisions: [ADR 0013](adr/0013-multi-agent-protocol.md). Short imperative version: `CLAUDE.md`.
+How several coding agents (and humans) work on this repo at once without stepping on each other. Decisions: [ADR 0013](adr/0013-multi-agent-protocol.md). Short imperative version: `CLAUDE.md`. What the team sees live in Studio versus what goes through branches: [live-vs-branches.md](live-vs-branches.md).
 
 ## Rules
 

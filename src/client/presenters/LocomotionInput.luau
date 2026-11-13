@@ -2,9 +2,9 @@
 --[[
     Client presenter of locomotion input: binds the configured sprint and equip keys (keyboard
     and gamepad) with ContextActionService and reports intent through callbacks. The game sends
-    the callbacks over a validated remote; the server decides (features/locomotion). Touch uses
-    the UI system buttons of LocomotionHud, not the ContextActionService touch button, so the
-    buttons follow the safe area and the tokens (ADR 0035). Excluded from the coverage gate.
+    the callbacks over a validated remote; the server decides (features/locomotion). Touch has no
+    ContextActionService button here: the game UI draws its own (ADR 0071). Excluded from the
+    coverage gate.
 ]]
 
 local ContextActionService = game:GetService("ContextActionService")

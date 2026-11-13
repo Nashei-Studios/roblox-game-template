@@ -1,6 +1,6 @@
 # 0039. Automated UI audit on every PR
 
-- Status: accepted
+- Status: superseded by [0071](0071-ui-belongs-to-the-art-owner.md) (2026-11-13)
 - Date: 2026-11-08
 - Deciders: Victor Ruiz (complaint of 2026-11-08 on +1 Mining Power; the audit is ported here so every game inherits it)
 

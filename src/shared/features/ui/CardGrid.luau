@@ -2,7 +2,7 @@
 --[[
     Pure model of a grid of cards (a wardrobe, a collection, an index): the card data, the status
     line each card shows from what the player owns, and the presenter interface a menu talks to.
-    Loads under Lune. The engine side is `client/presenters/ui/CardGridPanel`; a game with its own
+    Loads under Lune. The game UI paints it; a game with its own
     kit cards implements `CardGridPresenter` over them and keeps the same model.
 ]]
 

@@ -15,7 +15,7 @@ local function validWire(): { [string]: unknown }
     return {
         boot = 12,
         gameTime = 9,
-        uiKit = 1.5,
+        ui = 1.5,
         content = 2,
         hello = 4,
         action = -1,
@@ -160,12 +160,12 @@ return function(suite: harness.Harness)
             end,
         })
         state.now += 2
-        probe:mark("uiKit")
+        probe:mark("ui")
         state.now += 3
-        probe:mark("uiKit")
+        probe:mark("ui")
         probe:mark("hello")
         local report = probe:report()
-        harness.equal(report.uiKit, 2, "first mark wins")
+        harness.equal(report.ui, 2, "first mark wins")
         harness.equal(report.hello, 5, "hello")
         harness.equal(report.action, -1, "action not reached")
         harness.equal(report.boot, 100, "boot clock")
@@ -229,7 +229,7 @@ return function(suite: harness.Harness)
         local fields = ClientJoinProbe.fields({
             boot = 1,
             gameTime = 2,
-            uiKit = 3,
+            ui = 3,
             content = 4,
             hello = 5,
             action = -1,
@@ -341,7 +341,7 @@ return function(suite: harness.Harness)
             {
                 label = "nan",
                 change = function(wire)
-                    wire.uiKit = 0 / 0
+                    wire.ui = 0 / 0
                 end,
             },
             {

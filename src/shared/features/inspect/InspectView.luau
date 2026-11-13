@@ -5,7 +5,7 @@
     or open on an item with a yaw, a pitch and a zoom), turns every input into a state change
     (mouse or touch drag, wheel, pinch, right stick, triggers), clamps rotation and zoom, says which
     keys close it and how many WorldModels the engine side may hold (0 closed, 1 open). The engine
-    side (client/presenters/ui/InspectViewer) builds the model, paints and listens. Loads under Lune.
+    side (the game UI) builds the model, paints and listens. Loads under Lune.
 
     Rotate or orbit: the MODEL turns and the camera stays still (ADR 0060), so the light on the
     model and the framing never change. Every function returns a new state; none mutates its input.
