@@ -68,5 +68,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0066](0066-branch-guard-without-server-rules.md) | Guard for main and develop where the server cannot enforce rules: pre-push hook, audit workflow, rulesets on public repos |
 | [0068](0068-game-docs-scaffold-and-docs-check.md) | Game documentation scaffold in `docs/game/` (18 molds, stage gate) and the `docs-check` validator in Luau |
 | [0069](0069-template-sync-to-games.md) | Template sync: `.templatesync` allow-list manifest, daily pull in each game, one reviewable PR with issue, no merge |
+| [0070](0070-no-direct-push-to-develop.md) | No direct push to develop: the pre-push hook now also rejects it; supersedes that part of 0066 |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).
