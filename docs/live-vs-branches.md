@@ -2,6 +2,8 @@
 
 **In one sentence:** what is built in Studio (map, models, hand-made UI, lighting) is seen by everyone at the same time. Code is not: it lives in GitHub, each person writes it on their own branch, and it enters Studio through Rojo from one machine only.
 
+The org-level guide is `docs/como-trabajamos.md` in the studio repo (a path, not a link: that repo is private).
+
 Background: [ADR 0047](adr/0047-team-create-and-rojo-split.md), [team-workflow.md](team-workflow.md), [multi-agent.md](multi-agent.md).
 
 ```mermaid
@@ -16,7 +18,7 @@ flowchart LR
     R2[Branch of another] -->|PR, CI green| D
   end
   D -->|Rojo, one machine| Live
-  R1 -.->|own rojo serve| T[Own test baseplate]
+  R1 -.->|own rojo serve| T[Own test bench: copy of the shared place]
 ```
 
 ## What everyone sees at the same time
@@ -37,18 +39,26 @@ Team Create autosaves the place every few minutes. Players see nothing until som
 
 - Everyone codes on **their own branch** (`feat/<task>`), on their own machine. Nobody else sees it until the PR passes CI and enters `develop`. PRs are small and merged the same day, so nobody falls behind.
 - **Only the one machine that runs Rojo against the group place (the code owner) connects Rojo to it.** Two Rojo connections to the same place overwrite each other. While the game is private, what gets synced is `develop`. Once it is public, the published version comes from `main` by release.
-- To test your branch: your own baseplate and your own `rojo serve`. Never the group place.
+- The code in the shared place is always `develop`. The Rojo machine serves a folder pinned to `develop`, never someone's branch, and nobody edits scripts in Studio.
+- To test your branch: your own test bench and your own `rojo serve`. Never the group place.
 - Everyone codes on their own branch; the other person reviews in the PR.
 
 ## Test your branch in Studio
 
-Never the group place: build your own place from your branch.
+Each person has a test bench: a local copy of the shared place with the real world, plus their own `rojo serve` of their branch. Never connect to the group place itself.
 
-1. Build it: `rojo build default.project.json -o places/dev.rbxl` (`places/` is gitignored).
-2. Open `places/dev.rbxl` in Studio.
-3. Take the worktree's `.studio.lock` ([multi-agent.md](multi-agent.md)), then run `rojo serve --port <free port>` (pick a port no other serve uses).
-4. In the Rojo plugin, set the same port and click Connect.
-5. Release the lock when you stop.
+1. Get the copy: in Studio, open the shared place and use File, Save a Copy (or Save to File As) to `places/dev.rbxl` (`places/` is gitignored). Open that file.
+2. Take the worktree's `.studio.lock` ([multi-agent.md](multi-agent.md)), then run `rojo serve --port <free port>` from your branch's worktree (pick a port no other serve uses).
+3. In the Rojo plugin, set the same port and click Connect.
+4. Release the lock when you stop.
+
+Notes:
+
+- Without a DataStore (the copy is not published), the game keeps player data in memory, so a test never touches real data.
+- Refresh the copy when the world changes: builders announce it on the board, and you repeat step 1.
+- The agent does these steps for the person (copy, lock, serve, port, Connect notice) and reports where the bench is.
+
+Fallback, only for a game with no shared place yet: build an empty place from your branch with `rojo build default.project.json -o places/dev.rbxl` and follow steps 2 to 4. If the game has world builders (scripts that generate terrain or props), run them on that place first so it is not empty; the builders live in the repo and any person can rerun them.
 
 ## The Rojo machine: keep the place on develop
 

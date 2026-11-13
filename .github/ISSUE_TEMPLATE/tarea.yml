@@ -33,3 +33,9 @@ body:
     attributes:
       label: Para cuándo (opcional)
       placeholder: "2026-11-18"
+  - type: textarea
+    id: investigacion
+    attributes:
+      label: Investigación
+      description: Pistas para investigar antes del primer cambio (referentes y sus gameplays, módulos de la plantilla, kits u open source con licencia, qué entender con REA). Quien toma el issue investiga y deja un comentario `## Investigación` con enlaces comprobados antes de la primera PR.
+      placeholder: "Referentes: ... · Módulos: ... · Kits: ..."
