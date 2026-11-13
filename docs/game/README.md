@@ -27,6 +27,7 @@ flowchart TD
 
 | Documento | Etapa | Quién lo llena | Preguntas que fuerza |
 |---|---|---|---|
+| [grill](grill.md) | 1 | El grupo decide; el agente conduce y redacta | Agenda de la sesión, corte automático, pre-mortem y presupuesto de rendimiento y carga |
 | [concept](concept.md) | 1 | El grupo decide; el agente redacta | La frase, el gancho filmable y los pilares con su "no" |
 | [competition](competition.md) | 1 | Agente | Tres referentes medidos con fecha y la única diferencia |
 | [core-loop](core-loop.md) | 2 | El grupo decide; el agente redacta | Cinco verbos, segundos por vuelta, qué es permanente |
@@ -121,6 +122,16 @@ Cuatro, no catorce. Las fechas salen de las respuestas 11.4 y 12.3 del grill.
 | M2 Jugable | 3 a 9 | La puerta local en verde y `qa-plan` ejecutado |
 | M3 Publicado privado | 10 y 11 | Página y monetización creadas (con los pasos manuales de Victor) |
 | M4 Veredicto | 12 y 13 | Post-mortem escrito con el veredicto del día 7 |
+
+## Publicación: privado primero, público solo en la major final
+
+La experiencia vive en el grupo del estudio ([id 405835365](https://www.roblox.com/communities/405835365)), no en una cuenta personal, y se publica en **privado** para que la prueben los admin del grupo. Roblox deja una experiencia nueva accesible solo a su creador y a quien tenga permisos por rol; el acceso por rol se ajusta por experiencia, y hay además una lista de hasta 10 testers invitados (documentación `production/publishing/publish-games-and-places.md`).
+
+1. **Cada release completo sale primero en privado.** Major, minor y patch pasan por el grupo antes de cualquier otra audiencia.
+2. **Solo la major final pasa a público**, cuando el veredicto del día 7 lo permite. Después salen minor y patch, también privados primero.
+3. **El testeo privado es una etapa aparte del testeo por el MCP de Studio.** El MCP de Studio comprueba el juego en el editor (playtest, consola, entrada, captura); el testeo privado lo hacen personas reales del grupo sobre la experiencia publicada, con compras reales de prueba de pases y productos. Una etapa no sustituye a la otra.
+4. **Qué solo funciona en público** (y se prueba al pasar a público): los servidores privados exigen experiencia pública, y los anuncios inmersivos y el video con recompensa piden juego público y un mínimo de 2.000 visitantes únicos al mes. La lista "Creado antes de publicar" de [`monetization.md`](monetization.md) dice qué existe antes.
+5. Lo que decide el paso a público (cuestionario de contenido, ícono, miniaturas, precios finales) es de Victor; no se automatiza.
 
 ## Cómo agregar o cambiar un documento
 
