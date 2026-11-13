@@ -1,0 +1,47 @@
+name: template-sync-run
+
+# Reusable body of the template sync (ADR 0069). Games call it from .github/workflows/template-sync.yml.
+# Cost: one short ubuntu job; it exits in seconds when nothing differs.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Template branch or tag to sync from
+        type: string
+        default: main
+    secrets:
+      TEMPLATE_SYNC_TOKEN:
+        description: Optional PAT with contents, pull requests, issues and workflow write. Without it the job uses GITHUB_TOKEN, skips .github/workflows/* and the PR does not trigger CI by itself.
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.TEMPLATE_SYNC_TOKEN || github.token }}
+      HAS_PAT: ${{ secrets.TEMPLATE_SYNC_TOKEN != '' }}
+      TEMPLATE_REF: ${{ inputs.ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 1
+          token: ${{ secrets.TEMPLATE_SYNC_TOKEN || github.token }}
+      - name: Open or refresh the sync PR
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          $skip = if ($env:HAS_PAT -eq 'true') { @() } else { @('-SkipWorkflows') }
+          # The script lives in the template so a game never needs its own copy.
+          $tpl = Join-Path $env:RUNNER_TEMP 'tpl'
+          git clone --quiet --depth 1 --branch $env:TEMPLATE_REF https://github.com/Nashei-Studios/roblox-game-template.git $tpl
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & (Join-Path $tpl 'scripts/template-sync-pr.ps1') -Ref $env:TEMPLATE_REF @skip
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

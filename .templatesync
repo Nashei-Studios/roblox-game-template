@@ -1,0 +1,35 @@
+# Template sync manifest (ADR 0069). Read by scripts/template-sync.ps1.
+# Paths a game takes from roblox-game-template. Everything else belongs to the game.
+# Syntax: one glob per line, relative to the repo root. `*` stays inside a folder, `**` crosses folders.
+# A leading `!` excludes. Lines starting with `#` are comments. The last matching line wins.
+# A game adds its own exclusions in `.templatesync.local` (same syntax, only `!` lines matter there).
+# Files the template lacks are reported, never deleted in the game.
+
+# Tooling and gates
+scripts/**
+!scripts/new-game.ps1
+!scripts/new-game.test.ps1
+!scripts/suites.luau
+.githooks/**
+tools/**
+.luaurc
+.styluaignore
+stylua.toml
+selene.toml
+.gitattributes
+
+# Team workflow
+.github/ISSUE_TEMPLATE/**
+.github/pull_request_template.md
+.github/release.yml
+.github/labels.json
+.github/workflows/**
+!.github/workflows/template-sync-run.yml
+!.github/workflows/template-sync-notify.yml
+
+# Rules and molds that carry no game content
+docs/RULES.md
+docs/ui-system.md
+docs/win-condition-checklist.md
+docs/game/README.md
+docs/game/grill.md

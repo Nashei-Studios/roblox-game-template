@@ -1,0 +1,26 @@
+name: template-sync
+
+# Caller stamped into every game (ADR 0069). The logic lives in template-sync-run.yml of the template,
+# so this file rarely changes. Daily at 07:17 UTC (off the hour on purpose) and on demand.
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Template branch or tag to sync from
+        default: main
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  sync:
+    # The template repo itself has nothing to pull from.
+    if: github.repository != 'Nashei-Studios/roblox-game-template'
+    uses: Nashei-Studios/roblox-game-template/.github/workflows/template-sync-run.yml@main
+    with:
+      ref: ${{ inputs.ref || 'main' }}
+    secrets: inherit
