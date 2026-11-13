@@ -37,8 +37,8 @@ function Get-State {
     $main = Get-MainCheckout $Repo
     $lockPath = Join-Path $main '.studio.lock'
     $lock = if (Test-Path -LiteralPath $lockPath) { Read-StudioLock (Get-Content -LiteralPath $lockPath -Raw) } else { $null }
-    $wt = $Worktree ? $Worktree : $lock?.worktree
-    $pt = $Port ? $Port : $lock?.port
+    $wt = $Worktree ? $Worktree : ${lock}?.worktree
+    $pt = $Port ? $Port : ${lock}?.port
     $exists = [bool]($wt -and (Test-Path -LiteralPath $wt))
     $head = $null; $target = $null
     if ($exists) {
