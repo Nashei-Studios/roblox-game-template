@@ -4,7 +4,7 @@ A starting kit for monetized Roblox games: strict Luau, Rojo-synced code, a type
 
 ## What it is and is not
 
-- Is: a template you copy per game. Code lives in Git; the world, terrain and UI are built in Studio ([ADR 0002](docs/adr/0002-rojo-partially-managed.md)).
+- Is: a template you copy per game. Code lives in Git; the world, terrain and UI are built in Studio ([ADR 0002](docs/adr/0002-rojo-partially-managed.md)). What the team shares live in Studio and what goes through branches: [docs/live-vs-branches.md](docs/live-vs-branches.md).
 - Is not: a game, a framework, or a dependency manager setup (no Wally/pesde yet, [ADR 0003](docs/adr/0003-no-package-manager-yet.md)). It contains no real ids, keys or assets.
 
 ## Local setup from zero (Windows, PowerShell 7)
