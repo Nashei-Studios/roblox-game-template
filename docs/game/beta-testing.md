@@ -56,7 +56,9 @@ Sin supuestos de género: en los informes se usa el nombre de la persona o "test
 
 ## Estructura de Drive
 
-Carpeta nueva `35-beta-testing` dentro del Drive del estudio (propuesta; **no existe todavía**, la crea el preparador cuando Victor lo apruebe). Se numera junto a `30-video`, que es material para redes.
+Carpeta `35-beta-testing` del Drive del estudio, creada el 2026-11-12 con el sí de Victor y con su `LEEME.md`. Se numera junto a `30-video`, que es material para redes. La subcarpeta de cada juego se crea en B1 con el slug del repo.
+
+**Retención (Victor, 2026-11-12):** el video crudo (`raw/`) se borra cuando sale la versión siguiente. Se quedan el audio, la transcripción, los frames clave, `hallazgos.csv` y el informe.
 
 ```
 35-beta-testing/
@@ -92,7 +94,7 @@ Por qué cada nivel: el proyecto separa juegos; la versión ata cada hallazgo a 
 | B10 | Procesador | Descarga, transcribe, saca hallazgos con minuto y escribe el informe (ver procesamiento) | `hallazgos.csv` e `informe.md` completos | Hallazgo sin frame que lo confirme queda "fuente única" | Carpeta de sesión |
 | B11 | Revisor | Revisa los hallazgos S0 y S1 | Cada uno confirmado o degradado con razón | Sin revisor no se abren issues S0 y S1 | `hallazgos.csv` |
 | B12 | Procesador | Abre los issues, enlaza el informe en el PR o el resumen de la versión, escribe `99-resumen-de-version.md` | Cada hallazgo S0 a S2 tiene issue; el resumen tiene veredicto | Dedupe contra issues abiertos antes de crear | GitHub, Notion (espejo de Tareas) y Drive |
-| B13 | Preparador | Borra el video crudo del celular y, con el sí de Victor, aplica la retención de `raw/` | El celular sin los bloques | Esperar el informe aceptado | Ficha |
+| B13 | Preparador | Borra el video crudo del celular. Cuando sale la versión siguiente, borra `raw/` de la anterior (regla de retención) | El celular sin los bloques | Esperar el informe aceptado | Ficha |
 
 La ronda de una versión se cierra cuando todas las sesiones previstas pasaron por B13 y `99-resumen-de-version.md` existe.
 
@@ -202,7 +204,7 @@ flowchart TD
 ## Criterio de listo
 
 - [ ] Personas y celulares de prueba listados.
-- [ ] Carpeta `35-beta-testing` creada con el sí de Victor y enlazada abajo.
+- [x] Carpeta `35-beta-testing` creada con el sí de Victor (2026-11-12).
 - [ ] Prueba de humo de grabación hecha por plataforma, con los MB por minuto reales.
 - [ ] La versión se muestra en pantalla en la build (issue enlazado o ya hecho).
 - [ ] Una ronda de prueba de punta a punta con su informe y sus issues.
