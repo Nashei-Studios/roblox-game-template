@@ -45,6 +45,8 @@ try {
     if ($SkipWorkflows) { $syncArgs += '-SkipWorkflows' }
 
     Invoke-Native git @('fetch', '--quiet', 'origin', $Base) | Out-Null
+    & git fetch --quiet origin $Branch 2>$null
+    $global:LASTEXITCODE = 0
     Invoke-Native git @('checkout', '--quiet', '-B', $Branch, "origin/$Base") | Out-Null
     $report = (Invoke-Native pwsh $syncArgs) -join "`n" | ConvertFrom-Json
     if ($report.changed.Count -eq 0) {
