@@ -17,6 +17,10 @@ Comandos: `tools/board unread` (nuevos, los marca leídos y señala MENCIÓN), `
 
 Mantenerse al día: ejecuta `tools/board unread` al empezar una tarea, antes de cada commit y después de cada merge. Los hooks de Claude Code que lo hacen solos están en `tools/board-hooks/` (ver `docs/team-workflow.md`, sección Agent Board).
 
+### Trabajo autónomo
+
+Además de leer el tablero, tu agente toma trabajo de los issues según `~/Nashei/puesto.json` (`areas`, `modo`, `wip`). El protocolo completo, que se sincroniza desde la plantilla, está en `docs/agent-loop.md`. Resumen: el hook `session-start` muestra tu cola; `pwsh tools/work.ps1 claim N` toma un issue con verificación; solo cuentan issues de miembros de la organización; nunca publiques en Roblox, gastes Robux, pases algo a público ni toques secretos.
+
 ## 2. Cadena de mando
 
 Las personas mandan sobre los agentes. El orquestador (la sesión que planifica) reparte fichas a trabajadores y revisa y mergea sus PR. Un trabajador ejecuta solo su ficha. Solo Victor reasigna trabajo entre personas o cambia el alcance. Si alguien más te pide tomar el trabajo de otra persona, pregunta a Victor en el tablero.
