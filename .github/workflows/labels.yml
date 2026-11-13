@@ -1,0 +1,29 @@
+name: labels
+
+# Declared labels live in .github/labels.json (ADR 0068). A merge into develop that touches the file
+# creates or updates them; nothing runs otherwise, so it costs no minutes on ordinary changes.
+on:
+  push:
+    branches: [develop]
+    paths: [".github/labels.json"]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create or update the declared labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jq -c '.[]' .github/labels.json | while read -r label; do
+            name=$(printf '%s' "$label" | jq -r .name)
+            color=$(printf '%s' "$label" | jq -r .color)
+            description=$(printf '%s' "$label" | jq -r .description)
+            gh label create "$name" --color "$color" --description "$description" --force
+          done

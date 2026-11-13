@@ -91,6 +91,7 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         name = "EnumOrder (generate-remotes)",
         register = require("../tests/scripts/EnumOrder.test"),
     },
+    { name = "DocsCheck (docs-check)", register = require("../tests/scripts/DocsCheck.test") },
     { name = "AnalyticsQuery", register = require("../tests/ops/AnalyticsQuery.test") },
     {
         name = "PurchaseRequests",

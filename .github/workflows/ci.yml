@@ -33,6 +33,7 @@ jobs:
       pull-requests: read
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      gamedocs: ${{ steps.diff.outputs.gamedocs }}
     steps:
       - id: diff
         env:
@@ -41,8 +42,14 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          if [ "$EVENT" != "pull_request" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$EVENT" != "pull_request" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; echo "gamedocs=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
+          # Game documents are docs, but their gate (ADR 0068) must run when they or the checker change.
+          if printf '%s' "$files" | grep -Eq '^(docs/game/|scripts/(docs-check|DocsCheck)[.]luau$)'; then
+            echo "gamedocs=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "gamedocs=false" >> "$GITHUB_OUTPUT"
+          fi
           if printf '%s' "$files" | grep -Evq '(\.md$|^docs/|^\.vscode/|^\.github/(ISSUE_TEMPLATE/|CODEOWNERS|dependabot\.yml|release\.yml))'; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
@@ -72,6 +79,20 @@ jobs:
         run: pwsh scripts/generate-remotes.ps1
       - name: Fail when the generated code is stale
         run: git diff --exit-code -- src/shared/net/generated
+
+  game-docs:
+    # docs-check (ADR 0068): documents of the current stage are filled and carry evidence. One tool, seconds.
+    needs: changes
+    if: needs.changes.outputs.gamedocs == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          version: v1.2.0
+          cache: "true"
+      - run: lune run scripts/docs-check
 
   analyze:
     needs: changes
@@ -134,7 +155,7 @@ jobs:
     # Inherited gate (Nashei-Studios/.github): Conventional title, linked issue and, when the repo
     # variable AUTOMERGE_ENABLED is "true", squash-merge into develop with the branch deleted and the
     # issues closed. Draft or the `hold` label blocks the merge. It runs only after the whole gate.
-    needs: [changes, check, analyze, test]
+    needs: [changes, check, game-docs, analyze, test]
     if: ${{ !failure() && !cancelled() && github.event_name == 'pull_request' }}
     permissions:
       contents: write
