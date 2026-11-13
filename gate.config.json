@@ -1,0 +1,5 @@
+{
+  "_comment": "Owned by the game, never synced from the template. Single source for gate exclusions, read by scripts/analyze.ps1, scripts/coverage_report.luau and .github/workflows/ci.yml. selene.toml and .styluaignore cannot read it and must mirror the same paths.",
+  "analyzeIgnore": [],
+  "coverageExcludedPrefixes": []
+}
