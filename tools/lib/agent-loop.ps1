@@ -6,7 +6,7 @@
 $script:NotForAgent = @('hold', 'needs-info', 'needs-triage', 'ready-for-human', 'solo-victor', 'acuerdo', 'board')
 $script:ClaimRegex = '<!--\s*nashei-claim:([A-Za-z0-9-]+)\s*-->'
 $script:ReleaseRegex = '<!--\s*nashei-release:([A-Za-z0-9-]+)\s*-->'
-$script:Modes = @('preguntar', 'autonomo')
+$script:Modes = @('preguntar', 'autonomo', 'estricto')   # estricto: takes work like preguntar, and the start lock blocks (issue 67)
 
 function ConvertTo-UtcTime { param($Value) ([datetimeoffset]$Value).UtcDateTime }
 
@@ -30,9 +30,9 @@ function Get-PuestoLoopConfig {
     if (-not $cfg.areas.Count) { $cfg.problems += 'falta areas (por ejemplo ["area:arte"])' }
     if ($raw.ContainsKey('modo')) {
         if ($raw.modo -in $script:Modes) { $cfg.modo = $raw.modo }
-        else { $cfg.problems += "modo '$($raw.modo)' no valido (preguntar | autonomo); se usa preguntar" }
+        else { $cfg.problems += "modo '$($raw.modo)' no valido (preguntar | autonomo | estricto); se usa preguntar" }
     }
-    else { $cfg.problems += 'falta modo (preguntar | autonomo); se usa preguntar' }
+    else { $cfg.problems += 'falta modo (preguntar | autonomo | estricto); se usa preguntar' }
     if ($raw.ContainsKey('wip')) {
         if ($raw.wip -is [ValueType] -and $raw.wip -eq [math]::Floor($raw.wip) -and $raw.wip -ge 1) { $cfg.wip = [int]$raw.wip }
         else { $cfg.problems += 'wip debe ser un entero >= 1; se ignora (sin tope)' }
@@ -129,6 +129,23 @@ function Test-AgentLoopClone {
             detail = "git -C `"$RepoPath`" pull --ff-only (o, si es un juego, esperar la PR de template-sync); sin eso su agente no ve el tablero" }
     }
     $rows
+}
+
+function Select-StatusUpdates {
+    <# Which Project cards a status change moves (issue 102). Items are the GraphQL nodes of
+       issue.projectItems, each with project.field resolved by the status field name. Returns
+       .updates (projectId, itemId, fieldId, optionId) and .skipped (project title and why). #>
+    param($Items, [string]$Status)
+    $updates = @(); $skipped = @()
+    foreach ($item in @($Items | Where-Object { $_ })) {
+        $title = $item.project.title
+        $field = $item.project.field
+        if (-not $field -or -not $field.id) { $skipped += [pscustomobject]@{ project = $title; why = 'no tiene el campo de estado' }; continue }
+        $option = @($field.options | Where-Object { $_.name -eq $Status })[0]
+        if (-not $option) { $skipped += [pscustomobject]@{ project = $title; why = "no tiene la opción '$Status'" }; continue }
+        $updates += [pscustomobject]@{ projectId = $item.project.id; itemId = $item.id; fieldId = $field.id; optionId = $option.id }
+    }
+    [pscustomobject]@{ updates = $updates; skipped = $skipped }
 }
 
 function Test-AgentLoopConfig {
