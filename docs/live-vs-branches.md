@@ -50,6 +50,27 @@ Never the group place: build your own place from your branch.
 4. In the Rojo plugin, set the same port and click Connect.
 5. Release the lock when you stop.
 
+## The Rojo machine: keep the place on develop
+
+The one machine that carries code to the group place (the code owner's) runs `tools/place-sync.ps1` so the place follows `develop` without manual steps. It needs a worktree of the repo detached at `origin/develop` (never a branch) and a `.studio.lock` at the main checkout whose `worktree=` and `port=` point to it ([multi-agent.md](multi-agent.md)). Nothing is fixed in the tool: both values come from the lock, or from `-Worktree` and `-Port`.
+
+| Command | What it does |
+|---|---|
+| `pwsh tools/place-sync.ps1 run` | `git fetch`, `checkout --detach origin/develop` in that worktree if it is behind, and a hidden `rojo serve` if nothing listens on the port |
+| `pwsh tools/place-sync.ps1 install` | Registers the job every 5 minutes with no visible window: a scheduled task on Windows (`conhost --headless`), a cron entry on macOS and Linux |
+| `pwsh tools/place-sync.ps1 uninstall` | Removes that job |
+| `pwsh tools/place-sync.ps1 status` | Prints the current commit, `develop`, the port and whether Rojo listens |
+
+Limits to know:
+
+- Rojo reaches the place only while that machine's Studio is open on the group place **and** connected: after opening Studio, click Connect in the Rojo notice once. With Studio closed, `develop` keeps advancing in the worktree and the place catches up on the next connection.
+- Studio MCP and `rojo serve` still follow the lock rules: `place-sync` only runs while the lock names the place worktree.
+
+Rolling back:
+
+1. `pwsh tools/place-sync.ps1 uninstall` so it stops following `develop`.
+2. In the place worktree, `git checkout --detach <good commit>` and reconnect Rojo. Fix `develop` through a revert PR, then run `install` again.
+
 ## For builders
 
 1. Map, models, UI and audio go in the group place, with Team Create. Others see it instantly, and you see theirs.
