@@ -28,6 +28,8 @@ export type UiEnv = {
     usable: SafeArea.Rect,
     -- Closes the open menu: wired by the menu controller, used by the modal backdrop.
     onBack: (() -> ())?,
+    -- Whether the player asked for reduced motion (the Reduce motion setting); nil = off.
+    reducedMotion: (() -> boolean)?,
 }
 
 local UiEnvModule = {}
@@ -62,6 +64,7 @@ function UiEnvModule.new(
         margin = margin,
         usable = usable,
         onBack = nil,
+        reducedMotion = nil,
     }
 end
 

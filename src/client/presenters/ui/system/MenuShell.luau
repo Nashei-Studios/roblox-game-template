@@ -9,19 +9,20 @@
     - a close button of at least 44 px inside the safe frame,
     - gamepad focus: selection moves to the close button when it opens and returns to the previous
       object when it closes,
-    - open/close that animates GroupTransparency and a UIScale only (reduced motion skips both).
+    - open/close from the UiMotion presets (docs/adr/0063): UIScale and transparency only, never
+      Size; interrupting one continues from the current value; reduced motion keeps only a fade.
     A menu binds its rows to `body` and never builds its own chrome.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService = game:GetService("GuiService")
-local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage.Shared
 local Breakpoints = require(Shared.features.uisystem.Breakpoints)
 local Atoms = require(script.Parent.Atoms)
 local DevGuard = require(script.Parent.DevGuard)
 local UiEnv = require(script.Parent.UiEnv)
+local UiMotionPlayer = require(script.Parent.UiMotionPlayer)
 
 export type Options = {
     id: string,
@@ -46,8 +47,6 @@ export type Shell = {
     -- Re-sizes the window for a new environment.
     resize: (self: Shell, env: UiEnv.UiEnv) -> (),
 }
-
-local OPEN_FROM_SCALE = 0.94
 
 local MenuShell = {}
 
@@ -178,6 +177,7 @@ function MenuShell.new(env: UiEnv.UiEnv, parent: Instance, options: Options): Sh
     local previousSelection: GuiObject? = nil
     -- Bumped on every open and close so a finished close tween cannot hide a menu that reopened.
     local transition = 0
+    local wasHidden = true
 
     function self.resize(_self: Shell, newEnv: UiEnv.UiEnv)
         local box = Breakpoints.menuBox(options.kind, newEnv.deviceClass, newEnv.viewport)
@@ -195,40 +195,51 @@ function MenuShell.new(env: UiEnv.UiEnv, parent: Instance, options: Options): Sh
         local reduced = options.reducedMotion ~= nil and options.reducedMotion()
         transition += 1
         local current = transition
+        -- The window fades through GroupTransparency when it is a CanvasGroup (the plain shell).
+        local group: Instance? = if window:IsA("CanvasGroup") then window else nil
+        local groupProperty: string? = if group ~= nil then "GroupTransparency" else nil
         if visible then
             previousSelection = GuiService.SelectedObject
+            wasHidden = not root.Visible
             root.Visible = true
-            if not reduced then
-                scale.Scale = OPEN_FROM_SCALE
-                TweenService:Create(
-                    scale,
-                    TweenInfo.new(tokens.motionSeconds, Enum.EasingStyle.Quad),
-                    { Scale = 1 }
-                ):Play()
-            else
-                scale.Scale = 1
-            end
+            UiMotionPlayer.play("modalOpen", reduced, scale, group, groupProperty, wasHidden)
+            UiMotionPlayer.play(
+                "scrimOpen",
+                reduced,
+                nil,
+                backdrop,
+                "BackgroundTransparency",
+                wasHidden
+            )
             GuiService.SelectedObject = close
         else
             if GuiService.SelectedObject == close or GuiService.SelectedObject == nil then
                 GuiService.SelectedObject = previousSelection
             end
-            if reduced or not root.Visible then
-                root.Visible = false
-            else
-                -- The declared close transition (UiGates.MenuMotion.close, ADR 0061).
-                local tween = TweenService:Create(
-                    scale,
-                    TweenInfo.new(tokens.motionSeconds, Enum.EasingStyle.Quad),
-                    { Scale = OPEN_FROM_SCALE }
-                )
-                tween.Completed:Once(function()
-                    if transition == current then
-                        root.Visible = false
-                    end
-                end)
-                tween:Play()
+            if not root.Visible then
+                return
             end
+            -- The declared close transition (UiGates.MenuMotion.close, ADR 0061), continuing from
+            -- wherever an interrupted open had got to.
+            local tween =
+                UiMotionPlayer.play("modalClose", reduced, scale, group, groupProperty, false)
+            UiMotionPlayer.play(
+                "scrimClose",
+                reduced,
+                nil,
+                backdrop,
+                "BackgroundTransparency",
+                false
+            )
+            if tween == nil then
+                root.Visible = false
+                return
+            end
+            tween.Completed:Once(function()
+                if transition == current then
+                    root.Visible = false
+                end
+            end)
         end
     end
 
