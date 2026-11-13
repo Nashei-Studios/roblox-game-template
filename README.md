@@ -51,7 +51,7 @@ The MCP proxy built into Studio (`StudioMCP.exe`, signed by Roblox Corporation) 
 ├── tests/                   mirrors src, plus a tiny harness and the ProfileRepository port contract
 ├── scripts/                 test runner, analyze.ps1 and the one-time bootstrap
 └── docs/                    roadmap, requirements, milestones, architecture, adr/, multi-agent.md, ai-logs/
-    └── game/                the game design tree: 18 document molds, STAGE, README (ADR 0068); checked by `lune run scripts/docs-check`
+    └── game/                the game design tree: 19 document molds, STAGE, README (ADR 0068); checked by `lune run scripts/docs-check`
 ```
 
 Why this split: anything that needs only values lives in `shared` so Lune can test it in CI without Studio; anything that touches `DataStoreService` or `MarketplaceService` stays in `server` as a small adapter around a tested core.
