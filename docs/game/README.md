@@ -44,6 +44,7 @@ flowchart TD
 | [metrics](metrics.md) | 2 | Agente | Eventos, D1, D7 y el umbral de abandono por número |
 | [community](community.md) | 2 | El grupo decide; el agente redacta | Recompensa por unirse al grupo del estudio (ver abajo) |
 | [qa-plan](qa-plan.md) | 3 | El agente redacta; lo revisa otra sesión | Matriz sistema a prueba, casos borde, dispositivos |
+| [beta-testing](beta-testing.md) y molde [`_informe-sesion-beta.md`](_informe-sesion-beta.md) | 10 | El agente redacta y procesa; Victor aprueba el Drive; prueba una persona del grupo | Ronda por versión SemVer en el celular: grabación, guion, hallazgos por minuto y carpeta de Drive |
 | [accessibility](accessibility.md) | 5 | Agente | Nivel comprometido y cada excepción justificada |
 | [liveops](liveops.md) | 13 | El grupo decide | Cadencia que se puede sostener y un evento de ejemplo |
 
