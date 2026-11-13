@@ -15,7 +15,7 @@ A starting kit for monetized Roblox games: strict Luau, Rojo-synced code, a type
    - `rokit install` (installs the versions pinned in `rokit.toml`)
    - `rojo plugin install`
    - VS Code profile: `code --profile roblox --install-extension JohnnyMorganz.luau-lsp` (repeat for `evaera.vscode-rojo`, `Kampfkarren.selene-vscode`, `JohnnyMorganz.stylua`), then open the folder with `code --profile roblox .`
-4. `rojo serve`, open a dev place in Studio, click Connect in the Rojo plugin.
+4. `rojo serve`, open a dev place in Studio, click Connect in the Rojo plugin. Step by step, never the group place: [Test your branch in Studio](docs/live-vs-branches.md#test-your-branch-in-studio).
 5. Studio MCP (optional, see below): bootstrap installs and registers it at user scope; then Assistant > Manage MCP Servers > Enable Studio as MCP server.
 6. Check the headless gate passes before writing code: `stylua --check .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `lune run scripts/docs-check`, `pwsh scripts/coverage.ps1`, `lune run scripts/perf-budget`, `rojo build default.project.json -o places/dev.rbxl`.
 

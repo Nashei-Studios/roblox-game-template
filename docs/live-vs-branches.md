@@ -40,6 +40,16 @@ Team Create autosaves the place every few minutes. Players see nothing until som
 - To test your branch: your own baseplate and your own `rojo serve`. Never the group place.
 - To code together live: **VS Code Live Share**. One person shares their VS Code, both edit the same files on the sharer's branch, and the sharer commits.
 
+## Test your branch in Studio
+
+Never the group place: build your own place from your branch.
+
+1. Build it: `rojo build default.project.json -o places/dev.rbxl` (`places/` is gitignored).
+2. Open `places/dev.rbxl` in Studio.
+3. Take the worktree's `.studio.lock` ([multi-agent.md](multi-agent.md)), then run `rojo serve --port <free port>` (pick a port no other serve uses).
+4. In the Rojo plugin, set the same port and click Connect.
+5. Release the lock when you stop.
+
 ## For builders
 
 1. Map, models, UI and audio go in the group place, with Team Create. Others see it instantly, and you see theirs.
