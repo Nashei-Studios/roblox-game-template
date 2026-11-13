@@ -1,6 +1,6 @@
 # 0061. UI gate rules: destinations, scroll, motion, button limits and touch locomotion
 
-- Status: accepted
+- Status: superseded by [0071](0071-ui-belongs-to-the-art-owner.md) (2026-11-13)
 - Date: 2026-11-09
 - Extends: 0039 (automated UI audit), 0045 (spacing and platform-aware controls). Issue #168.
 

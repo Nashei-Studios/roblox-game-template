@@ -31,7 +31,7 @@ export type Station = {
     kind: string,
     angleDegrees: number,
     radius: number,
-    -- Optional menu the station opens (an id of the UI system, resolved by the game).
+    -- Optional menu the station opens (an id of the game UI, resolved by the game).
     menuId: string?,
 }
 

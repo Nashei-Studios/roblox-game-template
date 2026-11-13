@@ -3,8 +3,7 @@
     The locomotion HUD controls as registry entries (ADR 0045, ADR 0061). Sprint and Equip are
     key-only by default: keyboard and gamepad get a hint built from the configured keys, and touch
     gets no button (run is the joystick pushed to the end, stow is an item slot of the bar).
-    `touchButtons` re-adds the touch buttons, which the UI audit then reports as
-    UI-TOUCH-LOCOMOTION. Pure.
+    `touchButtons` re-adds the touch buttons for a game UI that wants them. Pure.
 ]]
 
 local ControlRegistry = require("../ui/ControlRegistry")

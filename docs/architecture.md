@@ -278,12 +278,12 @@ Rules that hold for all five:
 
 A literal price or a price-like number in `Config` or a UI (the test fails); a grant from a remote or from a client "ad finished" signal; trusting saved subscription status; prompting Plus or opening an ad without a player request; a transfer reward that skips the ledger; an engine call outside `src/server/adapters/`; a remote that carries a price, a reward or a user id of the caller; a fake id in `Config`.
 
-## UI kit, leaderboards and community reward
+## Leaderboards and community reward
 
-ADR 0026. Pure logic in `src/shared/features/{ui,leaderboards,community-reward}`; engine code in `src/server/adapters/` (`OrderedDataStoreBoards`, `RobloxLeaderstats`, `ReplicatedBoardPublisher`, `RobloxGroupMembership`) and `src/client/presenters/ui/` (`UiKit`, `UiToastRenderer`, `Widgets`). The class and sequence diagrams are in the ADR.
+ADR 0026 (its UI kit half is superseded by ADR 0071: the template draws no UI). Pure logic in `src/shared/features/{leaderboards,community-reward}` plus the UI-facing models in `src/shared/features/ui`; engine code in `src/server/adapters/` (`OrderedDataStoreBoards`, `RobloxLeaderstats`, `ReplicatedBoardPublisher`, `RobloxGroupMembership`) and `src/client/presenters/GameUiBridge.luau`, the attach point of the game UI. The class and sequence diagrams are in the ADR.
 
-- **Ports**: `UiPresenter`, `Leaderboards`, `OrderedBoardStore`, `StatView`, `BoardPublisher`, `MembershipChecker`. Callers depend on the port types only, so a pack adapter plugs in later.
-- **Config keys**: `ui` (theme tokens, menus, strings, input, settings), `leaderboards` (leaderstats, writeSeconds, boards), `communityReward` (enabled, communityId, reward, recheckCooldownSeconds, promptJoin).
+- **Ports**: `UiPresenter` (implemented by the game UI), `Leaderboards`, `OrderedBoardStore`, `StatView`, `BoardPublisher`, `MembershipChecker`. Callers depend on the port types only, so a pack adapter plugs in later.
+- **Config keys**: `leaderboards` (leaderstats, writeSeconds, boards), `communityReward` (enabled, communityId, reward, recheckCooldownSeconds, promptJoin).
 - **Remotes**: one new client to server, `RequestCommunityCheck` (no payload). Boards travel as replicated `StringValue`s under `ReplicatedStorage.Boards` and leaderstats as the engine folder, so there is no leaderboard remote. Two `Notify` kinds were added (`community_reward_claimed`, `community_not_member`).
 - **Data**: schema v5 adds `communityRewardClaimed` (`v4ToV5`). The grant is kept only after `confirmSaved`.
 - **Leaderboard schedule**: no store read on join; writes every `writeSeconds` and only for changed values; one read per board every `refreshSeconds`; a failed read keeps the cache and waits a full interval.

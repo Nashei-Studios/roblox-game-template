@@ -7,8 +7,14 @@
     - An id Config does not declare is refused with a typed error, never ignored.
 ]]
 
-local UiConfig = require("./UiConfig")
 local UiPresenter = require("../../ports/UiPresenter")
+
+-- The slice of a menu the controller needs. The game declares its menus; the template ships none.
+export type MenuConfig = {
+    id: string,
+    -- A modal menu closes the other modal menus when it opens.
+    modal: boolean,
+}
 
 export type Result =
     { ok: true, value: boolean }
@@ -24,14 +30,14 @@ export type MenuController = {
 }
 
 export type Deps = {
-    menus: { UiConfig.MenuConfig },
+    menus: { MenuConfig },
     presenter: UiPresenter.UiPresenter,
 }
 
 local MenuControllerModule = {}
 
 function MenuControllerModule.new(deps: Deps): MenuController
-    local byId: { [string]: UiConfig.MenuConfig } = {}
+    local byId: { [string]: MenuConfig } = {}
     local open: { [string]: boolean } = {}
     for _, menu in deps.menus do
         byId[menu.id] = menu
@@ -43,7 +49,7 @@ function MenuControllerModule.new(deps: Deps): MenuController
         end
     end
 
-    local function setOpen(menu: UiConfig.MenuConfig, visible: boolean)
+    local function setOpen(menu: MenuConfig, visible: boolean)
         if (open[menu.id] == true) == visible then
             return
         end

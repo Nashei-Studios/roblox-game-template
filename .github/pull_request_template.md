@@ -9,8 +9,6 @@
 - [ ] `pwsh scripts/analyze.ps1`
 - [ ] `lune run scripts/test`
 - [ ] `pwsh scripts/coverage.ps1` (75 % gate)
-- [ ] `lune run scripts/ui-audit` (static UI audit, 0 findings)
-- [ ] Runtime UI audit when the UI changed (docs/ui-audit.md), or the findings listed:
 - [ ] Not run here (say which and why):
 
 ## Links

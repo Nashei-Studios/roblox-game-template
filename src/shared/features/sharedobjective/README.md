@@ -26,7 +26,7 @@ Why split: the rule changes with design; the clock and players change with the e
 2. On the server build `AttributeObjectivePublisher.new({ set = function(n, v) workspace:SetAttribute(n, v) end, prefix = "Objective" })`, then `ObjectiveRuntime.new({ config, publisher, now = function() return workspace:GetServerTimeNow() end, present, reward, onCompleted, onError })`.
 3. Run `task.wait(1)` then `runtime:step()` in a loop. Call `runtime:contribute(userId, units)` only from the path that already validated the action (a swing, a kill).
 4. In `reward(completion)` pay by `completion.rank` and `completion.top`; return false when the profile is gone.
-5. On the client read the attributes (`ObjectiveBeat`, `ObjectiveProgress`, `ObjectiveTarget`, `ObjectiveClosesAt`, `ObjectiveCompleted`) and draw the bar with the UI system. Feed `beat` to the music mood resolver (`features/music`) and `completed` to the clip moment (`features/clipmoment`).
+5. On the client read the attributes (`ObjectiveBeat`, `ObjectiveProgress`, `ObjectiveTarget`, `ObjectiveClosesAt`, `ObjectiveCompleted`) and draw the bar with the game UI. Feed `beat` to the music mood resolver (`features/music`) and `completed` to the clip moment (`features/clipmoment`).
 
 ## Forbidden here
 

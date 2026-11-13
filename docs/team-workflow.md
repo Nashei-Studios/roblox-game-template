@@ -106,4 +106,4 @@ Están en `docs/team-kickoff.md` (primera llamada) y en el README del repo.
 "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/tools/board-hooks/board-prompt.sh\"", "timeout": 10 }] }]
 ```
 
-- **Límite de botones del HUD:** 4 en celular, 6 en PC y control; lo revisa `lune run scripts/ui-audit` (`UI-BUTTON-LIMIT`).
+- **Límite de botones del HUD:** 4 en celular, 6 en PC y control; se revisa a mano en el simulador de dispositivos (ADR 0071 retiró la auditoría automática).

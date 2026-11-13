@@ -1,6 +1,6 @@
 # 0035. UI system: imperative builders over kit Instance trees, rules in pure modules
 
-- Status: accepted
+- Status: superseded by [0071](0071-ui-belongs-to-the-art-owner.md) (2026-11-13)
 - Date: 2026-11-08
 - Deciders: Victor Ruiz (request of 2026-11-08 after playing +1 Mining on a phone: no padding, unreachable controls, overlaps)
 - Origin: plus-one-mining ADR 0037 and 0047, `feat/ui-audit`. Refs #81.
