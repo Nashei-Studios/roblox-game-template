@@ -18,6 +18,10 @@ La primera sesión donde el grupo cuestiona el concepto antes de construir. Dura
 4. ¿Cada riesgo del pre-mortem tiene dueño y una mitigación, o está aceptado por escrito?
 5. ¿Alguna respuesta se apoya en una cifra sin medir? Entonces va como `[GAP]`, no como número.
 
+## Cómo se prepara y se procesa
+
+La preparación (fila de Notion, carpeta de Drive, evidencia por bloque), la grabación, el acta y la generación de issues siguen la skill `reunion` (tipo `grill-juego`) y la guía `docs/reuniones.md` del repositorio del estudio.
+
 ## Reglas de la sesión
 
 - Quien conduce no es quien defiende la idea.
@@ -76,6 +80,6 @@ Cada fila con `[GAP]` va a un issue `acuerdo` con dueño y fecha antes del proto
 
 ## Evidencia
 
-Nota del vault `research/2026-11-12-monetizacion-y-proceso-de-grill` y la plantilla `grill-de-juego.md` del repositorio del estudio; el acta de la sesión enlazada aquí.
+Nota del vault `research/2026-11-12-monetizacion-y-proceso-de-grill` y el ADR 0001 del repositorio del estudio (este documento es la única fuente del grill; la plantilla vieja `grill-de-juego.md` del estudio quedó reemplazada); el acta de la sesión enlazada aquí.
 
 - TBD
