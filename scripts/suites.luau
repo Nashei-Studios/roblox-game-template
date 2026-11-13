@@ -92,6 +92,10 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
         register = require("../tests/scripts/EnumOrder.test"),
     },
     { name = "DocsCheck (docs-check)", register = require("../tests/scripts/DocsCheck.test") },
+    {
+        name = "ProjectContainers (merge-into-copy)",
+        register = require("../tests/scripts/ProjectContainers.test"),
+    },
     { name = "AnalyticsQuery", register = require("../tests/ops/AnalyticsQuery.test") },
     {
         name = "PurchaseRequests",
