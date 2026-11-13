@@ -1,6 +1,6 @@
 # 0048. ItemIcon and RarityFx: an image per item and one rarity language
 
-Status: accepted (2026-11-09). Refs #124, #127. Bar: vault W12, W13 (`docs/bars/world-3d.md`).
+Status: accepted (2026-11-09); the painting half (`ItemIconView`) is superseded by [0071](0071-ui-belongs-to-the-art-owner.md), the pure `ItemIcon` spec and the rarity language stay in force. Refs #124, #127. Bar: vault W12, W13 (`docs/bars/world-3d.md`).
 
 ## Context
 

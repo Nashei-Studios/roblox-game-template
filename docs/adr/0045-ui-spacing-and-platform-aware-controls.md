@@ -1,6 +1,6 @@
 # 0045. UI spacing and platform-aware controls are born from the ecosystem
 
-Status: accepted (2026-11-08). Extends 0035 (UI system) and 0039 (automated UI audit).
+Status: accepted (2026-11-08); the spacing audit and painting are superseded by [0071](0071-ui-belongs-to-the-art-owner.md), `InputScheme` and `ControlRegistry` stay in force. Extends 0035 (UI system) and 0039 (automated UI audit).
 
 ## Context
 

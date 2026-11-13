@@ -21,7 +21,7 @@ client/presenters/ClipMomentPresenter.luau   runs a Plan: task.delay per step, C
 2. Declare the ids in the game win-condition file (`moments` list, see the win-condition checklist).
 3. The server notices the moment (the break, the drop) and tells the client over a game remote.
 4. On the client, `director:trigger(id)` and `ClipMomentPresenter.run(plan, hooks)` with `playSting`, `cameraKick`, `setTimeScale` and `launchData`.
-5. Build the Settings rows from `MomentSettings.rows()` with the UI system, create the store with `MomentSettings.new` (pass `load` and `save` to persist), give the director `settings = function() return store:director() end` and send `MomentSettings.route(plan).capture` to `ClipMomentPresenter.run` (ADR 0051). A prompt needs a capture, so turning capture off also removes the prompt.
+5. Build the Settings rows from `MomentSettings.rows()` with the game UI, create the store with `MomentSettings.new` (pass `load` and `save` to persist), give the director `settings = function() return store:director() end` and send `MomentSettings.route(plan).capture` to `ClipMomentPresenter.run` (ADR 0051). A prompt needs a capture, so turning capture off also removes the prompt.
 6. Real capture is checked by hand: a screenshot appears and the share sheet can be dismissed.
 
 ## Forbidden here

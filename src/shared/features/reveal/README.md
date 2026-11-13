@@ -11,7 +11,6 @@ The reveal moment: a 1.5 to 2.5 s skippable beat that shows an unlocked item lar
 
 ```
 reveal/RevealMoment.luau                        Config, validate, spec, beamCount, oddsText, momentDef, session
-client/presenters/RevealMomentPresenter.luau    paints a Spec on the overlay layer (tokens, ItemIconView, one rotating beam group)
 tests/features/reveal/RevealMoment.test.luau    registered in scripts/suites.luau
 ```
 
@@ -24,7 +23,7 @@ tests/features/reveal/RevealMoment.test.luau    registered in scripts/suites.lua
 1. `RevealMoment.validate(config, rarityConfig)` at bootstrap (duration inside 1.5 to 2.5, beams under `PerfBudget.clientFx.maxRevealBeams`).
 2. Register `RevealMoment.momentDef("reveal_<kind>", config)` with the game's `MomentDirector` config and declare the id in the win-condition `moments` list.
 3. On an unlock, the server tells the client over a game remote. The client builds `RevealMoment.spec(config, rarity, { item, random, oddsPercent }, quality, surfaceHex)`; `quality` comes from `RarityFx.qualityFor`.
-4. `director:trigger(id)` and `ClipMomentPresenter.run(plan, hooks)` for the sting and capture; `RevealMomentPresenter.show({ env, theme, parent = root.overlay, spec, dismissText, lockedText, onDone })`.
+4. `director:trigger(id)` and `ClipMomentPresenter.run(plan, hooks)` for the sting and capture; the game UI paints the Spec (ADR 0071) and calls `onDone` when it closes.
 5. Queue reveals in the game: show one at a time, the next starts in `onDone`.
 
 ## Forbidden here

@@ -13,7 +13,6 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - `stylua .` format, `stylua --check .` verify
 - `selene .` lint
 - `lune run scripts/test` unit tests (add new suites to the list in `scripts/suites.luau`)
-- `lune run scripts/ui-audit` static UI audit over `assets/ui` (spacing, scrollers, text fit, 44 px, kit strokes); runtime half in docs/ui-audit.md
 - `lune run scripts/docs-check [stage]` game-docs gate: documents of `docs/game/` up to the current stage (`docs/game/STAGE`) are `ready`, filled and carry evidence (ADR 0068; molds and flow in `docs/game/README.md`)
 - `pwsh scripts/coverage.ps1` line coverage gate (75 % of the total, ADR 0017)
 - `lune run scripts/perf-budget` worst-case remote bandwidth vs `src/shared/perf/PerfBudget` (ADR 0019); every new remote needs a rate entry there
@@ -34,8 +33,8 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - Coverage gate 75 % (ADR 0017). Work leaves the machine at the first commit: push after every commit. Session with technical decisions -> `docs/ai-logs/YYYY-MM-DD-topic.md` (skill `ai-log`).
 - CI is budget: one trigger per change, no CI on drafts or docs-only changes, `timeout-minutes` on every job, `concurrency` cancel-in-progress. Reproduce failures locally before pushing. Details: skill `github-integrado`.
 
-## UI (ADR 0035)
-- All UI is built with the UI system, never raw `Instance.new` in a presenter: tokens, `SafeAreaRoot`, `Stack`/`ScrollList`/`MenuShell`, kit-skinned components, `DevGuard`. Guide: `docs/ui-system.md`; kit intake: `docs/ui-kit-intake.md`. A new game adapts tokens and picks a kit adapter. `lune run scripts/ui-audit` is part of the gate for committed `assets/ui` pieces.
+## UI (ADR 0071)
+- The template ships no UI: UI, UX, art, icon and thumbnails belong to the art owner (Leon), and the UI base is his system (#214). Never add a presenter that builds UI Instances here. The code side is models, state, events and remotes: `src/shared/features/ui` (shop model, card grid, item icon spec, input scheme, control registry, menu controller) and `src/client/presenters/GameUiBridge.luau`, the one attach point that `Main.client.luau` calls ("UI HOOK POINT").
 
 ## Roblox knowledge (ADR 0021)
 - The `lihfolk` plugin is enabled at project scope from the pinned copy in `D:\Victor\Roblox\kits\lihfolk-vault-v2.5.0\`. Before writing player data, receipts, remotes, monetization or anything with a 2025-2026 limit, price or policy, look it up through the `lihfolk` router (or `python -I "<vault>/_tools/vault.py" "<question>"`) and cite the note titles in the PR.

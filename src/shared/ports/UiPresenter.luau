@@ -1,8 +1,8 @@
 --!strict
 --[[
-    Port: the screen side of the menus. The client presenter src/client/presenters/ui/UiKit builds
-    the instances from the tokens of Config.default.ui and implements it; a game, or a pack, can
-    plug in another presenter behind the same type without changing MenuController (ADR 0022).
+    Port: the screen side of the menus. The template ships no UI (ADR 0071): the game UI system
+    implements this type and hands it to MenuController, which keeps the rules of which menu is
+    open (ADR 0022).
 ]]
 
 export type UiPresenter = {

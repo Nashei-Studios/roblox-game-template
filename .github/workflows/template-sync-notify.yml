@@ -13,7 +13,6 @@ on:
       - '.github/**'
       - '.githooks/**'
       - 'docs/RULES.md'
-      - 'docs/ui-system.md'
       - 'docs/game/**'
       - 'tools/**'
   workflow_dispatch:

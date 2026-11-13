@@ -3,12 +3,11 @@
     Registry of the HUD controls: every on-screen button declares its purpose and the schemes
     that need it. A control the player cannot need on the current scheme (a Run button on a
     keyboard, where Shift exists) is hidden and its `hints` entry is shown instead ("Shift").
-    The audit fails a HUD button that is not registered, and a control visible on a scheme that
-    does not list it (EcoRules). Pure. Decision: docs/adr/0045-ui-spacing-and-platform-aware-controls.md.
+    The game's UI reads it to show only the controls a scheme needs. Pure. Decision:
+    docs/adr/0045-ui-spacing-and-platform-aware-controls.md.
 ]]
 
 local InputScheme = require("./InputScheme")
-local UiGates = require("./UiGates")
 
 export type Control = {
     -- Instance name of the button in the HUD.
@@ -24,7 +23,7 @@ export type Control = {
     -- What the control opens or does ("menu:shop", "action:emote"). Two visible controls with the
     -- same destination on one scheme fail UI-DUP-DESTINATION. Nil = nothing to compare.
     destination: string?,
-    -- UiGates.CATEGORIES. A category in `touchForbiddenCategories` never gets a touch button.
+    -- ControlRegistry.CATEGORIES. A game UI can keep a category off touch (the joystick covers locomotion).
     category: string?,
     -- Text shown in place of the button on a scheme that is not in `schemes` (e.g. "Shift").
     hints: { [InputScheme.Scheme]: string }?,
@@ -36,6 +35,9 @@ export type Registry = {
 }
 
 local ControlRegistry = {}
+
+--- Control categories a registry entry may declare.
+ControlRegistry.CATEGORIES = { "locomotion", "menu", "action", "social" } :: { string }
 
 --- An empty registry.
 function ControlRegistry.new(): Registry
@@ -57,7 +59,10 @@ function ControlRegistry.validate(control: Control): { string }
     if control.destination ~= nil and string.match(control.destination, "%S") == nil then
         table.insert(problems, `{control.id}: destination is empty`)
     end
-    if control.category ~= nil and table.find(UiGates.CATEGORIES, control.category) == nil then
+    if
+        control.category ~= nil
+        and table.find(ControlRegistry.CATEGORIES, control.category) == nil
+    then
         table.insert(problems, `{control.id}: unknown category "{control.category}"`)
     end
     for _, scheme in control.schemes do

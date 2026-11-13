@@ -4,7 +4,7 @@ The CollectionIndex mold: found/total counter, black silhouettes for undiscovere
 
 ## What it is / is not
 
-- Is: a pure model (`CollectionIndex`), a server use case with ports (`CollectionService`) and a UI-system panel (`client/presenters/ui/CollectionIndexPanel`).
+- Is: a pure model (`CollectionIndex`), a server use case with ports (`CollectionService`) and the data a game UI paints (counter, bar, claim, tabs, grid).
 - Is not: a catalog, a currency, a reward grant, a remote or a save format. The game owns all of those and plugs them through ports.
 
 ## Tree
@@ -12,7 +12,6 @@ The CollectionIndex mold: found/total counter, black silhouettes for undiscovere
 ```
 collectionindex/CollectionIndex.luau     types, validate, snapshot, claim decision (pure)
 collectionindex/CollectionService.luau   view/claim over DiscoveryPort, ClaimLedgerPort, RewardPort (pure)
-client/presenters/ui/CollectionIndexPanel.luau   counter, bar, claim, tabs, grid (engine, thin)
 tests/features/collectionindex/          Lune tests
 ```
 

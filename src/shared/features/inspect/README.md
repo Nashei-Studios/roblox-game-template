@@ -4,7 +4,7 @@ The InspectView mold: a modal that shows one catalog item in 3D and lets the pla
 
 ## What it is / is not
 
-- Is: a pure state module (`InspectView`: open, close, drag, stick, wheel, pinch, triggers, tap outside, clamps, budget checks, control registration), a `ModelSource` port and a thin presenter (`client/presenters/ui/InspectViewer`).
+- Is: a pure state module (`InspectView`: open, close, drag, stick, wheel, pinch, triggers, tap outside, clamps, budget checks, control registration), and a `ModelSource` port. The viewer (ScreenGui, ViewportFrame, WorldModel) is the game UI's.
 - Is not: a model builder, an inventory or the card that holds the Inspect button. The game supplies the model and the button.
 
 ## Run locally
@@ -16,16 +16,15 @@ The InspectView mold: a modal that shows one catalog item in 3D and lets the pla
 ```
 inspect/InspectView.luau                      state, input mapping, clamps, budget, registry (pure)
 ports/ModelSource.luau                        build(itemId) and partCount(itemId) port
-client/presenters/ui/InspectViewer.luau       ScreenGui, ViewportFrame, WorldModel, input (engine, thin)
 tests/features/inspect/                       Lune tests
 ```
 
 ## Adopt in a game
 
 1. Tune `Config.inspect` (speeds, limits, `closeKeys`, `openKeys`). Validated at boot.
-2. Call `InspectView.register(registry, config)` once, before the HUD audit.
+2. Call `InspectView.register(registry, config)` once, at bootstrap.
 3. Implement `ModelSource` over the builder that makes the item in hand; keep a cached template and clone it in `build`.
-4. Create one `InspectViewer.new(deps)` and call `viewer:open(spec)` from the card Inspect button (named `InspectOpen`) or the pad open key.
+4. Open your own viewer from the card Inspect button (named `InspectOpen`) or the pad open key, driven by the `InspectView` state.
 5. Check `PerfBudget.inspect.maxParts` against your largest model with `InspectView.budgetProblems`.
 
 ## Forbidden here

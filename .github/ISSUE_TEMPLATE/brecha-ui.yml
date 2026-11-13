@@ -1,5 +1,5 @@
 name: Brecha de UI
-description: La interfaz se ve mal, se corta, no se entiende o rompe la revisión automática de UI
+description: La interfaz se ve mal, se corta o no se entiende
 labels: [ui, needs-triage]
 body:
   - type: textarea
@@ -20,12 +20,6 @@ body:
         - Consola o control
     validations:
       required: true
-  - type: input
-    id: regla
-    attributes:
-      label: Regla de la revisión automática (si la hay)
-      description: Por ejemplo UI-BUTTON-LIMIT. Está en la salida de `lune run scripts/ui-audit`.
-      placeholder: UI-BUTTON-LIMIT
   - type: textarea
     id: captura
     attributes:

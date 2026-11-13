@@ -5,7 +5,7 @@ Central social hub scaffold: where players appear, where the stations live, how 
 ## What it is / is not
 
 - Is: pure Luau that loads under Lune. A layout contract (spawn rings, stations as data, server cap, name-tag and emote policy), a registry that gives each player the lowest free slot, and an emote request check. Config-driven, no game names.
-- Is not: the place itself (parts, lighting, NPCs are built per game), a menu, an emote animation or a wheel. Menus use the UI system primitives (ADR 0035), never raw Frames.
+- Is not: the place itself (parts, lighting, NPCs are built per game), a menu, an emote animation or a wheel. Menus belong to the game UI (ADR 0071).
 
 ## Tree
 

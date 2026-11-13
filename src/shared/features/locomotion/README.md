@@ -16,7 +16,6 @@ locomotion/
   LocomotionServer.luau   per-player machines, equip, swing gate, respawn memory
 server/adapters/LocomotionPresenter.luau   MoveDirection in, WalkSpeed out, EquipTool on respawn
 client/presenters/LocomotionInput.luau     keyboard and gamepad via ContextActionService
-client/presenters/LocomotionHud.luau       touch buttons with the UI system Button
 ```
 
 ## Adopt in a game
@@ -25,7 +24,7 @@ client/presenters/LocomotionHud.luau       touch buttons with the UI system Butt
 2. Implement `SwingHandler.swing(playerId, toolId)`: the only place value is granted. Provide `owns(playerId, toolId)`.
 3. Build `LocomotionServer.new({ config, now = os.clock, owns, handler })` and `LocomotionPresenter.start({ server, findTool })`.
 4. Add three client-to-server remotes (sprint began or ended, equip toggle with a tool id, swing), validate payloads and rate-limit them, and call `server:sprint`, `server:equip`, `server:swing`.
-5. On the client call `LocomotionInput.bind` and, on touch, `LocomotionHud.mount` inside the `SafeAreaRoot` content frame.
+5. On the client call `LocomotionInput.bind`; the touch buttons, if any, are drawn by the game UI from `LocomotionControls`.
 6. Playtest keyboard, gamepad and touch (not done in the template PR).
 
 ## Forbidden here

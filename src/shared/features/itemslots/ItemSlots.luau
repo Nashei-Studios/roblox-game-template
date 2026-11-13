@@ -3,7 +3,7 @@
     ItemSlots mold: the pure model of a small hotbar of equipped items. It decides how many slots
     exist (config), what each one shows (an ItemIcon.Spec: image, rarity frame, level or count
     badge), which key or glyph hint each scheme gets, and what a tap does (open the item panel
-    through the ItemPanel port). The engine side (client/presenters/ui/ItemSlotsView) only paints
+    through the ItemPanel port). The game UI only paints
     and places it. Loads under Lune.
 
     Hints follow ADR 0045: keyboard shows the number key ("1"), gamepad the glyph of the pad button

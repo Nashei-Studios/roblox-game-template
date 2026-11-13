@@ -1,17 +1,11 @@
 --!strict
-local Breakpoints = require("../../../src/shared/features/uisystem/Breakpoints")
 local Config = require("../../../src/shared/Config")
 local ControlRegistry = require("../../../src/shared/features/ui/ControlRegistry")
-local EcoRules = require("../../../src/shared/features/ui/audit/EcoRules")
-local Geometry = require("../../../src/shared/features/ui/audit/Geometry")
-local HudRails = require("../../../src/shared/features/uisystem/HudRails")
 local InputScheme = require("../../../src/shared/features/ui/InputScheme")
 local ItemIcon = require("../../../src/shared/features/ui/ItemIcon")
 local ItemPanel = require("../../../src/shared/ports/ItemPanel")
 local ItemSlots = require("../../../src/shared/features/itemslots/ItemSlots")
 local RarityConfig = require("../../../src/shared/features/rarity/RarityConfig")
-local SafeArea = require("../../../src/shared/features/uisystem/SafeArea")
-local Tokens = require("../../../src/shared/features/uisystem/Tokens")
 local harness = require("../../harness")
 
 local RARITY = RarityConfig.default
@@ -157,99 +151,20 @@ return function(suite: harness.Harness)
         end
     )
 
-    suite:test("every slot is registered for all schemes and passes the Eco rules", function()
+    suite:test("every slot is registered for all schemes", function()
         local registry = ControlRegistry.new()
         ItemSlots.register(registry, ItemSlots.default)
         harness.equal(#registry.order, ItemSlots.default.count, "one control per slot")
-        local names: { string } = {}
         for index = 1, ItemSlots.default.count do
-            table.insert(names, ItemSlots.slotId(index))
+            local id = ItemSlots.slotId(index)
+            harness.isTrue(ControlRegistry.has(registry, id), `{id} registered`)
+            for _, scheme in InputScheme.ALL do
+                harness.equal(#ControlRegistry.validate(registry.controls[id]), 0, scheme)
+            end
         end
-        harness.equal(#EcoRules.hudRegistration("hud", names, registry), 0, "registered")
-        for _, scheme in InputScheme.ALL do
-            harness.equal(#EcoRules.controlsOnScheme("hud", scheme, names, registry), 0, scheme)
-        end
-        harness.equal(
-            #EcoRules.hudRegistration("hud", { "Slot6" }, registry),
-            1,
-            "unregistered caught"
-        )
         local ok = pcall(function()
             ItemSlots.register(registry, ItemSlots.default)
         end)
         harness.isFalse(ok, "double registration raises")
     end)
-
-    suite:test(
-        "UI-TEXT-LOST: a hint that does not fit is an error, a fitting one passes",
-        function()
-            harness.equal(#EcoRules.textLost("hud", "Slot1.Hint", true, false), 0, "fits")
-            harness.equal(#EcoRules.textLost("hud", "Slot1.Hint", false, false), 1, "cut")
-        end
-    )
-
-    suite:test(
-        "the row keeps the gap, the touch floor and the thumbstick zones on the four viewports",
-        function()
-            local tokens = Tokens.default()
-            local gap = Tokens.space(tokens, tokens.defaults.gap)
-            for _, viewport in Breakpoints.REVIEW_VIEWPORTS do
-                local deviceClass: Tokens.DeviceClass = Breakpoints.classify(viewport, false)
-                local scale = Breakpoints.uiScale(deviceClass, viewport)
-                local margin = Breakpoints.safeMargin(deviceClass, viewport, tokens)
-                local area = SafeArea.usable(
-                    viewport.width / scale,
-                    viewport.height / scale,
-                    { top = 0, left = 0, bottom = 0, right = 0 },
-                    margin
-                )
-                local reserve = if deviceClass == "phone" then 0.42 else 0
-                local plan = HudRails.plan(
-                    area,
-                    { left = 4, right = 3, bottom = ItemSlots.default.count },
-                    reserve,
-                    tokens
-                )
-                local label = `{viewport.width}x{viewport.height}`
-                harness.equal(#plan.problems, 0, `{label}: {table.concat(plan.problems, "; ")}`)
-                local row: { HudRails.Tile } = {}
-                for _, tile in plan.tiles do
-                    if tile.rail == "bottom" then
-                        table.insert(row, tile)
-                    end
-                end
-                harness.equal(#row, ItemSlots.default.count, `{label}: all slots placed`)
-                for index, tile in row do
-                    harness.isTrue(tile.rect.width >= tokens.touchMin, `{label}: touch floor`)
-                    if index > 1 then
-                        harness.isTrue(
-                            Geometry.gap(row[index - 1].rect, tile.rect) >= gap,
-                            `{label}: gap between slots`
-                        )
-                    end
-                    for _, other in plan.tiles do
-                        if other.rail ~= "bottom" then
-                            harness.isTrue(
-                                Geometry.gap(other.rect, tile.rect) >= gap,
-                                `{label}: gap to the side rails`
-                            )
-                        end
-                    end
-                end
-                if deviceClass == "phone" then
-                    -- The middle band: the thumbstick (left) and jump (right) live in the outer thirds.
-                    local first = row[1].rect
-                    local last = row[#row].rect
-                    harness.isTrue(
-                        first.x >= area.x + area.width * 0.25,
-                        `{label}: clear of the thumbstick`
-                    )
-                    harness.isTrue(
-                        last.x + last.width <= area.x + area.width * 0.75,
-                        `{label}: clear of the jump button`
-                    )
-                end
-            end
-        end
-    )
 end

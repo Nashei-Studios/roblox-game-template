@@ -12,7 +12,6 @@ local CommunityRewardConfig = require("./features/community-reward/CommunityRewa
 local LeaderboardsConfig = require("./features/leaderboards/LeaderboardsConfig")
 local NotificationsConfig = require("./features/notifications/NotificationsConfig")
 local SoundConfig = require("./features/sound/SoundConfig")
-local UiGates = require("./features/ui/UiGates")
 local WinCondition = require("./features/wincondition/WinCondition")
 local TimeRewardsConfig = require("./features/timerewards/TimeRewardsConfig")
 local PerfBudget = require("./perf/PerfBudget")
@@ -22,7 +21,6 @@ local AutoFeel = require("./features/autofeel/AutoFeel")
 local PodiumConfig = require("./features/podium/PodiumConfig")
 local RarityConfig = require("./features/rarity/RarityConfig")
 local TierModelConfig = require("./features/tiermodels/TierModelConfig")
-local UiConfig = require("./features/ui/UiConfig")
 
 export type ProductConfig = {
     name: string,
@@ -133,9 +131,9 @@ export type GameConfig = {
     privateServers: PrivateServersConfig?,
     plusPrompt: PlusPromptConfig?,
     robuxTransfers: RobuxTransfersConfig?,
-    -- UI kit, leaderboards and community join reward (issues #23, #25, #36). Optional so a game
-    -- can omit what it does not use; the defaults below ship all three (the reward disabled).
-    ui: UiConfig.UiConfig?,
+    -- Leaderboards and community join reward (issues #25, #36). Optional so a game can omit what
+    -- it does not use; the defaults below ship both (the reward disabled). The template ships no
+    -- UI config: the game's UI system owns its tokens, menus and texts (ADR 0071).
     -- Rarity ladder and effect tiers (ADR 0048); a game overrides the tiers and colors.
     rarity: RarityConfig.Config?,
     -- Hotbar of equipped items (ADR 0056): slot count and the keys that select each slot.
@@ -328,87 +326,6 @@ Config.default = {
     rarity = RarityConfig.default,
     itemSlots = ItemSlots.default,
     inspect = InspectView.default,
-    -- UI kit: tokens derived for this template (reasons in docs/design/DESIGN.md).
-    ui = {
-        theme = {
-            studs = false,
-            palette = {
-                background = "#0E1220",
-                surface = "#171C30",
-                surfaceRaised = "#222945",
-                textPrimary = "#F2F5FF",
-                textMuted = "#B4BCD8",
-                accent = "#FFB020",
-                onAccent = "#1B1300",
-                success = "#3DDC84",
-                warning = "#FFD166",
-                danger = "#FF6B6B",
-                focus = "#7CC4FF",
-            },
-            radius = 12,
-            strokeThickness = 1,
-            spacing = { sm = 6, md = 12, lg = 20 },
-            textSize = { caption = 12, body = 16, title = 22 },
-            font = "GothamMedium",
-            buttonHeight = 48,
-            touchTargetMin = 44,
-            reference = { shortSide = 360, longSide = 640 },
-            scale = { min = 0.75, max = 2 },
-            motionSeconds = 0.15,
-            panel = { widthScale = 0.92, heightScale = 0.84, maxWidthPoints = 520 },
-        },
-        input = { backKey = "Backspace", backPad = "ButtonB" },
-        settings = { volumeStep = 10, sendDebounceSeconds = 0.4 },
-        gates = UiGates.default(),
-        menus = {
-            { id = "hud", title = "HUD", modal = false },
-            {
-                id = "shop",
-                title = "Shop",
-                modal = true,
-                toggleKey = "B",
-                togglePad = "ButtonY",
-                motion = UiGates.defaultMotion(),
-            },
-            {
-                id = "rewards",
-                title = "Rewards",
-                modal = true,
-                toggleKey = "R",
-                togglePad = "ButtonX",
-                motion = UiGates.defaultMotion(),
-            },
-            {
-                id = "settings",
-                title = "Settings",
-                modal = true,
-                toggleKey = "P",
-                motion = UiGates.defaultMotion(),
-            },
-            {
-                id = "boards",
-                title = "Leaderboards",
-                modal = true,
-                toggleKey = "L",
-                togglePad = "DPadUp",
-                motion = UiGates.defaultMotion(),
-            },
-        },
-        strings = {
-            close = "Close",
-            buy = "Buy",
-            pricePending = "...",
-            priceUnavailable = "Unavailable",
-            claimDaily = "Claim daily reward",
-            giftReady = "Claim gift",
-            volumeMusic = "Music",
-            volumeSfx = "Effects",
-            boardEmpty = "No scores yet",
-            joinCommunity = "Join our community",
-            checkAgain = "Check again",
-            coinsLabel = "Coins",
-        },
-    },
     leaderboards = {
         leaderstats = { "coins" },
         writeSeconds = 60,
@@ -652,16 +569,12 @@ function Config.validate(config: GameConfig): { string }
     validatePrivateServers(config, problems)
     validatePlusPrompt(config, problems)
     validateRobuxTransfers(config, problems)
-    if config.ui ~= nil then
-        for _, problem in UiConfig.validate(config.ui) do
-            table.insert(problems, problem)
-        end
-    end
     if config.rarity ~= nil then
-        local surface = if config.ui ~= nil then config.ui.theme.palette.surface else "#171C30"
         local fx = PerfBudget.clientFx
         local cap = if fx ~= nil then fx.maxParticlesPerSecond else 0
-        for _, problem in RarityConfig.validate(config.rarity, surface, cap) do
+        for _, problem in
+            RarityConfig.validate(config.rarity, RarityConfig.referenceSurfaceHex, cap)
+        do
             table.insert(problems, problem)
         end
     end

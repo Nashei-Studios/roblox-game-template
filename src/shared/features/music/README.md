@@ -5,7 +5,7 @@ Playlists by mood, stings on moments, ducking under UI, and a licence manifest, 
 ## What it is / is not
 
 - Is: pure Luau that loads under Lune. `MusicConfig` (licence per sound name, moods, stings per moment kind, duck) and `MusicDirector` (mood, sting, duck, volume write). Audio ids stay in `SoundConfig`; this config only adds who may use them and when they play.
-- Is not: a sound engine (the manager and `SoundEnginePresenter` do the playing and the cross-fade), a music player UI (E09 with named tracks and skip is built with the UI system primitives later), or a source of audio ids. Never invent an id; leave `assetId` nil and `validate` says so.
+- Is not: a sound engine (the manager and `SoundEnginePresenter` do the playing and the cross-fade), a music player UI (E09 with named tracks and skip is built later with the game UI), or a source of audio ids. Never invent an id; leave `assetId` nil and `validate` says so.
 
 ## Tree
 
