@@ -11,6 +11,8 @@ sections: Respuestas, Eventos, Umbrales, Criterio de listo, Evidencia
 
 Roblox nombra tres KPIs: participación, retención y monetización. Aquí se declara qué se mide y cuál es el número que decide si el juego sigue (decisión de la etapa 12).
 
+Los números de rendimiento (tiempo de entrada, FPS, memoria, DataStore) no son KPIs de negocio y viven en [`load-budget.md`](load-budget.md).
+
 ## Preguntas que debe responder
 
 1. ¿Qué eventos se emiten, cuándo se disparan y con qué propiedades? (Consume `src/shared/features/analytics`.)
