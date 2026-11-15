@@ -111,6 +111,33 @@ export type Budget = {
     autoFeel: AutoFeelBudget?,
     -- 3D item viewer (ADR 0060); optional so a budget literal without it stays valid.
     inspect: InspectBudget?,
+    -- Load and join limits (ADR 0073); optional so a budget literal without it stays valid.
+    load: LoadLimits?,
+}
+
+-- Instance and part caps of one top-level service of the place. A missing cap is not checked.
+export type ServiceCap = {
+    maxInstances: number?,
+    maxParts: number?,
+}
+
+-- Load and join limits read by `scripts/perf-budget` through `LoadBudget` (ADR 0073).
+export type LoadLimits = {
+    -- Path of the place export (JSON, see docs/performance.md) relative to the repo root. When the
+    -- file does not exist the instance check is skipped and says so; a game generates it.
+    placeCountsPath: string,
+    -- Caps per service name, as the export names them (Workspace, StarterGui, ...).
+    services: { [string]: ServiceCap },
+    session: {
+        -- Longest a join may wait on a session lock, in seconds. Checked against JoinPolicy.
+        maxWaitSeconds: number,
+        -- Seconds between two polls of the Cancel callback (ProfileStore repeats the request).
+        pollSeconds: number,
+    },
+    dataStore: {
+        -- DataStore requests one join may issue (session start counts as one).
+        maxRequestsPerJoin: number,
+    },
 }
 
 -- Item viewer (ADR 0060): one ViewportFrame with one WorldModel holding one model, built on open.
@@ -187,6 +214,25 @@ local PerfBudget: Budget = {
         maxParts = 40, -- chosen, not measured: above the 24 of a tier node, a tool plus its glow
         maxWorldModels = 1, -- the acceptance rule: 0 closed, 1 open, 0 after closing
         maxOpenMs = 200, -- chosen: the issue target, to be measured on the poorest client
+    },
+    load = {
+        placeCountsPath = "perf/place-counts.json",
+        services = {
+            Workspace = {
+                maxInstances = 5000, -- chosen, not sourced: initial cap; with streaming the goal is the spawn area
+                maxParts = 4000, -- chosen, not sourced
+            },
+            StarterGui = {
+                maxInstances = 600, -- chosen, not sourced: cloned per player on join
+            },
+        },
+        session = {
+            maxWaitSeconds = 90, -- chosen: the policy limit of ADR 0032 (JoinPolicy.MAX_WAIT_SECONDS)
+            pollSeconds = 5, -- ProfileStore repeats the session request every 5 s (ADR 0032)
+        },
+        dataStore = {
+            maxRequestsPerJoin = 3, -- chosen, not sourced: the DataStore limits are per minute (error-codes-and-limits)
+        },
     },
 }
 

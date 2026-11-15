@@ -72,5 +72,6 @@ All below are "accepted by recommendation 2026-11-02, revisable" (from the R0 re
 | [0070](0070-no-direct-push-to-develop.md) | No direct push to develop: the pre-push hook now also rejects it; supersedes that part of 0066 |
 | [0071](0071-ui-belongs-to-the-art-owner.md) | UI belongs to the art owner; the template ships no UI kit; supersedes 0035, 0039 (UI audit) and 0061 |
 | [0072](0072-pre-commit-and-fenced-board-text.md) | No commit on develop or main (pre-commit hook), and the board text enters the agent context capped and fenced as data |
+| [0073](0073-load-and-join-limits-in-perf-budget.md) | Load and join limits in `perf-budget`: instance caps from the place export, session-wait cap and DataStore requests per join; extends 0019 |
 
 Also decided (no ADR needed): toolchain via Rokit in the default `~/.rokit`, kept on C: (toolchains stay on the SSD).

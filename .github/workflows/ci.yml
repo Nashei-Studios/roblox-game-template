@@ -132,7 +132,7 @@ jobs:
       - name: Unit tests (Lune)
         if: steps.diff.outputs.code == 'true'
         run: lune run scripts/test
-      - name: Performance budget (remote bandwidth)
+      - name: Performance budget (remotes, instances, session wait, DataStore)
         if: steps.diff.outputs.code == 'true'
         run: lune run scripts/perf-budget
       - name: Build smoke
