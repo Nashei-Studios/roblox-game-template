@@ -15,7 +15,7 @@ Roblox game template. Strict Luau, Rojo (partially managed), Lune tests. Read `R
 - `lune run scripts/test` unit tests (add new suites to the list in `scripts/suites.luau`)
 - `lune run scripts/docs-check [stage]` game-docs gate: documents of `docs/game/` up to the current stage (`docs/game/STAGE`) are `ready`, filled and carry evidence (ADR 0068; molds and flow in `docs/game/README.md`)
 - `pwsh scripts/coverage.ps1` line coverage gate (75 % of the total, ADR 0017)
-- `lune run scripts/perf-budget` worst-case remote bandwidth vs `src/shared/perf/PerfBudget` (ADR 0019); every new remote needs a rate entry there
+- `lune run scripts/perf-budget` worst-case remote bandwidth vs `src/shared/perf/PerfBudget` (ADR 0019); every new remote needs a rate entry there; also the load limits in `PerfBudget.load` (instance caps from the place export, session-wait cap, DataStore requests per join; ADR 0073)
 - `lune run scripts/own-analytics [out] [days]` own-game Open Cloud analytics (CI only, needs ROBLOX_UNIVERSE_ID and ROBLOX_ANALYTICS_KEY; ADR 0023); never print or commit its values
 - `pwsh scripts/generate-remotes.ps1` regenerate `src/shared/net/generated/` from `net/schema.zap` (never edit generated files)
 - `pwsh scripts/analyze.ps1` type-check (`-NewSolver` for the informational pass)

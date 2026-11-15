@@ -1,18 +1,29 @@
 --!strict
 --[[
-    Lune entry point: `lune run scripts/perf-budget [schema]` (default net/schema.zap).
+    Lune entry point: `lune run scripts/perf-budget [schema] [placeCounts]`.
     Prints the worst-case remote bandwidth per player and exits 1 when a remote or the total is
-    over the budget in src/shared/perf/PerfBudget.luau (ADR 0019). The logic is in
-    src/shared/perf/RemoteBudget (pure, tested); this file only reads the schema and reports.
+    over the budget in src/shared/perf/PerfBudget.luau (ADR 0019). It also checks the load limits
+    of `PerfBudget.load` (ADR 0073): instance counts of the place export, the longest session-lock
+    wait and the DataStore requests of one join. The logic is in src/shared/perf/RemoteBudget and
+    LoadBudget (pure, tested); this file only reads files and reports.
+    `schema` defaults to net/schema.zap; `placeCounts` to `PerfBudget.load.placeCountsPath`.
 ]]
 
 local fs = require("@lune/fs")
 local process = require("@lune/process")
+local serde = require("@lune/serde")
 
 local Config = require("../src/shared/Config")
 local AutoFeel = require("../src/shared/features/autofeel/AutoFeel")
+local InMemoryProfileRepository =
+    require("../src/shared/features/playerdata/InMemoryProfileRepository")
 local InspectView = require("../src/shared/features/inspect/InspectView")
+local JoinPolicy = require("../src/shared/features/join/JoinPolicy")
+local LoadBudget = require("../src/shared/perf/LoadBudget")
 local PerfBudget = require("../src/shared/perf/PerfBudget")
+local PlayerData = require("../src/shared/features/playerdata/PlayerData")
+local PlayerDataMigrations = require("../src/shared/features/playerdata/PlayerDataMigrations")
+local PlayerDataService = require("../src/shared/features/playerdata/PlayerDataService")
 local PodiumConfig = require("../src/shared/features/podium/PodiumConfig")
 local RarityConfig = require("../src/shared/features/rarity/RarityConfig")
 local RemoteBudget = require("../src/shared/perf/RemoteBudget")
@@ -124,6 +135,81 @@ if inspectBudget ~= nil and inspectConfig ~= nil then
     end
     print(
         `inspect: up to {inspectBudget.maxParts} parts, {inspectBudget.maxWorldModels} WorldModel, open under {inspectBudget.maxOpenMs} ms`
+    )
+end
+-- Load limits (ADR 0073): instances of the place export, session-lock wait, DataStore per join.
+local loadLimits = PerfBudget.load
+if loadLimits ~= nil then
+    local placePath = process.args[2] or loadLimits.placeCountsPath
+    if fs.isFile(placePath) then
+        local decoded: unknown = serde.decode("json", fs.readFile(placePath))
+        local read = LoadBudget.readPlaceCounts(decoded)
+        if read.ok then
+            for _, problem in LoadBudget.instanceProblems(read.value, loadLimits) do
+                table.insert(report.failures, problem)
+            end
+            local capped = 0
+            for _ in loadLimits.services do
+                capped += 1
+            end
+            print(`place export {placePath}: checked {capped} capped services`)
+        else
+            table.insert(report.failures, `place export {placePath}: {read.error}`)
+        end
+    else
+        print(`place export {placePath}: not found, instance caps skipped (generate it per game)`)
+    end
+
+    local waited = LoadBudget.simulateSessionWait(function(clock)
+        return JoinPolicy.newWait({
+            clock = clock,
+            isGone = function(): boolean
+                return false
+            end,
+        })
+    end, loadLimits.session.pollSeconds, LoadBudget.waitCeilingSeconds(loadLimits))
+    for _, problem in LoadBudget.sessionWaitProblems(waited, loadLimits) do
+        table.insert(report.failures, problem)
+    end
+    print(`session wait: {waited} s of {loadLimits.session.maxWaitSeconds} s`)
+
+    local function clonePlayerData(data: PlayerData.PlayerData): PlayerData.PlayerData
+        return {
+            schemaVersion = data.schemaVersion,
+            coins = data.coins,
+            purchaseIds = table.clone(data.purchaseIds),
+            sessionCount = data.sessionCount,
+            redeemedCodes = table.clone(data.redeemedCodes),
+            timeRewards = table.clone(data.timeRewards),
+            settings = table.clone(data.settings),
+            communityRewardClaimed = data.communityRewardClaimed,
+        }
+    end
+    local counter = LoadBudget.newRequestCounter()
+    local joinService = PlayerDataService.new({
+        repository = LoadBudget.countingRepository(
+            InMemoryProfileRepository.new({
+                default = PlayerData.default,
+                clone = clonePlayerData,
+            }),
+            counter
+        ),
+        onSessionLost = function(_key: string) end,
+        migrate = PlayerDataMigrations.migrateInPlace,
+        startSession = function(data: PlayerData.PlayerData): number
+            data.sessionCount += 1
+            return data.sessionCount
+        end,
+    })
+    local joined = joinService:join("perf-budget")
+    if not joined.ok then
+        table.insert(report.failures, `join probe failed: {tostring(joined.error)}`)
+    end
+    for _, problem in LoadBudget.dataStoreProblems(counter:total(), loadLimits) do
+        table.insert(report.failures, problem)
+    end
+    print(
+        `datastore: {counter:total()} requests per join of {loadLimits.dataStore.maxRequestsPerJoin}`
     )
 end
 if #report.failures > 0 then

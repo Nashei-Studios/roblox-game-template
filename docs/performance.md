@@ -26,7 +26,18 @@ Tools and attributes (no number to set):
 
 ```powershell
 lune run scripts/perf-budget      # prints bytes/s per remote and per direction; exit 1 over budget
+lune run scripts/perf-budget net/schema.zap perf/place-counts.json   # explicit place export
 ```
+
+The same command also checks the load limits of `PerfBudget.load` (ADR 0073):
+
+| Rule | What it reads | Fails when |
+|---|---|---|
+| Instance and part caps | The place export, a JSON file at `PerfBudget.load.placeCountsPath` | A capped service has more instances or parts than its cap, or the export lacks it. No file: the check is skipped and the output says so |
+| Session-lock wait | `JoinPolicy.newWait` against a lock holder that never answers, with a simulated clock | The wait lasts longer than `session.maxWaitSeconds`, or never ends |
+| DataStore requests per join | A real `PlayerDataService.join` over a counting repository | The join issues more than `dataStore.maxRequestsPerJoin` requests |
+
+The export is `{ "services": { "Workspace": { "instances": 4000, "parts": 3000 }, "StarterGui": { "instances": 500 } } }`: one entry per top-level service, `parts` only where a cap needs it. This repo ships no place, so it ships no export; a game generates it from its place (Studio MCP `execute_luau` over `GetDescendants`, or a place-export tool) and commits it at that path. Every limit lives in `PerfBudget.load` and is tagged "sourced" or "chosen".
 
 Acceptance: output ends with `perf-budget: OK`. If it fails: read the `FAIL` line. Over budget: lower the remote's rate limit or shrink its payload in `net/schema.zap`, or raise the budget in `PerfBudget.luau` with a reason in the PR. "No rate declared": add the remote to `clientRemotes` (with the limiter you build in `Main.server`) or `serverRemotes`. "Unbounded type": give the field a length or range in the schema. Recorded: CI job `test` log.
 

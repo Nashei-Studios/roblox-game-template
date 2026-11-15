@@ -159,6 +159,7 @@ local suites: { { name: string, register: (suite: harness.Harness) -> () } } = {
     },
     { name = "RemoteBudget", register = require("../tests/perf/RemoteBudget.test") },
     { name = "ProbeEvaluator", register = require("../tests/perf/ProbeEvaluator.test") },
+    { name = "LoadBudget", register = require("../tests/perf/LoadBudget.test") },
     { name = "CodesConfig", register = require("../tests/features/codes/CodesConfig.test") },
     { name = "Codes", register = require("../tests/features/codes/Codes.test") },
     { name = "CodeRequests", register = require("../tests/features/codes/CodeRequests.test") },
