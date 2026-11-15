@@ -54,7 +54,7 @@ function Resolve-StablePwshPath {
         [scriptblock]$Exists = { param($p) Test-Path -LiteralPath $p -PathType Leaf }
     )
     if ($LocalAppData) {
-        $alias = (Join-Path $LocalAppData 'Microsoft/WindowsApps/pwsh.exe').Replace([char]92, '/')
+        $alias = ($LocalAppData.TrimEnd([char]47, [char]92) + '/Microsoft/WindowsApps/pwsh.exe').Replace([char]92, '/')
         if (& $Exists $alias) { return $alias }
     }
     $Current
