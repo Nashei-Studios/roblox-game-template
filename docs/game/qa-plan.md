@@ -11,6 +11,8 @@ sections: Respuestas, Matriz de pruebas, Criterio de listo, Evidencia
 
 Qué se prueba y cómo, antes de publicar. Molde adaptado de `test-plan` de Claude Code Game Studios (MIT, ver `THIRD-PARTY.md`).
 
+Los topes de carga y de tiempo de entrada están en [`load-budget.md`](load-budget.md); la prueba con administradores que los mide, en [`prueba-de-carga-privada.md`](prueba-de-carga-privada.md). Sus resultados se anotan abajo, en `## Evidencia`.
+
 ## Preguntas que debe responder
 
 1. ¿Qué prueba automática cubre cada sistema de `systems-index.md` (Lune, propiedades y fuzz del ADR 0062)?
