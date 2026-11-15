@@ -36,5 +36,18 @@ $l = Read-StudioLock "worktree=/x`r`nport=99999`r`n"
 Assert ($l.worktree -eq '/x' -and $null -eq $l.port) 'lock parser rejects an out-of-range port, handles CRLF'
 Assert ((Get-PlaceSyncTaskName 'D:\Repos\my game\') -eq 'place-sync-my-game') 'task name is derived from the repo folder'
 
+$none = { param($p) $false }
+$all = { param($p) $true }
+Assert ((Resolve-StablePwshPath -Current 'C:/WindowsApps/Microsoft.PowerShell_7.7.0.0_x64/pwsh.exe' -LocalAppData 'C:\Users\u\AppData\Local' -Exists $all) -eq 'C:/Users/u/AppData/Local/Microsoft/WindowsApps/pwsh.exe') 'pwsh: the stable alias wins when it exists'
+Assert ((Resolve-StablePwshPath -Current '/usr/bin/pwsh' -LocalAppData 'C:/x' -Exists $none) -eq '/usr/bin/pwsh') 'pwsh: falls back to the running executable'
+Assert ((Resolve-StablePwshPath -Current '/usr/bin/pwsh' -Exists $all) -eq '/usr/bin/pwsh') 'pwsh: no LOCALAPPDATA keeps the running executable'
+$arg = '--headless "C:/old/pwsh.exe" "-NoProfile" "-File" "x.ps1"'
+Assert ((Get-TaskExecutablePath $arg) -eq 'C:/old/pwsh.exe') 'task argument: pwsh path is extracted'
+Assert ($null -eq (Get-TaskExecutablePath 'nothing here')) 'task argument: unknown shape gives null'
+Assert ($null -eq (Get-TaskHealth $null $none)) 'task health: not registered is not a warning'
+Assert ($null -eq (Get-TaskHealth $arg $all)) 'task health: existing executable is fine'
+Assert ((Get-TaskHealth $arg $none) -match 'no longer exists') 'task health: warns when the executable is gone'
+Assert ((Get-TaskHealth 'garbage' $all) -match 'unrecognised') 'task health: warns on an unrecognised command line'
+
 if ($failed) { "$failed expectation(s) failed"; exit 1 }
 'place-sync tests passed'

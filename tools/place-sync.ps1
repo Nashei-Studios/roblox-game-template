@@ -60,7 +60,7 @@ function Start-HiddenRojo {
     else { Start-Process -FilePath $rojo -ArgumentList $rojoArgs -WorkingDirectory $State.worktree -RedirectStandardOutput /dev/null -RedirectStandardError /dev/null | Out-Null }
 }
 function Get-SchedulerInvocation {
-    $pwshPath = (Get-Process -Id $PID).Path
+    $pwshPath = Resolve-StablePwshPath -Current (Get-Process -Id $PID).Path -LocalAppData $env:LOCALAPPDATA
     [pscustomobject]@{ pwsh = $pwshPath; args = @('-NoProfile', '-File', $PSCommandPath, 'run', '-Repo', (Get-MainCheckout $Repo), '-Project', $Project) }
 }
 
@@ -79,10 +79,16 @@ switch ($Command) {
     }
     'status' {
         $s = Get-State
+        $taskArg = $null
+        if ($IsWindows) {
+            $task = Get-ScheduledTask -TaskName (Get-PlaceSyncTaskName (Get-MainCheckout $Repo)) -ErrorAction SilentlyContinue
+            if ($task) { $taskArg = $task.Actions[0].Arguments }
+        }
         [ordered]@{
             lock = $s.lockFound; worktree = $s.worktree; port = $s.port
             head = $s.head ? $s.head.Substring(0, 8) : $null; develop = $s.target ? $s.target.Substring(0, 8) : $null
             behind = ($s.head -and $s.target) ? ($s.head -ne $s.target) : $null; rojoListening = $s.listening
+            taskWarning = Get-TaskHealth $taskArg
         } | ConvertTo-Json
     }
     'install' {
