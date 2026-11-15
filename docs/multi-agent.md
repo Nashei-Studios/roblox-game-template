@@ -6,7 +6,7 @@ How several coding agents (and humans) work on this repo at once without steppin
 
 1. **One git worktree and one branch per agent.** Never work in another agent's worktree or in the main checkout. Create it with `git worktree add ../<repo>-<agent-id> -b <type>/<topic>`. Remove it after the PR is merged.
 2. **Each agent owns one `features/<name>/` folder** (plus its tests). Changes that cross features, touch `ports/`, `Main.*`, `vendor/`, `types/`, CI or ADR numbering go through the orchestrator.
-3. **Headless first.** Before asking for Studio, an agent must pass, in its worktree: `stylua --check .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `rojo build default.project.json -o places/dev.rbxl`. Most work (logic, schemas, rate limiter, adapters' pure parts) never needs Studio.
+3. **Headless first.** Before asking for Studio, an agent must pass, in its worktree: `stylua --check .`, `selene .`, `pwsh scripts/analyze.ps1`, `lune run scripts/test`, `rojo build default.project.json -o logs/build.rbxl` (never into `places/dev.rbxl`, which is the copy of the real world). Most work (logic, schemas, rate limiter, adapters' pure parts) never needs Studio.
 4. **Studio is a shared, scarce resource** (see the lock below).
 5. **Place files are never merged.** Each `.rbxl` has one human owner; world, terrain and UI edits happen in the owner's Studio. Agents never edit Studio-owned content through files.
 6. **No credentials for agents.** Publishing and Open Cloud keys stay with Victor and the CI secret scope (key limited to the test place, Luau Execution only).
