@@ -39,18 +39,22 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          if [ "$EVENT" != "pull_request" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; echo "gamedocs=true" >> "$GITHUB_OUTPUT"; echo "tools=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$EVENT" != "pull_request" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; echo "gamedocs=true" >> "$GITHUB_OUTPUT"; echo "tools=true" >> "$GITHUB_OUTPUT"; echo "toolstests=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
           code=false; gamedocs=false
           # Game documents are docs, but their gate (ADR 0068) must run when they or the checker change.
           if printf '%s' "$files" | grep -Eq '^(docs/game/|scripts/(docs-check|DocsCheck)[.]luau$)'; then gamedocs=true; fi
           if printf '%s' "$files" | grep -Evq '(\.md$|^docs/|^\.vscode/|^\.github/(ISSUE_TEMPLATE/|CODEOWNERS|dependabot\.yml|release\.yml))'; then code=true; fi
+          # The PowerShell tests of tools/ run only when tools/ or this workflow change.
+          toolstests=false
+          if printf '%s' "$files" | grep -Eq '^(tools/|\.github/workflows/ci\.yml$)'; then toolstests=true; fi
+          echo "toolstests=$toolstests" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "gamedocs=$gamedocs" >> "$GITHUB_OUTPUT"
           if [ "$code" = true ] || [ "$gamedocs" = true ]; then echo "tools=true" >> "$GITHUB_OUTPUT"; else echo "tools=false" >> "$GITHUB_OUTPUT"; fi
 
       - uses: actions/checkout@v7
-        if: steps.diff.outputs.tools == 'true'
+        if: steps.diff.outputs.tools == 'true' || steps.diff.outputs.toolstests == 'true'
       # The pinned toolchain (rokit.toml) through a community action, checked 2026-11-02
       # (CompeyDev/setup-rokit v0.2.1) and pinned by commit SHA. Installed once for the whole gate.
       - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
@@ -58,6 +62,20 @@ jobs:
         with:
           version: v1.2.0
           cache: "true"
+
+      # ---- tools: PowerShell tests of tools/ (issue 233), one step on the runner's own pwsh ----
+      - name: Tools tests (tools/tests/*.test.ps1)
+        if: steps.diff.outputs.toolstests == 'true'
+        shell: pwsh
+        run: |
+          $failed = @()
+          foreach ($test in Get-ChildItem tools/tests -Filter '*.test.ps1' | Sort-Object Name) {
+            Write-Host "::group::$($test.Name)"
+            pwsh -NoProfile -File $test.FullName
+            if ($LASTEXITCODE -ne 0) { $failed += $test.Name }
+            Write-Host '::endgroup::'
+          }
+          if ($failed) { throw "Failing tools tests: $($failed -join ', ')" }
 
       # ---- check: format + lint + generated remotes + PR title, all static ----
       - name: Conventional Commit PR title (squash merge uses it)
