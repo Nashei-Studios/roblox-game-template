@@ -1,4 +1,4 @@
-// One-way mirror of GitHub issues and pull requests into a Notion database (ADR 0065).
+// One-way mirror of GitHub issues into a Notion database (ADR 0065, narrowed by ADR 0008: pull requests are not mirrored).
 // GitHub stays the source of truth: a Notion edit never flows back and the next event overwrites it.
 //
 // Inactive by design: without NOTION_TOKEN or NOTION_DATABASE_ID it prints one line and exits 0.
@@ -15,20 +15,16 @@
 const NOTION_VERSION = "2022-06-28";
 const API = "https://api.notion.com/v1";
 
-/** Maps a webhook payload to the flat record we store, or null when the event has no issue or PR. */
+/** Maps a webhook payload to the flat record we store, or null for anything that is not an issue (pull requests are not mirrored, ADR 0008). */
 export function toRecord(payload, repository) {
-  const item = payload.pull_request ?? payload.issue;
+  if (payload.pull_request) return null;
+  const item = payload.issue;
   if (!item) return null;
-  const isPr = Boolean(payload.pull_request);
-  const merged = isPr && item.merged === true;
-  let state = item.state === "closed" ? "closed" : "open";
-  if (merged) state = "merged";
-  else if (isPr && item.draft === true && state === "open") state = "draft";
   return {
     ref: `${repository}#${item.number}`,
     title: String(item.title ?? "").slice(0, 200),
-    kind: isPr ? "pull request" : "issue",
-    state,
+    kind: "issue",
+    state: item.state === "closed" ? "closed" : "open",
     labels: (item.labels ?? []).map((label) => String(label.name).slice(0, 100)),
     assignees: (item.assignees ?? []).map((user) => user.login).join(", "),
     url: item.html_url,
@@ -55,7 +51,7 @@ export function isConfigured(env) {
   return Boolean(env.NOTION_TOKEN?.trim()) && Boolean(env.NOTION_DATABASE_ID?.trim());
 }
 
-async function notion(fetchImpl, token, method, path, body) {
+export async function notion(fetchImpl, token, method, path, body) {
   const response = await fetchImpl(`${API}${path}`, {
     method,
     headers: {
@@ -66,20 +62,31 @@ async function notion(fetchImpl, token, method, path, body) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {
-    throw new Error(`Notion ${method} ${path} failed with HTTP ${response.status}`);
+    throw new Error(`Notion ${method} ${path} failed with HTTP ${response.status}${await errorDetail(response)}`);
   }
   return response.json();
 }
 
-/** Creates the page for `record`, or updates the one whose Ref matches. Returns "created" or "updated". */
-export async function upsert(fetchImpl, env, record) {
+/** Notion's own `code` and `message` for a rejected call, or "" when the body is not its error JSON. Never echoes the request. */
+export async function errorDetail(response) {
+  try {
+    const body = await response.json();
+    const parts = [body?.code, body?.message].filter((part) => typeof part === "string" && part.length > 0);
+    return parts.length > 0 ? ` (${parts.join(": ").slice(0, 400)})` : "";
+  } catch {
+    return "";
+  }
+}
+
+/** Creates the page for `record`, or updates the one whose Ref matches. `extend` may add properties. Returns "created" or "updated". */
+export async function upsert(fetchImpl, env, record, extend = (properties) => properties) {
   const token = env.NOTION_TOKEN;
   const databaseId = env.NOTION_DATABASE_ID;
   const found = await notion(fetchImpl, token, "POST", `/databases/${databaseId}/query`, {
     filter: { property: "Ref", rich_text: { equals: record.ref } },
     page_size: 1,
   });
-  const properties = toProperties(record);
+  const properties = extend(toProperties(record));
   if (found.results.length > 0) {
     await notion(fetchImpl, token, "PATCH", `/pages/${found.results[0].id}`, { properties });
     return "updated";
@@ -98,7 +105,7 @@ export async function main(env, readPayload, fetchImpl, log) {
   }
   const record = toRecord(readPayload(), env.GITHUB_REPOSITORY ?? "unknown/unknown");
   if (record === null) {
-    log("notion-mirror: event has no issue or pull request, nothing to do");
+    log("notion-mirror: event is not an issue, nothing to do");
     return 0;
   }
   const result = await upsert(fetchImpl, env, record);
