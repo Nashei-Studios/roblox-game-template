@@ -2,8 +2,9 @@ name: ci
 
 # One trigger per change (ADR 0029): every PR into develop or main runs the gate once and nothing
 # re-runs it on push. The release PR develop -> main tests the combination of merged features.
-# Docs-only changes and draft PRs cost no minutes. Jobs are merged because every job is
-# billed as at least one minute and these steps take seconds (rules: github-integrado, minutos-actions).
+# Docs-only changes and draft PRs cost no minutes.
+# The whole gate is ONE job (issue 267): GitHub bills every job as at least one minute, and these
+# steps take seconds each. Five jobs made a PR cost 5 to 6 billed minutes; one job costs 1 to 2.
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened, ready_for_review]
@@ -19,99 +20,98 @@ concurrency:
 permissions:
   contents: read
 
-# Each job installs the pinned toolchain (rokit.toml) through the same community action,
-# checked 2026-11-02 (CompeyDev/setup-rokit v0.2.1) and pinned by commit SHA.
 jobs:
-  changes:
-    # Docs-only PRs skip the gate (no toolchain minutes) but must still be able to merge, so the
-    # decision lives here instead of in paths-ignore, which would leave the PR with no run at all.
+  gate:
+    # Draft PRs cost nothing. A docs-only PR runs only the first step (no checkout, no toolchain) but
+    # still gets a run, so it can merge: that is why the decision is a step and not paths-ignore.
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: read
-    outputs:
-      code: ${{ steps.diff.outputs.code }}
-      gamedocs: ${{ steps.diff.outputs.gamedocs }}
     steps:
-      - id: diff
+      - name: What changed
+        id: diff
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          if [ "$EVENT" != "pull_request" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; echo "gamedocs=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$EVENT" != "pull_request" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; echo "gamedocs=true" >> "$GITHUB_OUTPUT"; echo "tools=true" >> "$GITHUB_OUTPUT"; echo "toolstests=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
+          code=false; gamedocs=false
           # Game documents are docs, but their gate (ADR 0068) must run when they or the checker change.
-          if printf '%s' "$files" | grep -Eq '^(docs/game/|scripts/(docs-check|DocsCheck)[.]luau$)'; then
-            echo "gamedocs=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "gamedocs=false" >> "$GITHUB_OUTPUT"
-          fi
-          if printf '%s' "$files" | grep -Evq '(\.md$|^docs/|^\.vscode/|^\.github/(ISSUE_TEMPLATE/|CODEOWNERS|dependabot\.yml|release\.yml))'; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "code=false" >> "$GITHUB_OUTPUT"
-          fi
-  check:
-    # format + lint + generated remotes + PR title: all static, seconds each.
-    needs: changes
-    if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
+          if printf '%s' "$files" | grep -Eq '^(docs/game/|scripts/(docs-check|DocsCheck)[.]luau$)'; then gamedocs=true; fi
+          if printf '%s' "$files" | grep -Evq '(\.md$|^docs/|^\.vscode/|^\.github/(ISSUE_TEMPLATE/|CODEOWNERS|dependabot\.yml|release\.yml))'; then code=true; fi
+          # The PowerShell tests of tools/ run only when tools/ or this workflow change.
+          toolstests=false
+          if printf '%s' "$files" | grep -Eq '^(tools/|\.github/workflows/ci\.yml$)'; then toolstests=true; fi
+          echo "toolstests=$toolstests" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "gamedocs=$gamedocs" >> "$GITHUB_OUTPUT"
+          if [ "$code" = true ] || [ "$gamedocs" = true ]; then echo "tools=true" >> "$GITHUB_OUTPUT"; else echo "tools=false" >> "$GITHUB_OUTPUT"; fi
+
       - uses: actions/checkout@v7
+        if: steps.diff.outputs.tools == 'true' || steps.diff.outputs.toolstests == 'true'
+      # The pinned toolchain (rokit.toml) through a community action, checked 2026-11-02
+      # (CompeyDev/setup-rokit v0.2.1) and pinned by commit SHA. Installed once for the whole gate.
       - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        if: steps.diff.outputs.tools == 'true'
         with:
           version: v1.2.0
           cache: "true"
+
+      # ---- tools: PowerShell tests of tools/ (issue 233), one step on the runner's own pwsh ----
+      - name: Tools tests (tools/tests/*.test.ps1)
+        if: steps.diff.outputs.toolstests == 'true'
+        shell: pwsh
+        run: |
+          $failed = @()
+          foreach ($test in Get-ChildItem tools/tests -Filter '*.test.ps1' | Sort-Object Name) {
+            Write-Host "::group::$($test.Name)"
+            pwsh -NoProfile -File $test.FullName
+            if ($LASTEXITCODE -ne 0) { $failed += $test.Name }
+            Write-Host '::endgroup::'
+          }
+          if ($failed) { throw "Failing tools tests: $($failed -join ', ')" }
+
+      # ---- check: format + lint + generated remotes + PR title, all static ----
       - name: Conventional Commit PR title (squash merge uses it)
-        if: github.event_name == 'pull_request'
+        if: steps.diff.outputs.code == 'true' && github.event_name == 'pull_request'
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           printf '%s' "$PR_TITLE" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|chore)(\([a-z0-9/_-]+\))?!?: .+'             || { echo "PR title must follow Conventional Commits: $PR_TITLE"; exit 1; }
-      - run: stylua --check .
-      - run: selene .
+      - name: Format (stylua)
+        if: steps.diff.outputs.code == 'true'
+        run: stylua --check .
+      - name: Lint (selene)
+        if: steps.diff.outputs.code == 'true'
+        run: selene .
       - name: Regenerate the remote layer (ADR 0015)
+        if: steps.diff.outputs.code == 'true'
         run: pwsh scripts/generate-remotes.ps1
       - name: Fail when the generated code is stale
+        if: steps.diff.outputs.code == 'true'
         run: git diff --exit-code -- src/shared/net/generated
 
-  game-docs:
-    # docs-check (ADR 0068): documents of the current stage are filled and carry evidence. One tool, seconds.
-    needs: changes
-    if: needs.changes.outputs.gamedocs == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - uses: actions/checkout@v7
-      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
-        with:
-          version: v1.2.0
-          cache: "true"
-      - run: lune run scripts/docs-check
+      # ---- game-docs: documents of the current stage are filled and carry evidence (ADR 0068) ----
+      - name: Game documents (docs-check)
+        if: steps.diff.outputs.gamedocs == 'true'
+        run: lune run scripts/docs-check
 
-  analyze:
-    needs: changes
-    if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
-        with:
-          version: v1.2.0
-          cache: "true"
+      # ---- analyze ----
       - name: Generate Lune types and sourcemap
+        if: steps.diff.outputs.code == 'true'
         run: |
           lune setup
           rojo sourcemap default.project.json -o sourcemap.json
       # A game may exclude paths in gate.config.json (analyzeIgnore); the template lists none.
       # The globs go through an array so the shell never expands them.
       - name: Analyze (stable solver, blocking)
+        if: steps.diff.outputs.code == 'true'
         run: |
           ignores=()
           if [ -f gate.config.json ]; then mapfile -t ignores < <(jq -r '.analyzeIgnore[]? | "--ignore", .' gate.config.json); fi
@@ -119,6 +119,7 @@ jobs:
             --definitions=@roblox=types/globalTypes.None.d.luau \
             --base-luaurc .luaurc src tests scripts
       - name: Analyze (new solver, informational drift detector, ADR 0008)
+        if: steps.diff.outputs.code == 'true'
         continue-on-error: true
         run: |
           ignores=()
@@ -127,39 +128,33 @@ jobs:
             --definitions=@roblox=types/globalTypes.None.d.luau \
             --base-luaurc .luaurc src tests scripts
 
-  test:
-    # Unit tests, performance budget, build smoke and the 75 % line-coverage gate (ADR 0017).
-    needs: changes
-    if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
-        with:
-          version: v1.2.0
-          cache: "true"
+      # ---- test: unit tests, performance budget, build smoke and the 75 % line-coverage gate (ADR 0017) ----
       - name: Unit tests (Lune)
+        if: steps.diff.outputs.code == 'true'
         run: lune run scripts/test
-      - name: Performance budget (remote bandwidth)
+      - name: Performance budget (remotes, instances, session wait, DataStore)
+        if: steps.diff.outputs.code == 'true'
         run: lune run scripts/perf-budget
       - name: Build smoke
+        if: steps.diff.outputs.code == 'true'
         run: |
           mkdir -p places
           rojo build default.project.json -o places/ci.rbxl
       - name: Run the suites with coverage
+        if: steps.diff.outputs.code == 'true'
         run: |
           mkdir -p logs
           luau --coverage scripts/test_luau.luau
           mv coverage.out logs/coverage.lcov
       - name: Gate (75 % of the total, per-file report)
+        if: steps.diff.outputs.code == 'true'
         run: lune run scripts/coverage_report logs/coverage.lcov 75 src
 
   pr:
     # Inherited gate (Nashei-Studios/.github): Conventional title, linked issue and, when the repo
     # variable AUTOMERGE_ENABLED is "true", squash-merge into develop with the branch deleted and the
     # issues closed. Draft or the `hold` label blocks the merge. It runs only after the whole gate.
-    needs: [changes, check, game-docs, analyze, test]
+    needs: [gate]
     if: ${{ !failure() && !cancelled() && github.event_name == 'pull_request' }}
     permissions:
       contents: write

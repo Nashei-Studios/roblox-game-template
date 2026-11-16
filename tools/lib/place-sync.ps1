@@ -40,3 +40,42 @@ function Get-PlaceSyncTaskName {
     $name = (Split-Path -Leaf ($RepoRoot.TrimEnd('/', '\'))) -replace '[^A-Za-z0-9._-]', '-'
     "place-sync-$name"
 }
+
+function Resolve-StablePwshPath {
+    <#
+    Picks the pwsh path to register in the scheduler. The Store build lives in a versioned folder
+    (WindowsApps/Microsoft.PowerShell_<version>_...) that disappears on update, while the execution
+    alias under %LOCALAPPDATA%/Microsoft/WindowsApps/pwsh.exe survives it. Returns the alias when it
+    exists, else the running executable. Pure: the existence check is injected.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Current,
+        [string]$LocalAppData,
+        [scriptblock]$Exists = { param($p) Test-Path -LiteralPath $p -PathType Leaf }
+    )
+    if ($LocalAppData) {
+        $alias = ($LocalAppData.TrimEnd([char]47, [char]92) + '/Microsoft/WindowsApps/pwsh.exe').Replace([char]92, '/')
+        if (& $Exists $alias) { return $alias }
+    }
+    $Current
+}
+
+function Get-TaskExecutablePath {
+    <# Extracts the pwsh path from a task's conhost argument line (`--headless "<pwsh>" ...`); $null if absent. #>
+    param([string]$Argument)
+    if ($Argument -match '--headless\s+"([^"]+)"') { return $Matches[1] }
+    $null
+}
+
+function Get-TaskHealth {
+    <# Status warning for a registered task: $null when fine or not registered, else a message. #>
+    param(
+        [string]$Argument,
+        [scriptblock]$Exists = { param($p) Test-Path -LiteralPath $p -PathType Leaf }
+    )
+    if (-not $Argument) { return $null }
+    $exe = Get-TaskExecutablePath $Argument
+    if (-not $exe) { return 'The registered task has an unrecognised command line; run install again.' }
+    if (-not (& $Exists $exe)) { return "The registered task points to a pwsh that no longer exists ($exe); run install again." }
+    $null
+}
